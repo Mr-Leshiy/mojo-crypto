@@ -6,7 +6,9 @@ platforms = ["osx-arm64", "linux-aarch64"]
 version = "0.1.0"
 
 [tasks]
-test = "mojo run -I . tests/aes/test_aes.mojo"
+fmt    = "mojo format ."
+
+test   = "mojo run -I . tests/aes/test_aes.mojo"
 
 [dependencies]
 mojo = ">=1.0.0b1,<2"

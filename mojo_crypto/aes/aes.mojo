@@ -1,9 +1,13 @@
+# https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
+
+
 def encrypt(key: List[UInt8], block: List[UInt8]) -> List[UInt8]:
     return List[UInt8]()
 
 
 # FIPS 197 Figure 7 — AES S-box
 comptime SBOX: InlineArray[UInt8, 256] = [
+    # fmt: off
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
     0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -20,12 +24,15 @@ comptime SBOX: InlineArray[UInt8, 256] = [
     0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
     0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
+    # fmt: on
 ]
 
 # FIPS 197 Table 2 — round constants, 0-indexed (Rcon[1]..Rcon[10])
 comptime RCON: InlineArray[UInt32, 10] = [
+    # fmt: off
     0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
     0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000,
+    # fmt: on
 ]
 
 
@@ -41,26 +48,28 @@ def rot_word(w: UInt32) -> UInt32:
 
 def sub_word(w: UInt32) -> UInt32:
     return (
-        UInt32(SBOX[w >> 24])           << 24
-        | UInt32(SBOX[w >> 16 & 0xff]) << 16
-        | UInt32(SBOX[w >>  8 & 0xff]) <<  8
-        | UInt32(SBOX[w       & 0xff])
+        UInt32(SBOX[w >> 24]) << 24
+        | UInt32(SBOX[w >> 16 & 0xFF]) << 16
+        | UInt32(SBOX[w >> 8 & 0xFF]) << 8
+        | UInt32(SBOX[w & 0xFF])
     )
 
 
 # FIPS 197 Algorithm 2 — KEYEXPANSION, AES-128 only
 # key: 16 bytes (128 bits), output: 44 words (11 round keys)
+# <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf>
+# 5.2 KEYEXPANSION() section
 def key_expansion(key: InlineArray[UInt8, 16]) -> InlineArray[UInt32, 44]:
     comptime Nk: UInt8 = 4
     comptime total: UInt8 = 44  # 4 * (10 + 1)
 
-    var w = InlineArray[UInt32, 44](uninitialized=True)
+    var w = InlineArray[UInt32, total](uninitialized=True)
 
     for i in range(Nk):
         var word: UInt32 = (
-            UInt32(key[4 * i])       << 24
+            UInt32(key[4 * i]) << 24
             | UInt32(key[4 * i + 1]) << 16
-            | UInt32(key[4 * i + 2]) <<  8
+            | UInt32(key[4 * i + 2]) << 8
             | UInt32(key[4 * i + 3])
         )
         w[i] = word
