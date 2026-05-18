@@ -6,7 +6,7 @@ def encrypt(key: List[UInt8], block: List[UInt8]) -> List[UInt8]:
 
 
 # FIPS 197 Figure 7 — AES S-box
-comptime SBOX: InlineArray[UInt8, 256] = [
+comptime SBOX: InlineArray[UInt32, 256] = [
     # fmt: off
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -36,32 +36,13 @@ comptime RCON: InlineArray[UInt32, 10] = [
 ]
 
 
-def rot_word(w: UInt32) -> UInt32:
-    # Cyclic left rotation by one byte: [a0, a1, a2, a3] → [a1, a2, a3, a0].
-    # No overflow: UInt32 shifts discard bits that fall off the edge and fill
-    # with zeros from the other side.
-    #   w << 8  → [a1, a2, a3, 00]  (a0 discarded from the top)
-    #   w >> 24 → [00, 00, 00, a0]  (a0 recovered at the bottom)
-    #   OR      → [a1, a2, a3, a0]
-    return (w << 8) | (w >> 24)
-
-
-def sub_word(w: UInt32) -> UInt32:
-    return (
-        UInt32(SBOX[w >> 24]) << 24
-        | UInt32(SBOX[w >> 16 & 0xFF]) << 16
-        | UInt32(SBOX[w >> 8 & 0xFF]) << 8
-        | UInt32(SBOX[w & 0xFF])
-    )
-
-
 # FIPS 197 Algorithm 2 — KEYEXPANSION, AES-128 only
 # key: 16 bytes (128 bits), output: 44 words (11 round keys)
 # <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf>
 # 5.2 KEYEXPANSION() section
 def key_expansion(key: InlineArray[UInt8, 16]) -> InlineArray[UInt32, 44]:
-    comptime Nk: UInt8 = 4
-    comptime total: UInt8 = 44  # 4 * (10 + 1)
+    comptime Nk: Int = 4
+    comptime total: Int = 44  # 4 * (10 + 1)
 
     var w = InlineArray[UInt32, total](uninitialized=True)
 
@@ -78,7 +59,25 @@ def key_expansion(key: InlineArray[UInt8, 16]) -> InlineArray[UInt32, 44]:
         var temp: UInt32 = w[i - 1]
         if i % Nk == 0:
             temp = sub_word(rot_word(temp)) ^ RCON[i / Nk - 1]
-        var wi: UInt32 = w[i - Nk] ^ temp
-        w[i] = wi
+        w[i] = w[i - Nk] ^ temp
+    return w
 
-    return w^
+
+@always_inline
+def rot_word(w: UInt32) -> UInt32:
+    # Cyclic left rotation by one byte: [a0, a1, a2, a3] → [a1, a2, a3, a0].
+    # No overflow: UInt32 shifts discard bits that fall off the edge and fill
+    # with zeros from the other side.
+    #   w << 8  → [a1, a2, a3, 00]  (a0 discarded from the top)
+    #   w >> 24 → [00, 00, 00, a0]  (a0 recovered at the bottom)
+    #   OR      → [a1, a2, a3, a0]
+    return (w << 8) | (w >> 24)
+
+
+@always_inline
+def sub_word(w: UInt32) -> UInt32:
+    a0 = SBOX[w >> 24] << 24
+    a1 = SBOX[w >> 16 & 0xFF] << 16
+    a2 = SBOX[w >> 8 & 0xFF] << 8
+    a3 = SBOX[w & 0xFF]
+    return a0 | a1 | a2 | a3
