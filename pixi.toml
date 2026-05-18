@@ -2,7 +2,7 @@
 authors = ["Mr-Leshiy <leshiy12345678@gmail.com>"]
 channels = ["conda-forge", "https://conda.modular.com/max"]
 name = "mojo-crypto"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-aarch64"]
 version = "0.1.0"
 
 [tasks]
