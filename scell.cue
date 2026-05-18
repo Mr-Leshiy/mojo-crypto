@@ -3,12 +3,13 @@ _gh_token: string
 main: {
 	from_image: "debian:trixie"
 	env: [
-		// claude code instalation path
-		"PATH=\"/root/.local/bin:$PATH\"",
+		// claude, pixi code instalation path
+		"PATH=\"/root/.pixi/bin:/root/.local/bin:$PATH\"",
 		"GH_TOKEN=\"\(_gh_token)\""
 	]
 	build: [
 		"apt-get update --fix-missing",
+		"apt-get -y install git curl wget",
 		// install pixi
 		"curl -fsSL https://pixi.sh/install.sh | sh",
 		// claude code

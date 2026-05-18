@@ -3,3 +3,5 @@
 !.pixi/config.toml
 
 .scell_args.cue
+
+.vscode
