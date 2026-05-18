@@ -1,1 +1,1 @@
-from mojo_crypto.aes import AES
+from mojo_crypto.aes import encrypt
