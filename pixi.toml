@@ -9,9 +9,7 @@ version = "0.1.0"
 fmt    = "mojo format ."
 
 test   = """
-mojo run -I . tests/aes/test_aes_128.mojo &&
-mojo run -I . tests/aes/test_aes_192.mojo &&
-mojo run -I . tests/aes/test_aes_256.mojo
+mojo run -I . tests/aes/test_aes.mojo
 """
 
 [dependencies]

@@ -2,7 +2,8 @@ from .cipher import cipher, decipher
 from .expand import key_expansion
 from .common import Nb
 
-struct AES128:
+
+struct Aes128:
     comptime Nk: Int = 4
     comptime Nr: Int = 10
     comptime WordsSize: Int = Nb * (Self.Nr + 1)

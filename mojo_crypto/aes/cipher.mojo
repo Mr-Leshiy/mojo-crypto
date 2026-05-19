@@ -5,9 +5,9 @@ comptime StateData = InlineArray[InlineArray[UInt8, Nb], Nb]
 
 def cipher[
     Nr: Int, WordsSize: Int
-](input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]) -> InlineArray[
-    UInt8, 16
-]:
+](
+    input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]
+) -> InlineArray[UInt8, 16]:
     state = bytes_to_state(input)
     add_round_key(state, 0, w)
     for r in range(1, Nr):
@@ -21,12 +21,13 @@ def cipher[
     add_round_key(state, Nr, w)
     return state_to_bytes(state)
 
+
 # FIPS 197 §5.3 InvCipher()
 def decipher[
     Nr: Int, WordsSize: Int
-](input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]) -> InlineArray[
-    UInt8, 16
-]:
+](
+    input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]
+) -> InlineArray[UInt8, 16]:
     state = bytes_to_state(input)
     add_round_key(state, Nr, w)
     for i in range(Nr - 1):
@@ -78,6 +79,7 @@ def sub_bytes(mut state: StateData):
         for c in range(Nb):
             state[r][c] = UInt8(SBOX[Int(state[r][c])])
 
+
 # FIPS 197 §5.3.2 InvSubBytes() — apply inverse S-box to every byte
 def inv_sub_bytes(mut state: StateData):
     for r in range(Nb):
@@ -94,6 +96,7 @@ def shift_rows(mut state: StateData):
         for c in range(Nb):
             state[r][c] = row[(c + r) % Nb]
 
+
 # FIPS 197 §5.3.1 InvShiftRows() — cyclic right shift of row r by r positions
 def inv_shift_rows(mut state: StateData):
     for r in range(1, Nb):
@@ -102,6 +105,7 @@ def inv_shift_rows(mut state: StateData):
             row[c] = state[r][c]
         for c in range(Nb):
             state[r][c] = row[(c - r + Nb) % Nb]
+
 
 # FIPS 197 §5.1.3 MixColumns() — GF(2^8) matrix multiply on each column
 def mix_columns(mut state: StateData):
@@ -123,10 +127,30 @@ def inv_mix_columns(mut state: StateData):
         var s1 = state[1][col]
         var s2 = state[2][col]
         var s3 = state[3][col]
-        state[0][col] = multiply(0x0e, s0) ^ multiply(0x0b, s1) ^ multiply(0x0d, s2) ^ multiply(0x09, s3)
-        state[1][col] = multiply(0x09, s0) ^ multiply(0x0e, s1) ^ multiply(0x0b, s2) ^ multiply(0x0d, s3)
-        state[2][col] = multiply(0x0d, s0) ^ multiply(0x09, s1) ^ multiply(0x0e, s2) ^ multiply(0x0b, s3)
-        state[3][col] = multiply(0x0b, s0) ^ multiply(0x0d, s1) ^ multiply(0x09, s2) ^ multiply(0x0e, s3)
+        state[0][col] = (
+            multiply(0x0E, s0)
+            ^ multiply(0x0B, s1)
+            ^ multiply(0x0D, s2)
+            ^ multiply(0x09, s3)
+        )
+        state[1][col] = (
+            multiply(0x09, s0)
+            ^ multiply(0x0E, s1)
+            ^ multiply(0x0B, s2)
+            ^ multiply(0x0D, s3)
+        )
+        state[2][col] = (
+            multiply(0x0D, s0)
+            ^ multiply(0x09, s1)
+            ^ multiply(0x0E, s2)
+            ^ multiply(0x0B, s3)
+        )
+        state[3][col] = (
+            multiply(0x0B, s0)
+            ^ multiply(0x0D, s1)
+            ^ multiply(0x09, s2)
+            ^ multiply(0x0E, s3)
+        )
 
 
 # General GF(2^8) multiply via Russian peasant: iterate over bits of `a`
@@ -141,6 +165,7 @@ def multiply(a: UInt8, b: UInt8) -> UInt8:
         factor = xtime(factor)
         scalar >>= 1
     return result
+
 
 # Multiply by 0x02 in GF(2^8) with AES reduction polynomial x^8+x^4+x^3+x+1
 @always_inline
