@@ -1,6 +1,5 @@
 from std.testing import assert_equal, TestSuite
-from mojo_crypto.aes import cipher_128
-
+from mojo_crypto.aes import cipher_128, decipher_128
 
 def test_cipher() raises:
     def check_cipher(
@@ -8,8 +7,10 @@ def test_cipher() raises:
         key: InlineArray[UInt8, 16],
         expected: InlineArray[UInt8, 16],
     ) raises:
-        var result = cipher_128(plaintext, key)
-        assert_equal(result, expected)
+        var enc = cipher_128(plaintext, key)
+        assert_equal(enc, expected)
+        var dec = decipher_128(enc, key)
+        assert_equal(dec, plaintext)
 
     # FIPS 197 Appendix B
     check_cipher(
