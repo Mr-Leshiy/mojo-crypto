@@ -1,11 +1,17 @@
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
 
 
-def encrypt(key: List[UInt8], block: List[UInt8]) -> List[UInt8]:
-    return List[UInt8]()
-
+comptime Nk: Int = 4
+comptime Nb: Int = 4
+comptime Nr: Int = 10
+comptime total: Int = Nb * (Nr + 1)  # 44
 
 # FIPS 197 Figure 7 — AES S-box
+# Values are logically UInt8 (0x00–0xFF), but stored as UInt32 so that sub_word()
+# can shift and OR them directly without a widening cast at each lookup:
+#   SBOX[b] << 24  — works because SBOX[b] is already UInt32
+# Switching to UInt8 storage would halve the table size
+# (256 B vs 1 KB, better cache fit) but would add a UInt8 → UInt32 widening in every sub_word() call.
 comptime SBOX: InlineArray[UInt32, 256] = [
     # fmt: off
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -27,6 +33,46 @@ comptime SBOX: InlineArray[UInt32, 256] = [
     # fmt: on
 ]
 
+
+def cipher(
+    input: InlineArray[UInt8, 16], key: InlineArray[UInt8, 16]
+) -> InlineArray[UInt8, 16]:
+    w = key_expansion(key)
+    var state = bytes_to_state(input)
+    add_round_key(state, 0, w)
+    for r in range(1, Nr):
+        sub_bytes(state)
+        shift_rows(state)
+        mix_columns(state)
+        add_round_key(state, r, w)
+
+    sub_bytes(state)
+    shift_rows(state)
+    add_round_key(state, Nr, w)
+    return state_to_bytes(state)
+
+
+comptime StateData = InlineArray[InlineArray[UInt8, Nb], Nb]
+
+
+# FIPS 197 §3.4: state[r][c] = in[r + 4*c]  (column-major input mapping)
+def bytes_to_state(input: InlineArray[UInt8, 16]) -> StateData:
+    var state = StateData(uninitialized=True)
+    for r in range(Nb):
+        for c in range(Nb):
+            state[r][c] = input[r + Nb * c]
+    return state
+
+
+# FIPS 197 §3.4: out[r + 4*c] = state[r][c]
+def state_to_bytes(state: StateData) -> InlineArray[UInt8, 16]:
+    var output = InlineArray[UInt8, 16](uninitialized=True)
+    for r in range(Nb):
+        for c in range(Nb):
+            output[r + Nb * c] = state[r][c]
+    return output
+
+
 # FIPS 197 Table 2 — round constants, 0-indexed (Rcon[1]..Rcon[10])
 comptime RCON: InlineArray[UInt32, 10] = [
     # fmt: off
@@ -39,11 +85,8 @@ comptime RCON: InlineArray[UInt32, 10] = [
 # FIPS 197 Algorithm 2 — KEYEXPANSION, AES-128 only
 # key: 16 bytes (128 bits), output: 44 words (11 round keys)
 # <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf>
-# 5.2 KEYEXPANSION() section
-def key_expansion(key: InlineArray[UInt8, 16]) -> InlineArray[UInt32, 44]:
-    comptime Nk: Int = 4
-    comptime total: Int = 44  # 4 * (10 + 1)
-
+# 5.2 KeyExpansion()
+def key_expansion(key: InlineArray[UInt8, 16]) -> InlineArray[UInt32, total]:
     var w = InlineArray[UInt32, total](uninitialized=True)
 
     for i in range(Nk):
@@ -61,6 +104,58 @@ def key_expansion(key: InlineArray[UInt8, 16]) -> InlineArray[UInt32, 44]:
             temp = sub_word(rot_word(temp)) ^ RCON[i / Nk - 1]
         w[i] = w[i - Nk] ^ temp
     return w
+
+
+# <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf>
+# 5.1.4 AddRoundKey()
+def add_round_key(
+    mut state: StateData, round: Int, w: InlineArray[UInt32, total]
+):
+    for c in range(Nb):
+        w_idx = Nb * round + c
+        state[0][c] ^= UInt8(w[w_idx] >> 24)
+        state[1][c] ^= UInt8(w[w_idx] >> 16)
+        state[2][c] ^= UInt8(w[w_idx] >> 8)
+        state[3][c] ^= UInt8(w[w_idx])
+
+
+# FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
+def sub_bytes(mut state: StateData):
+    for r in range(Nb):
+        for c in range(Nb):
+            state[r][c] = UInt8(SBOX[Int(state[r][c])])
+
+
+# FIPS 197 §5.1.2 ShiftRows() — cyclic left shift of row r by r positions
+def shift_rows(mut state: StateData):
+    for r in range(1, Nb):
+        var row = InlineArray[UInt8, Nb](uninitialized=True)
+        for c in range(Nb):
+            row[c] = state[r][c]
+        for c in range(Nb):
+            state[r][c] = row[(c + r) % Nb]
+
+
+# Multiply by 0x02 in GF(2^8) with AES reduction polynomial x^8+x^4+x^3+x+1
+@always_inline
+def xtime(a: UInt8) -> UInt8:
+    var result = a << 1
+    if a & 0x80:
+        result ^= 0x1B
+    return result
+
+
+# FIPS 197 §5.1.3 MixColumns() — GF(2^8) matrix multiply on each column
+def mix_columns(mut state: StateData):
+    for col in range(Nb):
+        var s0 = state[0][col]
+        var s1 = state[1][col]
+        var s2 = state[2][col]
+        var s3 = state[3][col]
+        state[0][col] = xtime(s0) ^ xtime(s1) ^ s1 ^ s2 ^ s3
+        state[1][col] = s0 ^ xtime(s1) ^ xtime(s2) ^ s2 ^ s3
+        state[2][col] = s0 ^ s1 ^ xtime(s2) ^ xtime(s3) ^ s3
+        state[3][col] = xtime(s0) ^ s0 ^ s1 ^ s2 ^ xtime(s3)
 
 
 @always_inline
