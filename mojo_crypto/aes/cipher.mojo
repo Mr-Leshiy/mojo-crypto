@@ -4,13 +4,10 @@ from .expand import key_expansion
 comptime StateData = InlineArray[InlineArray[UInt8, Nb], Nb]
 
 def cipher[
-    Nr: Int, Nk: Int, KeySize: Int
-](input: InlineArray[UInt8, 16], key: InlineArray[UInt8, KeySize]) -> InlineArray[
+    Nr: Int, WordsSize: Int
+](input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]) -> InlineArray[
     UInt8, 16
 ]:
-    comptime WordsSize: Int = Nb * (Nr + 1)
-
-    w = key_expansion[WordsSize, Nk, KeySize](key)
     state = bytes_to_state(input)
     add_round_key(state, 0, w)
     for r in range(1, Nr):
@@ -26,13 +23,10 @@ def cipher[
 
 # FIPS 197 §5.3 InvCipher()
 def decipher[
-    Nr: Int, Nk: Int, KeySize: Int
-](input: InlineArray[UInt8, 16], key: InlineArray[UInt8, KeySize]) -> InlineArray[
+    Nr: Int, WordsSize: Int
+](input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]) -> InlineArray[
     UInt8, 16
 ]:
-    comptime WordsSize: Int = Nb * (Nr + 1)
-
-    w = key_expansion[WordsSize, Nk, KeySize](key)
     state = bytes_to_state(input)
     add_round_key(state, Nr, w)
     for i in range(Nr - 1):

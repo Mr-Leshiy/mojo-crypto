@@ -1,19 +1,20 @@
 from std.testing import assert_equal, TestSuite
-from mojo_crypto.aes import cipher_128, decipher_128
+from mojo_crypto.aes import AES128
 
-def test_cipher() raises:
-    def check_cipher(
+def test_aes() raises:
+    def check_aes(
         plaintext: InlineArray[UInt8, 16],
         key: InlineArray[UInt8, 16],
         expected: InlineArray[UInt8, 16],
     ) raises:
-        var enc = cipher_128(plaintext, key)
+        var aes = AES128(key)
+        var enc = aes.encrypt(plaintext)
         assert_equal(enc, expected)
-        var dec = decipher_128(enc, key)
+        var dec = aes.decrypt(enc)
         assert_equal(dec, plaintext)
 
     # FIPS 197 Appendix B
-    check_cipher(
+    check_aes(
         [
             # fmt: off
             0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d,
@@ -35,7 +36,7 @@ def test_cipher() raises:
     )
 
     # FIPS 197 Appendix C.1
-    check_cipher(
+    check_aes(
         [
             # fmt: off
             0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
