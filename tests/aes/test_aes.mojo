@@ -1,10 +1,11 @@
 from std.testing import assert_equal, TestSuite
+from std.python import Python, PythonObject
 
-from mojo_crypto.aes import Aes128
+from mojo_crypto.aes import Aes128, Aes192, Aes256
 from mojo_crypto.aes.expand import key_expansion
 
 
-def test_aes() raises:
+def test_aes_128() raises:
     def check_aes(
         plaintext: InlineArray[UInt8, 16],
         key: InlineArray[UInt8, 16],
@@ -382,6 +383,72 @@ def test_256_key_expansion() raises:
             # fmt: on
         ],
     )
+
+@fieldwise_init
+struct AesTestVector(Movable, Copyable):
+    var aes_bits: Int
+    var key_hex: String
+    var pt_hex: String
+    var ct_hex: String
+    var file_name: String
+
+def parse_hex[N: Int](s: String) -> InlineArray[UInt8, N]:
+    var result = InlineArray[UInt8, N](uninitialized=True)
+    var ptr = s.unsafe_ptr()
+    for i in range(N):
+        result[i] = (_hex_nibble(ptr[2 * i]) << 4) | _hex_nibble(ptr[2 * i + 1])
+    return result
+
+@always_inline
+def _hex_nibble(b: UInt8) -> UInt8:
+    if b <= 57:
+        return b - 48
+    if b >= 97:
+        return b - 87
+    return b - 55
+
+# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
+def test_aes_test_vectors() raises:
+    var sys = Python.import_module("sys")
+    sys.path.insert(0, PythonObject("tests/aes"))
+    var parse_test_vectors = Python.import_module("load_test_vectors")
+    var vectors = List[AesTestVector]()
+
+    var data = parse_test_vectors.load("tests/aes/aesmct")
+    # data.extend(parse_test_vectors.load("tests/aes/aesmmt"))
+    # data.extend(parse_test_vectors.load("tests/aes/aesmct"))
+
+    for v in data:
+        vectors.append(
+            AesTestVector(
+                aes_bits=atol(String(v.aes_type.value)),
+                key_hex=String(v.key_hex),
+                pt_hex=String(v.pt_hex),
+                ct_hex=String(v.ct_hex),
+                file_name=String(v.file_name),
+            )
+        )
+
+    for i in range(len(vectors)):
+        var pt = parse_hex[16](vectors[i].pt_hex)
+        var ct = parse_hex[16](vectors[i].ct_hex)
+        var msg = vectors[i].file_name + " key=" + vectors[i].key_hex
+
+        if vectors[i].aes_bits == 128:
+            var aes = Aes128(parse_hex[16](vectors[i].key_hex))
+            assert_equal(aes.encrypt(pt), ct, msg=msg)
+            assert_equal(aes.decrypt(ct), pt, msg=msg)
+        elif vectors[i].aes_bits == 192:
+            var aes = Aes192(parse_hex[24](vectors[i].key_hex))
+            assert_equal(aes.encrypt(pt), ct, msg=msg)
+            assert_equal(aes.decrypt(ct), pt, msg=msg)
+        elif vectors[i].aes_bits == 256:
+            var aes = Aes256(parse_hex[32](vectors[i].key_hex))
+            assert_equal(aes.encrypt(pt), ct, msg=msg)
+            assert_equal(aes.decrypt(ct), pt, msg=msg)
+            
+
+
 
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
