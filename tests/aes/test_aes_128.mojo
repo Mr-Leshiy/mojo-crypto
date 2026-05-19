@@ -58,20 +58,22 @@ def test_cipher() raises:
 
 def test_key_expansion() raises:
     from mojo_crypto.aes.expand import key_expansion
+    from mojo_crypto.aes.common import Nb
 
-    comptime Nb: Int = 4
     comptime Nr: Int = 10
+    comptime Nk: Int = 4
     comptime WordsSize: Int = Nb * (Nr + 1)
+    comptime KeySize: Int = 16
 
     def check_key_expansion(
-        key: InlineArray[UInt8, 16],
-        expected: InlineArray[UInt32, 44],
+        key: InlineArray[UInt8, KeySize],
+        expected: InlineArray[UInt32, WordsSize],
     ) raises:
-        var result = key_expansion[WordsSize, 4](key)
+        var result = key_expansion[WordsSize, Nk](key)
         assert_equal(expected, result)
 
     check_key_expansion(
-        InlineArray[UInt8, 16](fill=0x00),
+        InlineArray[UInt8, KeySize](fill=0x00),
         [
             # fmt: off
             0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -90,7 +92,7 @@ def test_key_expansion() raises:
     )
 
     check_key_expansion(
-        InlineArray[UInt8, 16](fill=0xFF),
+        InlineArray[UInt8, KeySize](fill=0xFF),
         [
             # fmt: off
             0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,

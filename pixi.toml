@@ -8,7 +8,11 @@ version = "0.1.0"
 [tasks]
 fmt    = "mojo format ."
 
-test   = "mojo run -I . tests/aes/test_aes_128.mojo"
+test   = """
+mojo run -I . tests/aes/test_aes_128.mojo &&
+mojo run -I . tests/aes/test_aes_192.mojo &&
+mojo run -I . tests/aes/test_aes_256.mojo
+"""
 
 [dependencies]
 mojo = ">=1.0.0b1,<2"

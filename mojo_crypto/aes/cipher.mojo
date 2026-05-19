@@ -3,12 +3,11 @@ from .expand import key_expansion
 
 
 def cipher[
-    Nr: Int, Nk: Int
-](input: InlineArray[UInt8, 16], key: InlineArray[UInt8, 16]) -> InlineArray[
+    Nr: Int, Nk: Int, KeySize: Int
+](input: InlineArray[UInt8, 16], key: InlineArray[UInt8, KeySize]) -> InlineArray[
     UInt8, 16
 ]:
     comptime WordsSize: Int = Nb * (Nr + 1)
-    comptime KeySize = 16
 
     w = key_expansion[WordsSize, Nk, KeySize](key)
     var state = bytes_to_state(input)
