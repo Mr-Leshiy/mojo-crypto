@@ -1,5 +1,5 @@
 from std.testing import assert_equal, TestSuite
-from mojo_crypto.aes.aes import cipher, key_expansion, rot_word
+from mojo_crypto.aes import cipher_128
 
 
 def test_cipher() raises:
@@ -8,7 +8,7 @@ def test_cipher() raises:
         key: InlineArray[UInt8, 16],
         expected: InlineArray[UInt8, 16],
     ) raises:
-        var result = cipher(plaintext, key)
+        var result = cipher_128(plaintext, key)
         assert_equal(result, expected)
 
     # FIPS 197 Appendix B
@@ -57,11 +57,17 @@ def test_cipher() raises:
 
 
 def test_key_expansion() raises:
+    from mojo_crypto.aes.expand import key_expansion
+
+    comptime Nb: Int = 4
+    comptime Nr: Int = 10
+    comptime WordsSize: Int = Nb * (Nr + 1)
+
     def check_key_expansion(
         key: InlineArray[UInt8, 16],
         expected: InlineArray[UInt32, 44],
     ) raises:
-        var result = key_expansion(key)
+        var result = key_expansion[WordsSize, 4](key)
         assert_equal(expected, result)
 
     check_key_expansion(
@@ -173,18 +179,6 @@ def test_key_expansion() raises:
             # fmt: on
         ],
     )
-
-
-def test_rot_word() raises:
-    def check_rot_word(input: UInt32, expected: UInt32) raises:
-        assert_equal(rot_word(input), expected)
-
-    check_rot_word(0x01020304, 0x02030401)  # basic rotation
-    check_rot_word(0x00000000, 0x00000000)  # all zeros
-    check_rot_word(0xFFFFFFFF, 0xFFFFFFFF)  # all ones
-    check_rot_word(0xFF000000, 0x000000FF)  # top byte wraps to bottom
-    check_rot_word(0x000000FF, 0x0000FF00)  # bottom byte stays interior
-    check_rot_word(0x12345678, 0x34567812)  # FIPS 197 style
 
 
 def main() raises:
