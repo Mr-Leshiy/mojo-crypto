@@ -12,5 +12,9 @@ test   = """
 mojo run -I . tests/aes/test_aes.mojo
 """
 
+bench  = """
+mojo run -O3 -I . benchmarks/aes/bench_aes.mojo
+"""
+
 [dependencies]
 mojo = ">=1.0.0b1,<2"
