@@ -3,6 +3,7 @@ from .expand import key_expansion
 
 comptime StateData = InlineArray[InlineArray[UInt8, Nb], Nb]
 
+
 def cipher[
     Nr: Int, WordsSize: Int
 ](

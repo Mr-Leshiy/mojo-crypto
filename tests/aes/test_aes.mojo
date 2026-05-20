@@ -61,7 +61,10 @@ def test_aes_128() raises:
         ],
     )
 
-def check_key_expansion[Nk: Int, WordsSize: Int, KeySize: Int](
+
+def check_key_expansion[
+    Nk: Int, WordsSize: Int, KeySize: Int
+](
     key: InlineArray[UInt8, KeySize],
     expected: InlineArray[UInt32, WordsSize],
 ) raises:
@@ -180,6 +183,7 @@ def test_128_key_expansion() raises:
         ],
     )
 
+
 def test_192_key_expansion() raises:
     check_key_expansion[Nk=6, WordsSize=52](
         InlineArray[UInt8, 24](fill=0x00),
@@ -276,6 +280,7 @@ def test_192_key_expansion() raises:
             # fmt: on
         ],
     )
+
 
 def test_256_key_expansion() raises:
     check_key_expansion[Nk=8, WordsSize=60](
@@ -384,13 +389,16 @@ def test_256_key_expansion() raises:
         ],
     )
 
+
 @fieldwise_init
-struct AesTestVector(Movable, Copyable):
+struct AesTestVector(Copyable, Movable):
+    var is_encrypt: Bool
     var aes_bits: Int
     var key_hex: String
     var pt_hex: String
     var ct_hex: String
     var file_name: String
+
 
 def parse_hex[N: Int](s: String) -> InlineArray[UInt8, N]:
     var result = InlineArray[UInt8, N](uninitialized=True)
@@ -398,6 +406,7 @@ def parse_hex[N: Int](s: String) -> InlineArray[UInt8, N]:
     for i in range(N):
         result[i] = (_hex_nibble(ptr[2 * i]) << 4) | _hex_nibble(ptr[2 * i + 1])
     return result
+
 
 @always_inline
 def _hex_nibble(b: UInt8) -> UInt8:
@@ -407,20 +416,24 @@ def _hex_nibble(b: UInt8) -> UInt8:
         return b - 87
     return b - 55
 
+
+# AES Known Answer Test (KAT) Vectors
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
-def test_aes_test_vectors() raises:
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
+def test_aes_kat_test_vectors() raises:
     var sys = Python.import_module("sys")
     sys.path.insert(0, PythonObject("tests/aes"))
     var parse_test_vectors = Python.import_module("load_test_vectors")
     var vectors = List[AesTestVector]()
 
-    var data = parse_test_vectors.load("tests/aes/aesmct")
-    # data.extend(parse_test_vectors.load("tests/aes/aesmmt"))
-    # data.extend(parse_test_vectors.load("tests/aes/aesmct"))
+    var data = parse_test_vectors.load(
+        "tests/aes/KAT_AES", parse_test_vectors.AesMode.ECB
+    )
 
     for v in data:
         vectors.append(
             AesTestVector(
+                is_encrypt=v.is_encrypt.__bool__(),
                 aes_bits=atol(String(v.aes_type.value)),
                 key_hex=String(v.key_hex),
                 pt_hex=String(v.pt_hex),
@@ -429,25 +442,81 @@ def test_aes_test_vectors() raises:
             )
         )
 
-    for i in range(len(vectors)):
-        var pt = parse_hex[16](vectors[i].pt_hex)
-        var ct = parse_hex[16](vectors[i].ct_hex)
-        var msg = vectors[i].file_name + " key=" + vectors[i].key_hex
+    for v in vectors:
+        var pt = parse_hex[16](v.pt_hex)
+        var ct = parse_hex[16](v.ct_hex)
+        var msg = v.file_name + " key=" + v.key_hex
 
-        if vectors[i].aes_bits == 128:
-            var aes = Aes128(parse_hex[16](vectors[i].key_hex))
+        if v.aes_bits == 128:
+            var aes = Aes128(parse_hex[16](v.key_hex))
             assert_equal(aes.encrypt(pt), ct, msg=msg)
             assert_equal(aes.decrypt(ct), pt, msg=msg)
-        elif vectors[i].aes_bits == 192:
-            var aes = Aes192(parse_hex[24](vectors[i].key_hex))
+        elif v.aes_bits == 192:
+            var aes = Aes192(parse_hex[24](v.key_hex))
             assert_equal(aes.encrypt(pt), ct, msg=msg)
             assert_equal(aes.decrypt(ct), pt, msg=msg)
-        elif vectors[i].aes_bits == 256:
-            var aes = Aes256(parse_hex[32](vectors[i].key_hex))
+        elif v.aes_bits == 256:
+            var aes = Aes256(parse_hex[32](v.key_hex))
             assert_equal(aes.encrypt(pt), ct, msg=msg)
             assert_equal(aes.decrypt(ct), pt, msg=msg)
-            
 
+
+# AES Monte Carlo Test (MCT) Sample Vectors
+# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
+def test_aes_mct() raises:
+    # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
+    # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
+    comptime MCT_INNER_ITERATIONS = 1000
+
+    var sys = Python.import_module("sys")
+    sys.path.insert(0, PythonObject("tests/aes"))
+    var load_test_vectors = Python.import_module("load_test_vectors")
+    var vectors = List[AesTestVector]()
+
+    for v in load_test_vectors.load(
+        "tests/aes/aesmct", load_test_vectors.AesMode.ECB
+    ):
+        vectors.append(
+            AesTestVector(
+                is_encrypt=v.is_encrypt.__bool__(),
+                aes_bits=atol(String(v.aes_type.value)),
+                key_hex=String(v.key_hex),
+                pt_hex=String(v.pt_hex),
+                ct_hex=String(v.ct_hex),
+                file_name=String(v.file_name),
+            )
+        )
+
+    for v in vectors:
+        var msg = v.file_name + " key=" + v.key_hex
+        if v.aes_bits == 128:
+            var aes = Aes128(parse_hex[16](v.key_hex))
+            var block = parse_hex[16](v.pt_hex if v.is_encrypt else v.ct_hex)
+            for _ in range(1000):
+                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
+                    block
+                )
+            var expected = parse_hex[16](v.ct_hex if v.is_encrypt else v.pt_hex)
+            assert_equal(block, expected, msg=msg)
+        elif v.aes_bits == 192:
+            var aes = Aes192(parse_hex[24](v.key_hex))
+            var block = parse_hex[16](v.pt_hex if v.is_encrypt else v.ct_hex)
+            for _ in range(1000):
+                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
+                    block
+                )
+            var expected = parse_hex[16](v.ct_hex if v.is_encrypt else v.pt_hex)
+            assert_equal(block, expected, msg=msg)
+        elif v.aes_bits == 256:
+            var aes = Aes256(parse_hex[32](v.key_hex))
+            var block = parse_hex[16](v.pt_hex if v.is_encrypt else v.ct_hex)
+            for _ in range(1000):
+                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
+                    block
+                )
+            var expected = parse_hex[16](v.ct_hex if v.is_encrypt else v.pt_hex)
+            assert_equal(block, expected, msg=msg)
 
 
 def main() raises:
