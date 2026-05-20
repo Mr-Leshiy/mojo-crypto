@@ -1,4 +1,4 @@
-from .cipher import cipher, decipher
+from .cpu.cipher import cipher, decipher
 from .expand import key_expansion
 from .common import Nb
 
