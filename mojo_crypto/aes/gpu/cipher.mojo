@@ -1,0 +1,133 @@
+from std.gpu import thread_idx, barrier
+from std.gpu.memory import AddressSpace
+from std.memory import UnsafePointer, stack_allocation
+
+from ..common import Nb, BLOCK_SIZE, BLOCK_LAYOUT, BLOCK_LAYOUT
+
+# FIPS 197 §3.4: state[r][c] = in[r + 4*c] (column-major).
+# All helpers operate directly on the flat InlineArray[UInt8, 16] using
+# that index mapping: state[r][c] ↔ state[r + 4*c].
+
+
+def cipher[
+    Nr: Int
+](
+    in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
+    w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    sbox: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+):
+    var state = stack_allocation[
+        BLOCK_SIZE, Scalar[DType.uint8], address_space=AddressSpace.SHARED
+    ]()
+
+    var local_i = thread_idx.x
+
+    state[local_i] = in_out[local_i]
+
+    add_round_key(local_i, state, 0, w)
+    for r in range(1, Nr):
+        sub_bytes(local_i, state, sbox)
+        shift_rows(local_i, state)
+        mix_columns(local_i, state)
+        add_round_key(local_i, state, r, w)
+    sub_bytes(local_i, state, sbox)
+    shift_rows(local_i, state)
+    add_round_key(local_i, state, Nr, w)
+
+    in_out[local_i] = state[local_i]
+
+
+# FIPS 197 §5.1.4 AddRoundKey()
+@always_inline
+def add_round_key(
+    i: Int,
+    state: UnsafePointer[
+        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+    ],
+    round: Int,
+    w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+):
+    var w_idx = Nb * round + i // Nb
+    var offset = UInt32(24 - (i % Nb) * 8)
+    state[i] ^= UInt8(w[w_idx] >> offset)
+
+
+# FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
+@always_inline
+def sub_bytes(
+    i: Int,
+    state: UnsafePointer[
+        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+    ],
+    sbox: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+):
+    state[i] = UInt8(sbox[Int(state[i])])
+
+
+# FIPS 197 §5.1.2 ShiftRows() — cyclic left shift of row r by r positions
+# Row r in flat layout occupies indices r, r+4, r+8, r+12
+# Thread i handles byte at (r=i%4, c=i//4); reads from (r, (c+r)%4) of original
+@always_inline
+def shift_rows(
+    i: Int,
+    state: UnsafePointer[
+        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+    ],
+):
+    var r = i % Nb
+    var c = i // Nb
+    var tmp = state[r + 4 * ((c + r) % Nb)]
+    barrier()
+    state[i] = tmp
+    barrier()
+
+
+# FIPS 197 §5.1.3 MixColumns() — GF(2^8) matrix multiply on each column
+# Thread i at (r=i%4, c=i//4) reads all 4 bytes of its column into registers,
+# barriers to prevent write-before-read races, then writes only state[i]
+@always_inline
+def mix_columns(
+    i: Int,
+    state: UnsafePointer[
+        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+    ],
+):
+    var r = i % Nb
+    var c = i // Nb
+    var s0 = state[4 * c]
+    var s1 = state[1 + 4 * c]
+    var s2 = state[2 + 4 * c]
+    var s3 = state[3 + 4 * c]
+    barrier()
+    if r == 0:
+        state[i] = multiply(0x02, s0) ^ multiply(0x03, s1) ^ s2 ^ s3
+    elif r == 1:
+        state[i] = s0 ^ multiply(0x02, s1) ^ multiply(0x03, s2) ^ s3
+    elif r == 2:
+        state[i] = s0 ^ s1 ^ multiply(0x02, s2) ^ multiply(0x03, s3)
+    else:
+        state[i] = multiply(0x03, s0) ^ s1 ^ s2 ^ multiply(0x02, s3)
+    barrier()
+
+
+# General GF(2^8) multiply via Russian peasant: iterate over bits of `a`
+@always_inline
+def multiply(a: UInt8, b: UInt8) -> UInt8:
+    var result: UInt8 = 0
+    var factor = b
+    var scalar = a
+    while scalar != 0:
+        if scalar & 1:
+            result ^= factor
+        factor = xtime(factor)
+        scalar >>= 1
+    return result
+
+
+# Multiply by 0x02 in GF(2^8) with AES reduction polynomial x^8+x^4+x^3+x+1
+@always_inline
+def xtime(a: UInt8) -> UInt8:
+    var result = a << 1
+    if a & 0x80:
+        result ^= 0x1B
+    return result

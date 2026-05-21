@@ -5,7 +5,9 @@ from ..common import Nb, SBOX, SBOX_INV
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 
 
-def cipher[Nr: Int, WordsSize: Int](
+def cipher[
+    Nr: Int, WordsSize: Int
+](
     input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]
 ) -> InlineArray[UInt8, 16]:
     var state = input
@@ -22,7 +24,9 @@ def cipher[Nr: Int, WordsSize: Int](
 
 
 # FIPS 197 §5.3 InvCipher()
-def decipher[Nr: Int, WordsSize: Int](
+def decipher[
+    Nr: Int, WordsSize: Int
+](
     input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]
 ) -> InlineArray[UInt8, 16]:
     var state = input
@@ -40,8 +44,12 @@ def decipher[Nr: Int, WordsSize: Int](
 
 
 # FIPS 197 §5.1.4 AddRoundKey()
-def add_round_key[WordsSize: Int](
-    mut state: InlineArray[UInt8, 16], round: Int, w: InlineArray[UInt32, WordsSize]
+def add_round_key[
+    WordsSize: Int
+](
+    mut state: InlineArray[UInt8, 16],
+    round: Int,
+    w: InlineArray[UInt32, WordsSize],
 ):
     for c in range(Nb):
         var w_idx = Nb * round + c
@@ -106,16 +114,28 @@ def inv_mix_columns(mut state: InlineArray[UInt8, 16]):
         var s2 = state[2 + 4 * col]
         var s3 = state[3 + 4 * col]
         state[4 * col] = (
-            multiply(0x0E, s0) ^ multiply(0x0B, s1) ^ multiply(0x0D, s2) ^ multiply(0x09, s3)
+            multiply(0x0E, s0)
+            ^ multiply(0x0B, s1)
+            ^ multiply(0x0D, s2)
+            ^ multiply(0x09, s3)
         )
         state[1 + 4 * col] = (
-            multiply(0x09, s0) ^ multiply(0x0E, s1) ^ multiply(0x0B, s2) ^ multiply(0x0D, s3)
+            multiply(0x09, s0)
+            ^ multiply(0x0E, s1)
+            ^ multiply(0x0B, s2)
+            ^ multiply(0x0D, s3)
         )
         state[2 + 4 * col] = (
-            multiply(0x0D, s0) ^ multiply(0x09, s1) ^ multiply(0x0E, s2) ^ multiply(0x0B, s3)
+            multiply(0x0D, s0)
+            ^ multiply(0x09, s1)
+            ^ multiply(0x0E, s2)
+            ^ multiply(0x0B, s3)
         )
         state[3 + 4 * col] = (
-            multiply(0x0B, s0) ^ multiply(0x0D, s1) ^ multiply(0x09, s2) ^ multiply(0x0E, s3)
+            multiply(0x0B, s0)
+            ^ multiply(0x0D, s1)
+            ^ multiply(0x09, s2)
+            ^ multiply(0x0E, s3)
         )
 
 

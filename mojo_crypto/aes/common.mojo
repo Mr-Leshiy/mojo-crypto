@@ -2,6 +2,8 @@
 # For this AES Standard, Nb = 4.
 comptime Nb: Int = 4
 
+comptime BLOCK_SIZE: Int = 16
+
 # FIPS 197 Figure 7 — AES S-box
 # Values are logically UInt8 (0x00–0xFF), but stored as UInt32 so that sub_word()
 # can shift and OR them directly without a widening cast at each lookup:
