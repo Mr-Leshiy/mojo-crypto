@@ -4,14 +4,11 @@ from std.gpu.host import DeviceContext
 from mojo_crypto.aes import Aes, BLOCK_SIZE
 from mojo_crypto.block_cipher import BlockCipher, GpuBlockCipher
 
-# CPU: sequential block chain depth
-comptime NBLOCKS: Int = 1024
-
-# GPU: grid sizes — increasing these is how you saturate the GPU, not looping calls
-comptime GPU_BLOCKS_1: Int = 1  # baseline: launch overhead only
-comptime GPU_BLOCKS_256: Int = 256  # light load
-comptime GPU_BLOCKS_1K: Int = 1024  # moderate load
-comptime GPU_BLOCKS_4K: Int = 4096  # heavy load
+# Shared block counts — CPU loops this many times, GPU launches this many blocks.
+# Same total work, different parallelism — makes CPU vs GPU comparison meaningful.
+comptime BLOCKS_256: Int = 256
+comptime BLOCKS_1K: Int = 1024
+comptime BLOCKS_4K: Int = 4096
 
 
 @parameter
@@ -29,35 +26,53 @@ def bench_cpu_cipher[
     var prefix = String(label) + "_cpu"
 
     @parameter
-    def bench_encrypt_block() raises:
+    def bench_encrypt_256blk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.encrypt(block)
-
-    @parameter
-    def bench_encrypt_blocks() raises:
-        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        for _ in range(NBLOCKS):
+        for _ in range(BLOCKS_256):
             block = cipher.encrypt(block)
 
     @parameter
-    def bench_decrypt_block() raises:
+    def bench_encrypt_1kblk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.decrypt(block)
+        for _ in range(BLOCKS_1K):
+            block = cipher.encrypt(block)
 
     @parameter
-    def bench_decrypt_blocks() raises:
+    def bench_encrypt_4kblk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        for _ in range(NBLOCKS):
+        for _ in range(BLOCKS_4K):
+            block = cipher.encrypt(block)
+
+    @parameter
+    def bench_decrypt_256blk() raises:
+        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
+        for _ in range(BLOCKS_256):
             block = cipher.decrypt(block)
 
-    print(prefix + "_encrypt_block")
-    run[bench_encrypt_block]().print()
-    print(prefix + "_encrypt_blocks")
-    run[bench_encrypt_blocks]().print()
-    print(prefix + "_decrypt_block")
-    run[bench_decrypt_block]().print()
-    print(prefix + "_decrypt_blocks")
-    run[bench_decrypt_blocks]().print()
+    @parameter
+    def bench_decrypt_1kblk() raises:
+        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
+        for _ in range(BLOCKS_1K):
+            block = cipher.decrypt(block)
+
+    @parameter
+    def bench_decrypt_4kblk() raises:
+        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
+        for _ in range(BLOCKS_4K):
+            block = cipher.decrypt(block)
+
+    print(prefix + "_encrypt_256blk")
+    run[bench_encrypt_256blk]().print()
+    print(prefix + "_encrypt_1kblk")
+    run[bench_encrypt_1kblk]().print()
+    print(prefix + "_encrypt_4kblk")
+    run[bench_encrypt_4kblk]().print()
+    print(prefix + "_decrypt_256blk")
+    run[bench_decrypt_256blk]().print()
+    print(prefix + "_decrypt_1kblk")
+    run[bench_decrypt_1kblk]().print()
+    print(prefix + "_decrypt_4kblk")
+    run[bench_decrypt_4kblk]().print()
 
 
 def bench_gpu_cipher[
@@ -69,67 +84,48 @@ def bench_gpu_cipher[
     var cipher = cipher_init(key)
     var prefix = String(label) + "_gpu"
 
-    # ctx.synchronize() is required for accurate wall-time measurement —
-    # enqueue_copy_to is async and returns before the GPU finishes without it.
-
-    @parameter
-    def bench_encrypt_1blk() raises:
-        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.encrypt[GPU_BLOCKS_1](ctx, block)
-        ctx.synchronize()
-
     @parameter
     def bench_encrypt_256blk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.encrypt[GPU_BLOCKS_256](ctx, block)
+        _ = cipher.encrypt[BLOCKS_256](ctx, block)
         ctx.synchronize()
 
     @parameter
     def bench_encrypt_1kblk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.encrypt[GPU_BLOCKS_1K](ctx, block)
+        _ = cipher.encrypt[BLOCKS_1K](ctx, block)
         ctx.synchronize()
 
     @parameter
     def bench_encrypt_4kblk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.encrypt[GPU_BLOCKS_4K](ctx, block)
-        ctx.synchronize()
-
-    @parameter
-    def bench_decrypt_1blk() raises:
-        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.decrypt[GPU_BLOCKS_1](ctx, block)
+        _ = cipher.encrypt[BLOCKS_4K](ctx, block)
         ctx.synchronize()
 
     @parameter
     def bench_decrypt_256blk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.decrypt[GPU_BLOCKS_256](ctx, block)
+        _ = cipher.decrypt[BLOCKS_256](ctx, block)
         ctx.synchronize()
 
     @parameter
     def bench_decrypt_1kblk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.decrypt[GPU_BLOCKS_1K](ctx, block)
+        _ = cipher.decrypt[BLOCKS_1K](ctx, block)
         ctx.synchronize()
 
     @parameter
     def bench_decrypt_4kblk() raises:
         var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
-        _ = cipher.decrypt[GPU_BLOCKS_4K](ctx, block)
+        _ = cipher.decrypt[BLOCKS_4K](ctx, block)
         ctx.synchronize()
 
-    print(prefix + "_encrypt_1blk")
-    run[bench_encrypt_1blk]().print()
     print(prefix + "_encrypt_256blk")
     run[bench_encrypt_256blk]().print()
     print(prefix + "_encrypt_1kblk")
     run[bench_encrypt_1kblk]().print()
     print(prefix + "_encrypt_4kblk")
     run[bench_encrypt_4kblk]().print()
-    print(prefix + "_decrypt_1blk")
-    run[bench_decrypt_1blk]().print()
     print(prefix + "_decrypt_256blk")
     run[bench_decrypt_256blk]().print()
     print(prefix + "_decrypt_1kblk")
