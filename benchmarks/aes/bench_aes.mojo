@@ -1,65 +1,58 @@
 from std.benchmark import run
 
-from mojo_crypto.aes import Aes128, Aes192, Aes256
-from mojo_crypto.aes.testing_utils import (
-    AesKey,
-    AesTestVector,
-    load_aes_vectors,
-)
+from mojo_crypto.aes import Aes, AesGpu, BLOCK_SIZE
+from mojo_crypto.block_cipher import BlockCipher
+
+comptime NBLOCKS: Int = 1024
+
+
+@parameter
+def aes[KeySize: Int](key: InlineArray[UInt8, KeySize]) -> Aes[KeySize]:
+    return Aes[KeySize](key)
+
+
+def bench_cipher[
+    C: BlockCipher,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) capturing[_] -> C,
+    label: StringLiteral,
+](key: InlineArray[UInt8, KeySize]) raises:
+    var cipher = cipher_init(key)
+    var prefix = String(label)
+
+    @parameter
+    def bench_encrypt_block() raises:
+        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
+        _ = cipher.encrypt(block)
+
+    @parameter
+    def bench_encrypt_blocks() raises:
+        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
+        for _ in range(NBLOCKS):
+            block = cipher.encrypt(block)
+
+    @parameter
+    def bench_decrypt_block() raises:
+        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
+        _ = cipher.decrypt(block)
+
+    @parameter
+    def bench_decrypt_blocks() raises:
+        var block = InlineArray[UInt8, BLOCK_SIZE](fill=0)
+        for _ in range(NBLOCKS):
+            block = cipher.decrypt(block)
+
+    print(prefix + "_encrypt_block")
+    run[bench_encrypt_block]().print()
+    print(prefix + "_encrypt_blocks")
+    run[bench_encrypt_blocks]().print()
+    print(prefix + "_decrypt_block")
+    run[bench_decrypt_block]().print()
+    print(prefix + "_decrypt_blocks")
+    run[bench_decrypt_blocks]().print()
 
 
 def main() raises:
-    # --- setup: load all vectors before any measurement ---
-    var kat_vectors = load_aes_vectors("mojo_crypto/aes/KAT_AES", "ECB")
-    var mct_vectors = load_aes_vectors("mojo_crypto/aes/aesmct", "ECB")
-
-    # KAT: one encrypt + decrypt per vector
-    @parameter
-    def bench_kat():
-        for ref v in kat_vectors:
-            if v.key.isa[InlineArray[UInt8, 16]]():
-                var aes = Aes128(v.key[InlineArray[UInt8, 16]])
-                _ = aes.encrypt(v.pt)
-                _ = aes.decrypt(v.ct)
-            elif v.key.isa[InlineArray[UInt8, 24]]():
-                var aes = Aes192(v.key[InlineArray[UInt8, 24]])
-                _ = aes.encrypt(v.pt)
-                _ = aes.decrypt(v.ct)
-            else:
-                var aes = Aes256(v.key[InlineArray[UInt8, 32]])
-                _ = aes.encrypt(v.pt)
-                _ = aes.decrypt(v.ct)
-
-    # MCT: 1000 chained encrypt or decrypt per vector
-    comptime MCT_INNER_ITERATIONS = 1000
-
-    @parameter
-    def bench_mct():
-        for ref v in mct_vectors:
-            if v.key.isa[InlineArray[UInt8, 16]]():
-                var aes = Aes128(v.key[InlineArray[UInt8, 16]])
-                var block = v.pt if v.is_encrypt else v.ct
-                for _ in range(MCT_INNER_ITERATIONS):
-                    block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                        block
-                    )
-            elif v.key.isa[InlineArray[UInt8, 24]]():
-                var aes = Aes192(v.key[InlineArray[UInt8, 24]])
-                var block = v.pt if v.is_encrypt else v.ct
-                for _ in range(MCT_INNER_ITERATIONS):
-                    block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                        block
-                    )
-            else:
-                var aes = Aes256(v.key[InlineArray[UInt8, 32]])
-                var block = v.pt if v.is_encrypt else v.ct
-                for _ in range(MCT_INNER_ITERATIONS):
-                    block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                        block
-                    )
-
-    print("aes_kat_ecb")
-    run[bench_kat]().print()
-
-    print("aes_mct_ecb")
-    run[bench_mct]().print()
+    bench_cipher[Aes[16], 16, aes[16], "aes128"](InlineArray[UInt8, 16](fill=0))
+    bench_cipher[Aes[24], 24, aes[24], "aes192"](InlineArray[UInt8, 24](fill=0))
+    bench_cipher[Aes[32], 32, aes[32], "aes256"](InlineArray[UInt8, 32](fill=0))

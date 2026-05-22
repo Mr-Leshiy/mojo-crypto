@@ -1,11 +1,15 @@
+from std.gpu.host import DeviceContext
 from std.testing import assert_equal, TestSuite
+from std.python import PythonObject
+from std.reflection import reflect
 
-from mojo_crypto.aes import Aes, AesGpu, Sbox
+from mojo_crypto.aes import Aes, AesGpu, BLOCK_SIZE
 from mojo_crypto.aes.expand import key_expansion
-from mojo_crypto.aes.testing_utils import (
-    AesKey,
+from mojo_crypto.block_cipher import BlockCipher, GpuBlockCipher
+
+from tests.aes.utils import (
     AesTestVector,
-    parse_hex,
+    load_python_aes_vectors,
     load_aes_vectors,
 )
 
@@ -395,130 +399,80 @@ def test_256_key_expansion() raises:
     )
 
 
-# AES Known Answer Test (KAT) Vectors
-# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
-# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
-# TODO: refactor once some Cipher trait is available.
-def test_aes_cpu_kat() raises:
-    var vectors = load_aes_vectors("tests/aes/KAT_AES", "ECB")
+comptime BLOCKS_PER_GRID = 1
 
-    for v in vectors:
-        var msg = v.file_name
 
-        if v.key.isa[InlineArray[UInt8, 16]]():
-            var aes = Aes[16](v.key[InlineArray[UInt8, 16]])
-            assert_equal(aes.encrypt(v.pt), v.ct, msg=msg)
-            assert_equal(aes.decrypt(v.ct), v.pt, msg=msg)
-        elif v.key.isa[InlineArray[UInt8, 24]]():
-            var aes = Aes[24](v.key[InlineArray[UInt8, 24]])
-            assert_equal(aes.encrypt(v.pt), v.ct, msg=msg)
-            assert_equal(aes.decrypt(v.ct), v.pt, msg=msg)
-        else:
-            var aes = Aes[32](v.key[InlineArray[UInt8, 32]])
-            assert_equal(aes.encrypt(v.pt), v.ct, msg=msg)
-            assert_equal(aes.decrypt(v.ct), v.pt, msg=msg)
+@parameter
+def aes[KeySize: Int](key: InlineArray[UInt8, KeySize]) -> Aes[KeySize]:
+    return Aes[KeySize](key)
+
+
+def check_aes_kat[
+    C: BlockCipher & GpuBlockCipher,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) capturing[_] -> C,
+](ctx: DeviceContext, vectors: PythonObject) raises:
+    for v in load_aes_vectors[KeySize](vectors):
+        var cipher = cipher_init(v.key)
+        var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
+        assert_equal(cipher.encrypt(v.pt), v.ct, msg=msg)
+        assert_equal(cipher.decrypt(v.ct), v.pt, msg=msg)
+        assert_equal(cipher.encrypt[BLOCKS_PER_GRID](ctx, v.pt), v.ct, msg=msg)
+        assert_equal(cipher.decrypt[BLOCKS_PER_GRID](ctx, v.ct), v.pt, msg=msg)
 
 
 # AES Known Answer Test (KAT) Vectors
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
-# TODO: refactor once some Cipher trait is available.
-def test_aes_gpu_kat() raises:
-    var vectors = load_aes_vectors("tests/aes/KAT_AES", "ECB")
+def test_aes_kat() raises:
+    var vectors = load_python_aes_vectors("tests/aes/KAT_AES", "ECB")
 
-    for v in vectors:
-        var msg = v.file_name
+    with DeviceContext() as ctx:
+        check_aes_kat[Aes[16], 16, aes[16]](ctx, vectors)
+        check_aes_kat[Aes[24], 24, aes[24]](ctx, vectors)
+        check_aes_kat[Aes[32], 32, aes[32]](ctx, vectors)
 
-        if v.key.isa[InlineArray[UInt8, 16]]():
-            var aes = AesGpu[16](v.key[InlineArray[UInt8, 16]])
-            assert_equal(aes.encrypt(v.pt), v.ct, msg=msg)
-            assert_equal(aes.decrypt(v.ct), v.pt, msg=msg)
-        elif v.key.isa[InlineArray[UInt8, 24]]():
-            var aes = AesGpu[24](v.key[InlineArray[UInt8, 24]])
-            assert_equal(aes.encrypt(v.pt), v.ct, msg=msg)
-            assert_equal(aes.decrypt(v.ct), v.pt, msg=msg)
-        else:
-            var aes = AesGpu[32](v.key[InlineArray[UInt8, 32]])
-            assert_equal(aes.encrypt(v.pt), v.ct, msg=msg)
-            assert_equal(aes.decrypt(v.ct), v.pt, msg=msg)
+
+def check_aes_mct[
+    C: BlockCipher & GpuBlockCipher,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) capturing[_] -> C,
+](ctx: DeviceContext, vectors: PythonObject) raises:
+    # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
+    # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
+    comptime MCT_INNER_ITERATIONS: Int = 1000
+
+    for v in load_aes_vectors[KeySize](vectors):
+        var initial = v.pt if v.is_encrypt else v.ct
+        var expected = v.ct if v.is_encrypt else v.pt
+        var cipher = cipher_init(v.key)
+        var block_cpu = initial
+        var block_gpu = initial
+        for _ in range(MCT_INNER_ITERATIONS):
+            block_cpu = cipher.encrypt(
+                block_cpu
+            ) if v.is_encrypt else cipher.decrypt(block_cpu)
+            block_gpu = cipher.encrypt[BLOCKS_PER_GRID](
+                ctx, block_gpu
+            ) if v.is_encrypt else cipher.decrypt[BLOCKS_PER_GRID](
+                ctx, block_gpu
+            )
+
+        var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
+        assert_equal(block_cpu, expected, msg=msg)
+        assert_equal(block_gpu, expected, msg=msg)
 
 
 # AES Monte Carlo Test (MCT) Sample Vectors
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
-# TODO: refactor once some Cipher trait is available.
-def test_aes_cpu_mct() raises:
-    # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
-    # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
-    comptime MCT_INNER_ITERATIONS = 1000
+def test_aes_mct() raises:
+    var vectors = load_python_aes_vectors("tests/aes/aesmct", "ECB")
 
-    var vectors = load_aes_vectors("tests/aes/aesmct", "ECB")
-
-    for v in vectors:
-        var msg = v.file_name
-        if v.key.isa[InlineArray[UInt8, 16]]():
-            var aes = Aes[16](v.key[InlineArray[UInt8, 16]])
-            var block = v.pt if v.is_encrypt else v.ct
-            for _ in range(MCT_INNER_ITERATIONS):
-                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                    block
-                )
-            assert_equal(block, v.ct if v.is_encrypt else v.pt, msg=msg)
-        elif v.key.isa[InlineArray[UInt8, 24]]():
-            var aes = Aes[24](v.key[InlineArray[UInt8, 24]])
-            var block = v.pt if v.is_encrypt else v.ct
-            for _ in range(MCT_INNER_ITERATIONS):
-                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                    block
-                )
-            assert_equal(block, v.ct if v.is_encrypt else v.pt, msg=msg)
-        else:
-            var aes = Aes[32](v.key[InlineArray[UInt8, 32]])
-            var block = v.pt if v.is_encrypt else v.ct
-            for _ in range(MCT_INNER_ITERATIONS):
-                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                    block
-                )
-            assert_equal(block, v.ct if v.is_encrypt else v.pt, msg=msg)
-
-
-# AES Monte Carlo Test (MCT) Sample Vectors
-# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
-# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
-# TODO: refactor once some Cipher trait is available.
-def test_aes_gpu_mct() raises:
-    # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
-    # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
-    comptime MCT_INNER_ITERATIONS = 1000
-
-    var vectors = load_aes_vectors("tests/aes/aesmct", "ECB")
-
-    for v in vectors:
-        var msg = v.file_name
-        if v.key.isa[InlineArray[UInt8, 16]]():
-            var aes = AesGpu[16](v.key[InlineArray[UInt8, 16]])
-            var block = v.pt if v.is_encrypt else v.ct
-            for _ in range(MCT_INNER_ITERATIONS):
-                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                    block
-                )
-            assert_equal(block, v.ct if v.is_encrypt else v.pt, msg=msg)
-        elif v.key.isa[InlineArray[UInt8, 24]]():
-            var aes = AesGpu[24](v.key[InlineArray[UInt8, 24]])
-            var block = v.pt if v.is_encrypt else v.ct
-            for _ in range(MCT_INNER_ITERATIONS):
-                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                    block
-                )
-            assert_equal(block, v.ct if v.is_encrypt else v.pt, msg=msg)
-        else:
-            var aes = AesGpu[32](v.key[InlineArray[UInt8, 32]])
-            var block = v.pt if v.is_encrypt else v.ct
-            for _ in range(MCT_INNER_ITERATIONS):
-                block = aes.encrypt(block) if v.is_encrypt else aes.decrypt(
-                    block
-                )
-            assert_equal(block, v.ct if v.is_encrypt else v.pt, msg=msg)
+    with DeviceContext() as ctx:
+        check_aes_mct[Aes[16], 16, aes[16]](ctx, vectors)
+        check_aes_mct[Aes[24], 24, aes[24]](ctx, vectors)
+        check_aes_mct[Aes[32], 32, aes[32]](ctx, vectors)
 
 
 def main() raises:
