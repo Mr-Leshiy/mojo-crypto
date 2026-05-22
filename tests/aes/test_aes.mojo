@@ -3,7 +3,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.aes import Aes, AesGpu, BLOCK_SIZE
+from mojo_crypto.aes import Aes, BLOCK_SIZE
 from mojo_crypto.aes.expand import key_expansion
 from mojo_crypto.block_cipher import BlockCipher, GpuBlockCipher
 

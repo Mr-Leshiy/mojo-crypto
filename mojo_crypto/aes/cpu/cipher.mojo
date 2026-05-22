@@ -1,10 +1,10 @@
 from ..common import Nb, SBOX, SBOX_INV
 
+
+# FIPS 197 §5.1 Cipher()
 # FIPS 197 §3.4: state[r][c] = in[r + 4*c] (column-major).
 # All helpers operate directly on the flat InlineArray[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
-
-
 def cipher[
     Nr: Int, WordsSize: Int
 ](
@@ -31,11 +31,10 @@ def decipher[
 ) -> InlineArray[UInt8, 16]:
     var state = input
     add_round_key(state, Nr, w)
-    for i in range(Nr - 1):
-        var round = Nr - 1 - i
+    for r in range(Nr - 1, 0, -1):
         inv_shift_rows(state)
         inv_sub_bytes(state)
-        add_round_key(state, round, w)
+        add_round_key(state, r, w)
         inv_mix_columns(state)
     inv_shift_rows(state)
     inv_sub_bytes(state)

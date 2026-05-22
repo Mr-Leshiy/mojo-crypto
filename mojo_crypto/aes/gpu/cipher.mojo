@@ -4,11 +4,11 @@ from std.memory import UnsafePointer, stack_allocation
 
 from ..common import Nb, BLOCK_SIZE, BLOCK_LAYOUT, BLOCK_LAYOUT
 
+
+# FIPS 197 §5.1 Cipher()
 # FIPS 197 §3.4: state[r][c] = in[r + 4*c] (column-major).
 # All helpers operate directly on the flat InlineArray[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
-
-
 def cipher[
     Nr: Int
 ](
@@ -33,6 +33,35 @@ def cipher[
     sub_bytes(local_i, state, sbox)
     shift_rows(local_i, state)
     add_round_key(local_i, state, Nr, w)
+
+    in_out[local_i] = state[local_i]
+
+
+# FIPS 197 §5.3 InvCipher()
+def decipher[
+    Nr: Int
+](
+    in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
+    w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    sbox_inv: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+):
+    var state = stack_allocation[
+        BLOCK_SIZE, Scalar[DType.uint8], address_space=AddressSpace.SHARED
+    ]()
+
+    var local_i = thread_idx.x
+
+    state[local_i] = in_out[local_i]
+
+    add_round_key(local_i, state, Nr, w)
+    for r in range(Nr - 1, 0, -1):
+        inv_shift_rows(local_i, state)
+        inv_sub_bytes(local_i, state, sbox_inv)
+        add_round_key(local_i, state, r, w)
+        inv_mix_columns(local_i, state)
+    inv_shift_rows(local_i, state)
+    inv_sub_bytes(local_i, state, sbox_inv)
+    add_round_key(local_i, state, 0, w)
 
     in_out[local_i] = state[local_i]
 
@@ -64,6 +93,18 @@ def sub_bytes(
     state[i] = UInt8(sbox[Int(state[i])])
 
 
+# FIPS 197 §5.3.2 InvSubBytes() — apply inverse S-box to every byte
+@always_inline
+def inv_sub_bytes(
+    i: Int,
+    state: UnsafePointer[
+        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+    ],
+    sbox_inv: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+):
+    state[i] = sbox_inv[Int(state[i])]
+
+
 # FIPS 197 §5.1.2 ShiftRows() — cyclic left shift of row r by r positions
 # Row r in flat layout occupies indices r, r+4, r+8, r+12
 # Thread i handles byte at (r=i%4, c=i//4); reads from (r, (c+r)%4) of original
@@ -77,6 +118,22 @@ def shift_rows(
     var r = i % Nb
     var c = i // Nb
     var tmp = state[r + 4 * ((c + r) % Nb)]
+    barrier()
+    state[i] = tmp
+    barrier()
+
+
+# FIPS 197 §5.3.1 InvShiftRows() — cyclic right shift of row r by r positions
+@always_inline
+def inv_shift_rows(
+    i: Int,
+    state: UnsafePointer[
+        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+    ],
+):
+    var r = i % Nb
+    var c = i // Nb
+    var tmp = state[r + 4 * ((c - r + Nb) % Nb)]
     barrier()
     state[i] = tmp
     barrier()
@@ -107,6 +164,54 @@ def mix_columns(
         state[i] = s0 ^ s1 ^ multiply(0x02, s2) ^ multiply(0x03, s3)
     else:
         state[i] = multiply(0x03, s0) ^ s1 ^ s2 ^ multiply(0x02, s3)
+    barrier()
+
+
+# FIPS 197 §5.3.3 InvMixColumns() — GF(2^8) inverse matrix multiply on each column
+# Thread i at (r=i%4, c=i//4) reads all 4 bytes of its column into registers,
+# barriers to prevent write-before-read races, then writes only state[i]
+@always_inline
+def inv_mix_columns(
+    i: Int,
+    state: UnsafePointer[
+        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+    ],
+):
+    var r = i % Nb
+    var c = i // Nb
+    var s0 = state[4 * c]
+    var s1 = state[1 + 4 * c]
+    var s2 = state[2 + 4 * c]
+    var s3 = state[3 + 4 * c]
+    barrier()
+    if r == 0:
+        state[i] = (
+            multiply(0x0E, s0)
+            ^ multiply(0x0B, s1)
+            ^ multiply(0x0D, s2)
+            ^ multiply(0x09, s3)
+        )
+    elif r == 1:
+        state[i] = (
+            multiply(0x09, s0)
+            ^ multiply(0x0E, s1)
+            ^ multiply(0x0B, s2)
+            ^ multiply(0x0D, s3)
+        )
+    elif r == 2:
+        state[i] = (
+            multiply(0x0D, s0)
+            ^ multiply(0x09, s1)
+            ^ multiply(0x0E, s2)
+            ^ multiply(0x0B, s3)
+        )
+    else:
+        state[i] = (
+            multiply(0x0B, s0)
+            ^ multiply(0x0D, s1)
+            ^ multiply(0x09, s2)
+            ^ multiply(0x0E, s3)
+        )
     barrier()
 
 
