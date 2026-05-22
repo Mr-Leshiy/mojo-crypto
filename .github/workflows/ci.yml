@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: latest
+          cache: true
+      - run: pixi run fmt
+      - name: Check for changes
+        run: git diff --exit-code
+
+# TODO: Tests require a GPU (NVIDIA CUDA) which is not available on free GitHub-hosted runners.
+#       Re-enable once a self-hosted GPU runner or a CI provider with free GPU support is set up.
+#
+#  test:
+#    name: Test
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: prefix-dev/setup-pixi@v0.8.1
+#        with:
+#          pixi-version: latest
+#          cache: true
+#      - run: pixi run test
