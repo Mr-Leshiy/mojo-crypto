@@ -2,7 +2,7 @@ from std.gpu import thread_idx, barrier
 from std.gpu.memory import AddressSpace
 from std.memory import UnsafePointer, stack_allocation
 
-from ..common import Nb, BLOCK_SIZE, BLOCK_LAYOUT, BLOCK_LAYOUT
+from ..common import Nb, BLOCK_SIZE
 
 
 # FIPS 197 §5.1 Cipher()

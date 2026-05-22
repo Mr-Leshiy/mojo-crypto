@@ -402,15 +402,10 @@ def test_256_key_expansion() raises:
 comptime BLOCKS_PER_GRID = 1
 
 
-@parameter
-def aes[KeySize: Int](key: InlineArray[UInt8, KeySize]) -> Aes[KeySize]:
-    return Aes[KeySize](key)
-
-
 def check_aes_kat[
     C: BlockCipher & GpuBlockCipher,
     KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) capturing[_] -> C,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](ctx: DeviceContext, vectors: PythonObject) raises:
     for v in load_aes_vectors[KeySize](vectors):
         var cipher = cipher_init(v.key)
@@ -428,6 +423,13 @@ def test_aes_kat() raises:
     var vectors = load_python_aes_vectors("tests/aes/KAT_AES", "ECB")
 
     with DeviceContext() as ctx:
+
+        @parameter
+        def aes[
+            KeySize: Int
+        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+            return Aes[KeySize](key, ctx)
+
         check_aes_kat[Aes[16], 16, aes[16]](ctx, vectors)
         check_aes_kat[Aes[24], 24, aes[24]](ctx, vectors)
         check_aes_kat[Aes[32], 32, aes[32]](ctx, vectors)
@@ -436,7 +438,7 @@ def test_aes_kat() raises:
 def check_aes_mct[
     C: BlockCipher & GpuBlockCipher,
     KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) capturing[_] -> C,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](ctx: DeviceContext, vectors: PythonObject) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
@@ -470,6 +472,13 @@ def test_aes_mct() raises:
     var vectors = load_python_aes_vectors("tests/aes/aesmct", "ECB")
 
     with DeviceContext() as ctx:
+
+        @parameter
+        def aes[
+            KeySize: Int
+        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+            return Aes[KeySize](key, ctx)
+
         check_aes_mct[Aes[16], 16, aes[16]](ctx, vectors)
         check_aes_mct[Aes[24], 24, aes[24]](ctx, vectors)
         check_aes_mct[Aes[32], 32, aes[32]](ctx, vectors)
