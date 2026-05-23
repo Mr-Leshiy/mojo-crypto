@@ -12,7 +12,7 @@ trait BlockCipher:
         ...
 
 
-trait GpuBlockCipher(ImplicitlyDestructible):
+trait GpuBlockCipher:
     def encrypt[
         Size: Int
     ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
