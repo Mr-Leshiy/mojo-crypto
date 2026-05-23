@@ -15,6 +15,8 @@ mojo run -I . tests/aes/test_aes.mojo
 bench  = """
 mojo run -O3 -I . benchmarks/aes/bench_aes.mojo
 """
+bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
 
 [dependencies]
 mojo = ">=1.0.0b1,<2"
+rust = ">=1.80.0,<2"

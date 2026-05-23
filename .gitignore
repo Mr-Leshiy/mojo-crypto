@@ -3,6 +3,7 @@
 !.pixi/config.toml
 
 __pycache__
+target
 
 .scell_args.cue
 
