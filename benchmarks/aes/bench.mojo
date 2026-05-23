@@ -10,6 +10,7 @@ comptime BLOCKS_256: Int = 256
 comptime BLOCKS_1K: Int = 1024
 comptime BLOCKS_4K: Int = 4096
 
+
 def bench_cpu_cipher[
     C: BlockCipher & ImplicitlyDestructible,
     KeySize: Int,
@@ -29,11 +30,11 @@ def bench_cpu_cipher[
     def bench_decrypt[N: Int]() raises:
         var data = InlineArray[UInt8, N * BLOCK_SIZE](fill=0)
         cipher.decrypt(data)
-    
+
     run[bench_encrypt[BLOCKS_256]]().print(prefix + "_encrypt_256blk")
     run[bench_encrypt[BLOCKS_256]]().print(prefix + "_encrypt_256blk")
     run[bench_decrypt[BLOCKS_256]]().print(prefix + "_decrypt_256blk")
-    
+
     run[bench_encrypt[BLOCKS_1K]]().print(prefix + "_encrypt_1kblk")
     run[bench_decrypt[BLOCKS_1K]]().print(prefix + "_decrypt_1kblk")
 
