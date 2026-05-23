@@ -74,6 +74,7 @@ def bench_gpu_cipher[
 
 
 def main() raises:
+    print("Running aes benches")
     with DeviceContext() as ctx:
 
         @parameter
