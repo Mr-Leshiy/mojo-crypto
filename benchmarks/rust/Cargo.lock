@@ -4,14 +4,6 @@ version = 4
 
 [[package]]
 name = "aes"
-version = "0.1.0"
-dependencies = [
- "aes 0.9.0",
- "criterion",
-]
-
-[[package]]
-name = "aes"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66bd29a732b644c0431c6140f370d097879203d79b80c94a6747ba0872adaef8"
@@ -47,6 +39,14 @@ name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
+
+[[package]]
+name = "b-aes"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "criterion",
+]
 
 [[package]]
 name = "bumpalo"
