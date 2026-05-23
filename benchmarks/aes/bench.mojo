@@ -32,7 +32,6 @@ def bench_cpu_cipher[
         cipher.decrypt(data)
 
     run[bench_encrypt[BLOCKS_256]]().print(prefix + "_encrypt_256blk")
-    run[bench_encrypt[BLOCKS_256]]().print(prefix + "_encrypt_256blk")
     run[bench_decrypt[BLOCKS_256]]().print(prefix + "_decrypt_256blk")
 
     run[bench_encrypt[BLOCKS_1K]]().print(prefix + "_encrypt_1kblk")
