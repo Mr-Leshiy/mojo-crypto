@@ -2,129 +2,149 @@
 
 ## Summary
 
-The current GPU implementation is functionally correct but has critical structural
-issues that prevent it from delivering any real throughput advantage over the CPU path.
-Issues are grouped by severity.
+The GPU implementation in `mojo_crypto/aes/gpu/cipher.mojo` is functionally correct
+(it passes the KAT and MCT vectors) but its kernel design is the *fine-grained* AES
+mapping — **16 threads per block, one thread per state byte**, with the 16-byte state
+held in shared memory and `barrier()` calls between every step. This is the slow
+design. The literature on GPU AES (e.g. *Optimizing AES on GPU*,
+[arXiv:1902.05234](https://arxiv.org/pdf/1902.05234), and Manavski 2007) converges
+on a *coarse-grained* design: **one thread per 16-byte block**, the round computed
+with **T-tables** that fuse SubBytes + ShiftRows + MixColumns into table lookups,
+state kept in registers, no barriers, and no runtime GF(2⁸) multiplication.
+
+The single highest-impact change is to adopt that T-table / one-block-per-thread
+architecture. It simultaneously removes the three biggest current bottlenecks:
+warp divergence in `multiply`, the `barrier()` pairs, and the half-warp occupancy
+problem. Everything else is secondary.
+
+## Already addressed (do not re-report)
+
+These were issues in earlier revisions and have since been fixed — they are listed
+so this document is not mistaken for current state:
+
+- **Per-call buffer allocation** — the key schedule and S-boxes are now uploaded
+  once in `AesGpuSetup.__init__` (`aes/aes.mojo`) and reused across calls.
+- **Single-block-per-launch API** — the public API now takes
+  `InlineArray[UInt8, Size]` for any block-aligned `Size`; the GPU path launches
+  `grid_dim = Size // BLOCK_SIZE` blocks (`aes/aes.mojo` `_encrypt_gpu`/`_decrypt_gpu`).
+- **Duplicate `BLOCK_LAYOUT` import** — gone; the file now imports only
+  `Nb, BLOCK_SIZE`.
 
 ---
 
 ## Critical
 
-### 1. Buffers and constants re-allocated on every call (`aes.mojo:43–48`, `69–74`)
-
-Every `encrypt` / `decrypt` call allocates three device buffers and copies the key
-schedule and S-box to GPU memory from scratch:
-
-```
-var block_in = ctx.enqueue_create_buffer[DType.uint8](BLOCK_SIZE)   # alloc
-var w        = ctx.enqueue_create_buffer[DType.uint32](Self.WordsSize) # alloc
-var sbox     = ctx.enqueue_create_buffer[DType.uint32](256)           # alloc
-block_in.enqueue_copy_from(block)   # H→D copy
-w.enqueue_copy_from(self.w)         # H→D copy (key schedule — constant!)
-sbox.enqueue_copy_from(SBOX.unsafe_ptr())  # H→D copy (S-box — constant!)
-```
-
-The key schedule and both S-boxes are immutable after construction.
-Allocating and uploading them on every call makes the GPU version strictly worse
-than CPU for small workloads.
-
-**Fix:** Add `w_dev`, `sbox_dev`, `sbox_inv_dev` as fields on `Aes`, upload in
-`__init__`, reuse across calls.
-
----
-
-### 2. Only 16 threads per block — half a warp (`gpu/cipher.mojo:23`, `aes.mojo:56`)
-
-`block_dim=BLOCK_SIZE=16`. A GPU warp is 32 threads; 16 threads is half a warp,
-meaning the other 16 lanes in every scheduled warp are idle slots. The SM
-scheduler cannot hide latency with so few in-flight warps, and occupancy is
-effectively zero.
-
-**Fix:** Process multiple AES blocks per thread block. Map 1 thread → 1 byte of
-1 block, pack N blocks per thread block → `block_dim = N * 16`. A natural value
-is `N=8` (128 threads, 4 warps) or `N=16` (256 threads, 8 warps).
-
----
-
-### 3. `multiply` is a data-dependent loop on the GPU (`gpu/cipher.mojo:220–229`)
+### 1. Runtime GF(2⁸) multiply is a data-dependent loop → warp divergence (`gpu/cipher.mojo:222`)
 
 ```mojo
 def multiply(a: UInt8, b: UInt8) -> UInt8:
-    while scalar != 0:   # ← variable iteration count per thread
-        ...
+    while scalar != 0:        # ← iteration count depends on `a`
+        if scalar & 1:        # ← per-lane branch
+            result ^= factor
+        factor = xtime(factor)
+        scalar >>= 1
+    return result
 ```
 
-Loop iterations depend on the input value. Different threads in the same warp
-iterate different numbers of times, causing **warp divergence**: the hardware
-serialises every distinct branch path. In `mix_columns` this runs up to 8 times
-per byte per round.
+The loop trip count and the inner branch both depend on the operand, so lanes in a
+warp take different paths and the hardware serializes them. `mix_columns` /
+`inv_mix_columns` call `multiply` up to 4× per output byte, every round.
 
-**Fix:** Replace with a 256-entry precomputed lookup table (`MUL2`, `MUL3`,
-`MUL9`, `MUL11`, `MUL13`, `MUL14`) stored in shared memory. One table lookup
-per multiply, no branches, no divergence.
+**Fix:** Eliminate runtime multiplication entirely. The T-table approach (see
+*Recommended architecture* below) folds every `xtime`/`multiply` into precomputed
+tables. If keeping the explicit MixColumns for now, at minimum replace `multiply`
+with constant `MUL2/MUL3/MUL9/MUL11/MUL13/MUL14` lookup tables — branchless, no
+divergence.
+
+### 2. Fine-grained mapping: 16 threads/block, half a warp (`gpu/cipher.mojo:23-24`, `aes/aes.mojo` `block_dim=BLOCK_SIZE`)
+
+Each thread owns one byte; a thread block is 16 threads. A warp is 32 lanes, so
+every launched warp runs at most half-occupied, and the per-block shared state forces
+synchronization. The paper (§4.1) and Manavski both map **one thread → one full
+16-byte state**, which needs no intra-block coordination and lets a block hold
+32/64/128 *independent* states (1/2/4 warps fully packed).
+
+**Fix:** Switch to one-block-per-thread. `block_dim` becomes the number of AES
+blocks per thread block (e.g. 128 or 256), `grid_dim = ceil(num_blocks / block_dim)`,
+and each thread loads its 16 bytes into registers and runs the full cipher locally.
+
+### 3. Per-step `barrier()` pairs (`gpu/cipher.mojo:123-125, 139-141, 160-169, 188-217`)
+
+`shift_rows`, `inv_shift_rows`, `mix_columns`, `inv_mix_columns` each issue two
+`barrier()` calls because threads share the state through shared memory. Barriers
+stall the whole block and exist *only* because of the fine-grained mapping.
+
+**Fix:** They disappear under the one-block-per-thread design — a thread owns its
+entire state in registers, so there is no cross-thread dependency to synchronize.
 
 ---
 
-## High
+## Recommended architecture (from arXiv:1902.05234 §3.2.3, §4)
 
-### 4. S-box and key schedule accessed from global memory every round
+This is the target the three critical items above all point toward.
 
-`sbox`, `sbox_inv`, and `w` are `DeviceBuffer` raw pointers — global memory.
-Every `sub_bytes` call (`sbox[Int(state[i])]`) and every `add_round_key` call
-hits global memory with an uncoalesced, index-dependent load.
+### T-tables fuse SubBytes + ShiftRows + MixColumns
 
-**Fix:**
-- Load `sbox` (1 KB) and `w` (≤ 240 B) into **shared memory** at kernel start,
-  barrier once, then use them from shared for all rounds.
-- Alternatively, `sbox` is read-only and fits in constant cache — mark the
-  pointer with the appropriate address space.
+Precompute four 256-entry, 4-byte tables `T0..T3` where each entry is the S-box
+output of one byte spread across a column and pre-multiplied by the MixColumns
+coefficients. A full round for output column *j* becomes:
 
----
-
-### 5. One block processed per launch — no batching (`aes.mojo:39`, `65`)
-
-The public API takes a single `InlineArray[UInt8, BLOCK_SIZE]` per call.
-Even with `BLOCKS_PER_GRID > 1`, all blocks encrypt the same input because
-there is only one block buffer. The overhead of a kernel launch (µs range) vastly
-exceeds the work of one 16-byte AES block.
-
-**Fix:** Change the API to accept a slice / buffer of N blocks:
 ```
-def encrypt[BLOCKS_PER_GRID: Int](
-    self, ctx: DeviceContext,
-    blocks: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
-    n_blocks: Int,
-) raises
+e_j = T0[a0_j] ^ T1[a1_{j+1}] ^ T2[a2_{j+2}] ^ T3[a3_{j+3}] ^ k_j
 ```
-Each grid block processes one AES block; `grid_dim = n_blocks`, `block_dim = 16`.
+
+— four loads and four XORs per column, **no GF multiply, no separate ShiftRows
+write, no intermediate shared-memory state.** The last round (no MixColumns) uses
+the plain S-box, so keep the existing `SBOX`/`SBOX_INV` for it. Decryption uses the
+inverse tables `Td0..Td3` built from `SBOX_INV` and the inverse MixColumns
+coefficients (0x09/0x0b/0x0d/0x0e).
+
+### Table placement: shared memory for T-tables, constant for round keys
+
+The paper (§4.2–4.3) puts both T-tables and round keys in **constant memory**.
+That is ideal for round keys — every lane in a warp reads the *same* key word, which
+constant memory broadcasts in one transaction. But T-table lookups are
+**data-dependent** (each lane indexes a different entry), and constant memory
+*serializes* divergent addresses within a warp. So:
+
+- **Round keys → constant memory** (uniform access, broadcast).
+- **T-tables → shared memory**, copied from global at kernel entry with a single
+  barrier before first use. Watch for **bank conflicts**: a 256×4B table is 1 KB =
+  256 banks' worth; byte-indexed random lookups will conflict. Mitigations used in
+  the literature: replicate the table once per warp, or pad/​interleave so each
+  lane's stream hits distinct banks.
+- **State / plaintext → registers** (per §4.1, "the plaintext is stored in the
+  thread's register").
+
+### Memory coalescing (not covered by the paper, but matters here)
+
+The *current* byte-per-thread load `in_out[block_idx.x*16 + thread_idx.x]` is
+naturally coalesced (consecutive lanes → consecutive bytes). When moving to
+one-block-per-thread, a naive `in_out[16*tid + k]` makes lane *t* and *t+1* read
+16 bytes apart — **uncoalesced**. Restore coalescing by treating the input as
+`UInt32` words and having each warp load words in a transposed/interleaved layout
+(word *k* of all 32 states contiguous), or load 16-byte vectors. Measure with a
+profiler; uncoalesced global loads can erase the gains from the T-table change.
 
 ---
 
 ## Medium
 
-### 6. Two barriers per `shift_rows` / `mix_columns` (`gpu/cipher.mojo:121–123`, `158–167`)
+### 4. S-box stored as `UInt32` (1 KB) instead of `UInt8` (256 B) (`aes/common.mojo`)
 
-With only 16 threads and a shared-memory state of 16 bytes, barriers are
-necessary for correctness. But the barrier count doubles once `mix_columns` also
-needs them. At higher occupancy (after fix #2) these barriers still serialize
-within a block — they cannot be avoided, but their cost is amortised over more
-useful work.
+`SBOX` is `InlineArray[UInt32, 256]` so `sub_word` can shift without a widening cast
+on the CPU key-expansion path. On the GPU this quadruples the table footprint in
+whatever memory space it lands in, hurting cache/shared-memory residency. Once the
+GPU path uses T-tables, the only S-box use on-device is the final round; consider a
+`UInt8` device copy for that to keep the on-device footprint at 256 B.
 
-**Fix:** After packing N blocks per thread block (fix #2), each block's 16
-threads are contiguous in a warp-sub-group; within-warp synchronisation via
-`warp.shuffle_*` can replace shared-memory barriers for `shift_rows`, removing
-two barriers per round entirely.
+### 5. Host↔device transfer is synchronous, no overlap (`aes/aes.mojo` `_encrypt_gpu`/`_decrypt_gpu`)
 
----
-
-### 7. Duplicate import in `gpu/cipher.mojo` (`line 5`)
-
-```mojo
-from ..common import Nb, BLOCK_SIZE, BLOCK_LAYOUT, BLOCK_LAYOUT
-#                                    ^^^^^^^^^^^^^  ^^^^^^^^^^^^^ — imported twice
-```
-
-Minor, but `BLOCK_LAYOUT` is also not used in this file.
+Each call does H→D copy, kernel, D→H copy in order with no streaming. For large
+buffers, splitting into chunks and overlapping copy with compute via multiple
+streams (and pinned host memory) hides transfer latency. The paper notes GPU only
+wins above ~4 KB because of fixed launch/transfer overhead — overlap pushes that
+crossover down. Lower priority than the kernel redesign.
 
 ---
 
@@ -132,10 +152,9 @@ Minor, but `BLOCK_LAYOUT` is also not used in this file.
 
 | Priority | Task | File(s) |
 |----------|------|---------|
-| 1 | Pre-allocate `w_dev`, `sbox_dev`, `sbox_inv_dev` in `Aes.__init__`; remove per-call alloc/copy | `aes.mojo` |
-| 2 | Change public GPU API to accept N-block buffer; `grid_dim=n_blocks`, `block_dim=16` | `aes.mojo`, `block_cipher.mojo` |
-| 3 | Pack N AES blocks per thread block (e.g. N=16); `block_dim=N*16`, state shared array of `N*16` bytes | `gpu/cipher.mojo` |
-| 4 | Load `sbox` + `w` into shared memory at kernel entry; single barrier before first use | `gpu/cipher.mojo` |
-| 5 | Replace `multiply` loop with precomputed GF tables in shared memory | `gpu/cipher.mojo` |
-| 6 | Explore replacing `shift_rows` barriers with warp shuffles (after N-block packing) | `gpu/cipher.mojo` |
-| 7 | Remove duplicate `BLOCK_LAYOUT` import | `gpu/cipher.mojo` |
+| 1 | Build `T0..T3` (and inverse `Td0..Td3`) encryption tables; replace separate SubBytes/ShiftRows/MixColumns with table-lookup rounds | `gpu/cipher.mojo`, `aes/common.mojo` |
+| 2 | Switch to one-thread-per-block mapping; state in registers; drop all `barrier()` calls; `block_dim` = blocks/threadblock | `gpu/cipher.mojo`, `aes/aes.mojo` |
+| 3 | Place round keys in constant memory; stage T-tables into shared memory at kernel entry (mind bank conflicts) | `gpu/cipher.mojo`, `aes/aes.mojo` |
+| 4 | Restore coalesced global loads/stores under the new mapping (word-transposed or vectorized access) | `gpu/cipher.mojo`, `aes/aes.mojo` |
+| 5 | Use a 256 B `UInt8` S-box on device for the final round | `aes/common.mojo`, `gpu/cipher.mojo` |
+| 6 | Chunk large buffers across CUDA streams with pinned memory to overlap transfer and compute | `aes/aes.mojo` |
