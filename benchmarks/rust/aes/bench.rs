@@ -33,31 +33,23 @@ fn bench_all_block_counts<C: BlockCipherEncrypt + BlockCipherDecrypt>(
     group: &mut BenchmarkGroup<WallTime>,
     cipher: &C,
 ) {
-    for blocks in [BLOCKS_256, BLOCKS_1K, BLOCKS_4K] {
+    for n in [BLOCKS_256, BLOCKS_1K, BLOCKS_4K] {
         group.bench_with_input(
-            BenchmarkId::new("encrypt", format!("{}blk", blocks)),
-            &blocks,
-            |b, &n| b.iter(|| encrypt_blocks(cipher, n)),
+            BenchmarkId::new("encrypt", format!("{}blk", n)),
+            &n,
+            |b, &n| {
+                let mut blocks = vec![Block::<C>::default(); n];
+                b.iter(|| cipher.encrypt_blocks(&mut blocks))
+            },
         );
         group.bench_with_input(
-            BenchmarkId::new("decrypt", format!("{}blk", blocks)),
-            &blocks,
-            |b, &n| b.iter(|| decrypt_blocks(cipher, n)),
+            BenchmarkId::new("decrypt", format!("{}blk", n)),
+            &n,
+            |b, &n| {
+                let mut blocks = vec![Block::<C>::default(); n];
+                b.iter(|| cipher.decrypt_blocks(&mut blocks))
+            },
         );
-    }
-}
-
-fn encrypt_blocks<C: BlockCipherEncrypt>(cipher: &C, n: usize) {
-    let mut block = Block::<C>::default();
-    for _ in 0..n {
-        cipher.encrypt_block(&mut block);
-    }
-}
-
-fn decrypt_blocks<C: BlockCipherDecrypt>(cipher: &C, n: usize) {
-    let mut block = Block::<C>::default();
-    for _ in 0..n {
-        cipher.decrypt_block(&mut block);
     }
 }
 
