@@ -7,10 +7,7 @@ from ..common import Nb, SBOX, SBOX_INV
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 def cipher[
     Nr: Int, WordsSize: Int
-](
-    input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]
-) -> InlineArray[UInt8, 16]:
-    var state = input
+](mut state: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]):
     add_round_key(state, 0, w)
     for r in range(1, Nr):
         sub_bytes(state)
@@ -20,16 +17,12 @@ def cipher[
     sub_bytes(state)
     shift_rows(state)
     add_round_key(state, Nr, w)
-    return state
 
 
 # FIPS 197 §5.3 InvCipher()
 def decipher[
     Nr: Int, WordsSize: Int
-](
-    input: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]
-) -> InlineArray[UInt8, 16]:
-    var state = input
+](mut state: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]):
     add_round_key(state, Nr, w)
     for r in range(Nr - 1, 0, -1):
         inv_shift_rows(state)
@@ -39,7 +32,6 @@ def decipher[
     inv_shift_rows(state)
     inv_sub_bytes(state)
     add_round_key(state, 0, w)
-    return state
 
 
 # FIPS 197 §5.1.4 AddRoundKey()

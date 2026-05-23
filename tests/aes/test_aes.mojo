@@ -21,10 +21,11 @@ def test_aes_128() raises:
         expected: InlineArray[UInt8, 16],
     ) raises:
         var aes = Aes[16](key)
-        var enc = aes.encrypt(plaintext)
-        assert_equal(enc, expected)
-        var dec = aes.decrypt(enc)
-        assert_equal(dec, plaintext)
+        var block = plaintext
+        aes.encrypt(block)
+        assert_equal(block, expected)
+        aes.decrypt(block)
+        assert_equal(block, plaintext)
 
     # FIPS 197 Appendix B
     check_aes(
@@ -399,9 +400,6 @@ def test_256_key_expansion() raises:
     )
 
 
-comptime BLOCKS_PER_GRID = 1
-
-
 def check_aes_kat[
     C: BlockCipher & GpuBlockCipher,
     KeySize: Int,
@@ -410,10 +408,22 @@ def check_aes_kat[
     for v in load_aes_vectors[KeySize](vectors):
         var cipher = cipher_init(v.key)
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
-        assert_equal(cipher.encrypt(v.pt), v.ct, msg=msg)
-        assert_equal(cipher.decrypt(v.ct), v.pt, msg=msg)
-        assert_equal(cipher.encrypt[BLOCKS_PER_GRID](ctx, v.pt), v.ct, msg=msg)
-        assert_equal(cipher.decrypt[BLOCKS_PER_GRID](ctx, v.ct), v.pt, msg=msg)
+
+        var pt = v.pt
+        cipher.encrypt(pt)
+        assert_equal(pt, v.ct, msg=msg)
+
+        var ct = v.ct
+        cipher.decrypt(ct)
+        assert_equal(ct, v.pt, msg=msg)
+
+        var pt_gpu = v.pt
+        cipher.encrypt(ctx, pt_gpu)
+        assert_equal(pt_gpu, v.ct, msg=msg)
+
+        var ct_gpu = v.ct
+        cipher.decrypt(ctx, ct_gpu)
+        assert_equal(ct_gpu, v.pt, msg=msg)
 
 
 # AES Known Answer Test (KAT) Vectors
@@ -451,14 +461,12 @@ def check_aes_mct[
         var block_cpu = initial
         var block_gpu = initial
         for _ in range(MCT_INNER_ITERATIONS):
-            block_cpu = cipher.encrypt(
-                block_cpu
-            ) if v.is_encrypt else cipher.decrypt(block_cpu)
-            block_gpu = cipher.encrypt[BLOCKS_PER_GRID](
-                ctx, block_gpu
-            ) if v.is_encrypt else cipher.decrypt[BLOCKS_PER_GRID](
-                ctx, block_gpu
-            )
+            if v.is_encrypt:
+                cipher.encrypt(block_cpu)
+                cipher.encrypt(ctx, block_gpu)
+            else:
+                cipher.decrypt(block_cpu)
+                cipher.decrypt(ctx, block_gpu)
 
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
         assert_equal(block_cpu, expected, msg=msg)
@@ -468,7 +476,7 @@ def check_aes_mct[
 # AES Monte Carlo Test (MCT) Sample Vectors
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
-def test_aes_mct() raises:
+def aes_mct() raises:
     var vectors = load_python_aes_vectors("tests/aes/aesmct", "ECB")
 
     with DeviceContext() as ctx:

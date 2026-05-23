@@ -1,31 +1,24 @@
 from std.gpu.host import DeviceContext
 
 from .aes.common import BLOCK_SIZE
+from .errors import GpuContextError
 
 
 trait BlockCipher:
-    def encrypt(
-        self, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises -> InlineArray[UInt8, BLOCK_SIZE]:
+    def encrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]) raises:
         ...
 
-    def decrypt(
-        self, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises -> InlineArray[UInt8, BLOCK_SIZE]:
+    def decrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]) raises:
         ...
 
 
 trait GpuBlockCipher(ImplicitlyDestructible):
     def encrypt[
-        BLOCKS_PER_GRID: Int
-    ](
-        self, ctx: DeviceContext, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises -> InlineArray[UInt8, BLOCK_SIZE]:
+        Size: Int
+    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
         ...
 
     def decrypt[
-        BLOCKS_PER_GRID: Int
-    ](
-        self, ctx: DeviceContext, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises -> InlineArray[UInt8, BLOCK_SIZE]:
+        Size: Int
+    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
         ...
