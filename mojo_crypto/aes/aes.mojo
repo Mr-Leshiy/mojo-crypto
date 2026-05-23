@@ -1,4 +1,5 @@
 from std.gpu.host import DeviceContext, DeviceBuffer
+from std.memory import memcpy
 
 from mojo_crypto.block_cipher import BlockCipher, GpuBlockCipher
 from mojo_crypto.errors import GpuContextError
@@ -75,34 +76,49 @@ struct AesGpuSetup(ImplicitlyDestructible, Movable):
         self.sbox_inv.enqueue_copy_from(SBOX_INV.unsafe_ptr())
 
 
-def _encrypt_cpu[
-    Size: Int, Nr: Int, WordsSize: Int
-](mut data: InlineArray[UInt8, Size], w: InlineArray[UInt32, WordsSize]):
+@always_inline
+def _assert_block_aligned[Size: Int]():
     comptime assert (
         Size % BLOCK_SIZE == 0
     ), "input size must be a multiple of 16 (BLOCK_SIZE)"
-    for i in range(Size // BLOCK_SIZE):
-        var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        for j in range(BLOCK_SIZE):
-            block[j] = data[i * BLOCK_SIZE + j]
+
+
+def _encrypt_cpu[
+    Size: Int, Nr: Int, WordsSize: Int
+](mut data: InlineArray[UInt8, Size], w: InlineArray[UInt32, WordsSize]):
+    _assert_block_aligned[Size]()
+    var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
+    comptime for i in range(Size // BLOCK_SIZE):
+        memcpy(
+            dest=block.unsafe_ptr(),
+            src=data.unsafe_ptr() + i * BLOCK_SIZE,
+            count=BLOCK_SIZE,
+        )
         cpu_cipher[Nr=Nr](block, w)
-        for j in range(BLOCK_SIZE):
-            data[i * BLOCK_SIZE + j] = block[j]
+        memcpy(
+            dest=data.unsafe_ptr() + i * BLOCK_SIZE,
+            src=block.unsafe_ptr(),
+            count=BLOCK_SIZE,
+        )
 
 
 def _decrypt_cpu[
     Size: Int, Nr: Int, WordsSize: Int
 ](mut data: InlineArray[UInt8, Size], w: InlineArray[UInt32, WordsSize]):
-    comptime assert (
-        Size % BLOCK_SIZE == 0
-    ), "input size must be a multiple of 16 (BLOCK_SIZE)"
-    for i in range(Size // BLOCK_SIZE):
-        var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        for j in range(BLOCK_SIZE):
-            block[j] = data[i * BLOCK_SIZE + j]
+    _assert_block_aligned[Size]()
+    var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
+    comptime for i in range(Size // BLOCK_SIZE):
+        memcpy(
+            dest=block.unsafe_ptr(),
+            src=data.unsafe_ptr() + i * BLOCK_SIZE,
+            count=BLOCK_SIZE,
+        )
         cpu_decipher[Nr=Nr](block, w)
-        for j in range(BLOCK_SIZE):
-            data[i * BLOCK_SIZE + j] = block[j]
+        memcpy(
+            dest=data.unsafe_ptr() + i * BLOCK_SIZE,
+            src=block.unsafe_ptr(),
+            count=BLOCK_SIZE,
+        )
 
 
 def _encrypt_gpu[
@@ -113,9 +129,7 @@ def _encrypt_gpu[
     sbox: DeviceBuffer[DType.uint32],
     data: InlineArray[UInt8, Size],
 ) raises -> InlineArray[UInt8, Size]:
-    comptime assert (
-        Size % BLOCK_SIZE == 0
-    ), "input size must be a multiple of 16 (BLOCK_SIZE)"
+    _assert_block_aligned[Size]()
     comptime num_blocks = Size // BLOCK_SIZE
     comptime kernel = gpu_cipher[Nr]
 
@@ -143,9 +157,7 @@ def _decrypt_gpu[
     sbox_inv: DeviceBuffer[DType.uint8],
     data: InlineArray[UInt8, Size],
 ) raises -> InlineArray[UInt8, Size]:
-    comptime assert (
-        Size % BLOCK_SIZE == 0
-    ), "input size must be a multiple of 16 (BLOCK_SIZE)"
+    _assert_block_aligned[Size]()
     comptime num_blocks = Size // BLOCK_SIZE
     comptime kernel = gpu_decipher[Nr]
 

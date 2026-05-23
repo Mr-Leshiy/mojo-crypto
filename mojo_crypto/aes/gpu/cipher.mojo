@@ -1,4 +1,4 @@
-from std.gpu import thread_idx, barrier
+from std.gpu import thread_idx, block_idx, barrier
 from std.gpu.memory import AddressSpace
 from std.memory import UnsafePointer, stack_allocation
 
@@ -21,8 +21,9 @@ def cipher[
     ]()
 
     var local_i = thread_idx.x
+    var global_i = block_idx.x * BLOCK_SIZE + local_i
 
-    state[local_i] = in_out[local_i]
+    state[local_i] = in_out[global_i]
 
     add_round_key(local_i, state, 0, w)
     for r in range(1, Nr):
@@ -34,7 +35,7 @@ def cipher[
     shift_rows(local_i, state)
     add_round_key(local_i, state, Nr, w)
 
-    in_out[local_i] = state[local_i]
+    in_out[global_i] = state[local_i]
 
 
 # FIPS 197 §5.3 InvCipher()
@@ -50,8 +51,9 @@ def decipher[
     ]()
 
     var local_i = thread_idx.x
+    var global_i = block_idx.x * BLOCK_SIZE + local_i
 
-    state[local_i] = in_out[local_i]
+    state[local_i] = in_out[global_i]
 
     add_round_key(local_i, state, Nr, w)
     for r in range(Nr - 1, 0, -1):
@@ -63,7 +65,7 @@ def decipher[
     inv_sub_bytes(local_i, state, sbox_inv)
     add_round_key(local_i, state, 0, w)
 
-    in_out[local_i] = state[local_i]
+    in_out[global_i] = state[local_i]
 
 
 # FIPS 197 §5.1.4 AddRoundKey()
