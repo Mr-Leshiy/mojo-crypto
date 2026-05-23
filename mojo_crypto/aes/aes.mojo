@@ -32,71 +32,51 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         else:
             self._gpu = None
 
-    def encrypt_block(
-        self, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) -> InlineArray[UInt8, BLOCK_SIZE]:
-        var state = block
-        _encrypt_cpu[BLOCK_SIZE, Self.Nr](state, self.w)
-        return state
+    def encrypt_block(self, mut block: InlineArray[UInt8, BLOCK_SIZE]):
+        _encrypt_cpu[BLOCK_SIZE, Self.Nr](block, self.w)
 
-    def encrypt[
-        Size: Int
-    ](self, data: InlineArray[UInt8, Size]) -> InlineArray[UInt8, Size]:
-        var result = data
-        _encrypt_cpu[Size, Self.Nr](result, self.w)
-        return result
+    def decrypt_block(self, mut block: InlineArray[UInt8, BLOCK_SIZE]):
+        _decrypt_cpu[BLOCK_SIZE, Self.Nr](block, self.w)
 
-    def decrypt_block(
-        self, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) -> InlineArray[UInt8, BLOCK_SIZE]:
-        var state = block
-        _decrypt_cpu[BLOCK_SIZE, Self.Nr](state, self.w)
-        return state
+    def encrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]):
+        _encrypt_cpu[Size, Self.Nr](data, self.w)
 
-    def decrypt[
-        Size: Int
-    ](self, data: InlineArray[UInt8, Size]) -> InlineArray[UInt8, Size]:
-        var result = data
-        _decrypt_cpu[Size, Self.Nr](result, self.w)
-        return result
+    def decrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]):
+        _decrypt_cpu[Size, Self.Nr](data, self.w)
 
     def encrypt_block(
-        self, ctx: DeviceContext, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises -> InlineArray[UInt8, BLOCK_SIZE]:
+        self, ctx: DeviceContext, mut block: InlineArray[UInt8, BLOCK_SIZE]
+    ) raises:
         if not self._gpu:
             raise GpuContextError()
-        return _encrypt_gpu[BLOCK_SIZE, Self.Nr](
+        block = _encrypt_gpu[BLOCK_SIZE, Self.Nr](
             ctx, self._gpu.value().w, self._gpu.value().sbox, block
         )
 
-    def encrypt[
-        Size: Int
-    ](
-        self, ctx: DeviceContext, data: InlineArray[UInt8, Size]
-    ) raises -> InlineArray[UInt8, Size]:
+    def decrypt_block(
+        self, ctx: DeviceContext, mut block: InlineArray[UInt8, BLOCK_SIZE]
+    ) raises:
         if not self._gpu:
             raise GpuContextError()
-        return _encrypt_gpu[Size, Self.Nr](
-            ctx, self._gpu.value().w, self._gpu.value().sbox, data
+        block = _decrypt_gpu[BLOCK_SIZE, Self.Nr](
+            ctx, self._gpu.value().w, self._gpu.value().sbox_inv, block
         )
 
-    def decrypt_block(
-        self, ctx: DeviceContext, block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises -> InlineArray[UInt8, BLOCK_SIZE]:
+    def encrypt[
+        Size: Int
+    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
         if not self._gpu:
             raise GpuContextError()
-        return _decrypt_gpu[BLOCK_SIZE, Self.Nr](
-            ctx, self._gpu.value().w, self._gpu.value().sbox_inv, block
+        data = _encrypt_gpu[Size, Self.Nr](
+            ctx, self._gpu.value().w, self._gpu.value().sbox, data
         )
 
     def decrypt[
         Size: Int
-    ](
-        self, ctx: DeviceContext, data: InlineArray[UInt8, Size]
-    ) raises -> InlineArray[UInt8, Size]:
+    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
         if not self._gpu:
             raise GpuContextError()
-        return _decrypt_gpu[Size, Self.Nr](
+        data = _decrypt_gpu[Size, Self.Nr](
             ctx, self._gpu.value().w, self._gpu.value().sbox_inv, data
         )
 
