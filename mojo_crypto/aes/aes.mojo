@@ -32,35 +32,11 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         else:
             self._gpu = None
 
-    def encrypt_block(self, mut block: InlineArray[UInt8, BLOCK_SIZE]):
-        _encrypt_cpu[BLOCK_SIZE, Self.Nr](block, self.w)
-
-    def decrypt_block(self, mut block: InlineArray[UInt8, BLOCK_SIZE]):
-        _decrypt_cpu[BLOCK_SIZE, Self.Nr](block, self.w)
-
     def encrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]):
         _encrypt_cpu[Size, Self.Nr](data, self.w)
 
     def decrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]):
         _decrypt_cpu[Size, Self.Nr](data, self.w)
-
-    def encrypt_block(
-        self, ctx: DeviceContext, mut block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises:
-        if not self._gpu:
-            raise GpuContextError()
-        block = _encrypt_gpu[BLOCK_SIZE, Self.Nr](
-            ctx, self._gpu.value().w, self._gpu.value().sbox, block
-        )
-
-    def decrypt_block(
-        self, ctx: DeviceContext, mut block: InlineArray[UInt8, BLOCK_SIZE]
-    ) raises:
-        if not self._gpu:
-            raise GpuContextError()
-        block = _decrypt_gpu[BLOCK_SIZE, Self.Nr](
-            ctx, self._gpu.value().w, self._gpu.value().sbox_inv, block
-        )
 
     def encrypt[
         Size: Int

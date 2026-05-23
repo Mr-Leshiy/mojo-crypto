@@ -22,9 +22,9 @@ def test_aes_128() raises:
     ) raises:
         var aes = Aes[16](key)
         var block = plaintext
-        aes.encrypt_block(block)
+        aes.encrypt(block)
         assert_equal(block, expected)
-        aes.decrypt_block(block)
+        aes.decrypt(block)
         assert_equal(block, plaintext)
 
     # FIPS 197 Appendix B
@@ -410,19 +410,19 @@ def check_aes_kat[
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
 
         var pt = v.pt
-        cipher.encrypt_block(pt)
+        cipher.encrypt(pt)
         assert_equal(pt, v.ct, msg=msg)
 
         var ct = v.ct
-        cipher.decrypt_block(ct)
+        cipher.decrypt(ct)
         assert_equal(ct, v.pt, msg=msg)
 
         var pt_gpu = v.pt
-        cipher.encrypt_block(ctx, pt_gpu)
+        cipher.encrypt(ctx, pt_gpu)
         assert_equal(pt_gpu, v.ct, msg=msg)
 
         var ct_gpu = v.ct
-        cipher.decrypt_block(ctx, ct_gpu)
+        cipher.decrypt(ctx, ct_gpu)
         assert_equal(ct_gpu, v.pt, msg=msg)
 
 
@@ -462,11 +462,11 @@ def check_aes_mct[
         var block_gpu = initial
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
-                cipher.encrypt_block(block_cpu)
-                cipher.encrypt_block(ctx, block_gpu)
+                cipher.encrypt(block_cpu)
+                cipher.encrypt(ctx, block_gpu)
             else:
-                cipher.decrypt_block(block_cpu)
-                cipher.decrypt_block(ctx, block_gpu)
+                cipher.decrypt(block_cpu)
+                cipher.decrypt(ctx, block_gpu)
 
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
         assert_equal(block_cpu, expected, msg=msg)
