@@ -399,9 +399,6 @@ def test_256_key_expansion() raises:
     )
 
 
-comptime BLOCKS_PER_GRID = 1
-
-
 def check_aes_kat[
     C: BlockCipher & GpuBlockCipher,
     KeySize: Int,
@@ -412,8 +409,8 @@ def check_aes_kat[
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
         assert_equal(cipher.encrypt_block(v.pt), v.ct, msg=msg)
         assert_equal(cipher.decrypt_block(v.ct), v.pt, msg=msg)
-        assert_equal(cipher.encrypt_block[BLOCKS_PER_GRID](ctx, v.pt), v.ct, msg=msg)
-        assert_equal(cipher.decrypt_block[BLOCKS_PER_GRID](ctx, v.ct), v.pt, msg=msg)
+        assert_equal(cipher.encrypt_block(ctx, v.pt), v.ct, msg=msg)
+        assert_equal(cipher.decrypt_block(ctx, v.ct), v.pt, msg=msg)
 
 
 # AES Known Answer Test (KAT) Vectors
@@ -454,11 +451,9 @@ def check_aes_mct[
             block_cpu = cipher.encrypt_block(
                 block_cpu
             ) if v.is_encrypt else cipher.decrypt_block(block_cpu)
-            block_gpu = cipher.encrypt_block[BLOCKS_PER_GRID](
+            block_gpu = cipher.encrypt_block(
                 ctx, block_gpu
-            ) if v.is_encrypt else cipher.decrypt_block[BLOCKS_PER_GRID](
-                ctx, block_gpu
-            )
+            ) if v.is_encrypt else cipher.decrypt_block(ctx, block_gpu)
 
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
         assert_equal(block_cpu, expected, msg=msg)
