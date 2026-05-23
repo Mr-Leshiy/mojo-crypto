@@ -21,9 +21,9 @@ def test_aes_128() raises:
         expected: InlineArray[UInt8, 16],
     ) raises:
         var aes = Aes[16](key)
-        var enc = aes.encrypt(plaintext)
+        var enc = aes.encrypt_block(plaintext)
         assert_equal(enc, expected)
-        var dec = aes.decrypt(enc)
+        var dec = aes.decrypt_block(enc)
         assert_equal(dec, plaintext)
 
     # FIPS 197 Appendix B
@@ -410,10 +410,10 @@ def check_aes_kat[
     for v in load_aes_vectors[KeySize](vectors):
         var cipher = cipher_init(v.key)
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
-        assert_equal(cipher.encrypt(v.pt), v.ct, msg=msg)
-        assert_equal(cipher.decrypt(v.ct), v.pt, msg=msg)
-        assert_equal(cipher.encrypt[BLOCKS_PER_GRID](ctx, v.pt), v.ct, msg=msg)
-        assert_equal(cipher.decrypt[BLOCKS_PER_GRID](ctx, v.ct), v.pt, msg=msg)
+        assert_equal(cipher.encrypt_block(v.pt), v.ct, msg=msg)
+        assert_equal(cipher.decrypt_block(v.ct), v.pt, msg=msg)
+        assert_equal(cipher.encrypt_block[BLOCKS_PER_GRID](ctx, v.pt), v.ct, msg=msg)
+        assert_equal(cipher.decrypt_block[BLOCKS_PER_GRID](ctx, v.ct), v.pt, msg=msg)
 
 
 # AES Known Answer Test (KAT) Vectors
@@ -451,12 +451,12 @@ def check_aes_mct[
         var block_cpu = initial
         var block_gpu = initial
         for _ in range(MCT_INNER_ITERATIONS):
-            block_cpu = cipher.encrypt(
+            block_cpu = cipher.encrypt_block(
                 block_cpu
-            ) if v.is_encrypt else cipher.decrypt(block_cpu)
-            block_gpu = cipher.encrypt[BLOCKS_PER_GRID](
+            ) if v.is_encrypt else cipher.decrypt_block(block_cpu)
+            block_gpu = cipher.encrypt_block[BLOCKS_PER_GRID](
                 ctx, block_gpu
-            ) if v.is_encrypt else cipher.decrypt[BLOCKS_PER_GRID](
+            ) if v.is_encrypt else cipher.decrypt_block[BLOCKS_PER_GRID](
                 ctx, block_gpu
             )
 

@@ -33,17 +33,17 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         self.w = key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
         self._gpu = AesGpuSetup(ctx, self.w)
 
-    def encrypt(
+    def encrypt_block(
         self, block: InlineArray[UInt8, BLOCK_SIZE]
     ) -> InlineArray[UInt8, BLOCK_SIZE]:
         return cpu_cipher[Nr=Self.Nr](block, self.w)
 
-    def decrypt(
+    def decrypt_block(
         self, block: InlineArray[UInt8, BLOCK_SIZE]
     ) -> InlineArray[UInt8, BLOCK_SIZE]:
         return cpu_decipher[Nr=Self.Nr](block, self.w)
 
-    def encrypt[
+    def encrypt_block[
         BLOCKS_PER_GRID: Int
     ](
         self, ctx: DeviceContext, block: InlineArray[UInt8, BLOCK_SIZE]
@@ -68,7 +68,7 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         block_in.enqueue_copy_to(result.unsafe_ptr())
         return result
 
-    def decrypt[
+    def decrypt_block[
         BLOCKS_PER_GRID: Int
     ](
         self, ctx: DeviceContext, block: InlineArray[UInt8, BLOCK_SIZE]
