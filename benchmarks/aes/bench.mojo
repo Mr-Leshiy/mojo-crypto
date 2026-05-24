@@ -30,12 +30,11 @@ def bench_cpu_cipher[
         @parameter
         def do_encrypt() raises:
             cipher.encrypt(data)
-        
+
         @parameter
         def do_decrypt() raises:
             cipher.decrypt(data)
 
-         
         run[do_encrypt]().print(prefix + "_encrypt_" + suffix)
         run[do_decrypt]().print(prefix + "_decrypt_" + suffix)
 
@@ -62,13 +61,12 @@ def bench_gpu_cipher[
         def do_encrypt() raises:
             cipher.encrypt(ctx, data)
             ctx.synchronize()
-        
+
         @parameter
         def do_decrypt() raises:
             cipher.decrypt(ctx, data)
             ctx.synchronize()
 
-         
         run[do_encrypt]().print(prefix + "_encrypt_" + suffix)
         run[do_decrypt]().print(prefix + "_decrypt_" + suffix)
 
