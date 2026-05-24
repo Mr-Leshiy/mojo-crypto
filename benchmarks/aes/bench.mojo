@@ -24,29 +24,24 @@ def bench_cpu_cipher[
     var prefix = String(label) + "_cpu"
 
     @parameter
-    def bench_encrypt[N: Int]() raises:
+    def bench[N: Int, suffix: StringLiteral]() raises:
         var data = InlineArray[UInt8, N](fill=0)
-        cipher.encrypt(data)
 
-    @parameter
-    def bench_decrypt[N: Int]() raises:
-        var data = InlineArray[UInt8, N](fill=0)
-        cipher.decrypt(data)
+        @parameter
+        def do_encrypt() raises:
+            cipher.encrypt(data)
+        
+        @parameter
+        def do_decrypt() raises:
+            cipher.decrypt(data)
 
-    run[bench_encrypt[BLOCKS_256]]().print(prefix + "_encrypt_256b")
-    run[bench_decrypt[BLOCKS_256]]().print(prefix + "_decrypt_256b")
+         
+        run[do_encrypt]().print(prefix + "_encrypt_" + suffix)
+        run[do_decrypt]().print(prefix + "_decrypt_" + suffix)
 
-    run[bench_encrypt[BLOCKS_1K]]().print(prefix + "_encrypt_1kb")
-    run[bench_decrypt[BLOCKS_1K]]().print(prefix + "_decrypt_1kb")
-
-    run[bench_encrypt[BLOCKS_4K]]().print(prefix + "_encrypt_4kb")
-    run[bench_decrypt[BLOCKS_4K]]().print(prefix + "_decrypt_4kb")
-
-    run[bench_encrypt[BLOCKS_8K]]().print(prefix + "_encrypt_8kb")
-    run[bench_decrypt[BLOCKS_8K]]().print(prefix + "_decrypt_8kb")
-
-    run[bench_encrypt[BLOCKS_16K]]().print(prefix + "_encrypt_16kb")
-    run[bench_decrypt[BLOCKS_16K]]().print(prefix + "_decrypt_16kb")
+    bench[BLOCKS_4K, "4kb"]()
+    bench[BLOCKS_8K, "8kb"]()
+    bench[BLOCKS_16K, "16kb"]()
 
 
 def bench_gpu_cipher[
@@ -60,31 +55,26 @@ def bench_gpu_cipher[
     var prefix = String(label) + "_gpu"
 
     @parameter
-    def bench_encrypt[N: Int]() raises:
+    def bench[N: Int, suffix: StringLiteral]() raises:
         var data = InlineArray[UInt8, N](fill=0)
-        cipher.encrypt(ctx, data)
-        ctx.synchronize()
 
-    @parameter
-    def bench_decrypt[N: Int]() raises:
-        var data = InlineArray[UInt8, N](fill=0)
-        cipher.decrypt(ctx, data)
-        ctx.synchronize()
+        @parameter
+        def do_encrypt() raises:
+            cipher.encrypt(ctx, data)
+            ctx.synchronize()
+        
+        @parameter
+        def do_decrypt() raises:
+            cipher.decrypt(ctx, data)
+            ctx.synchronize()
 
-    run[bench_encrypt[BLOCKS_256]]().print(prefix + "_encrypt_256b")
-    run[bench_decrypt[BLOCKS_256]]().print(prefix + "_decrypt_256b")
+         
+        run[do_encrypt]().print(prefix + "_encrypt_" + suffix)
+        run[do_decrypt]().print(prefix + "_decrypt_" + suffix)
 
-    run[bench_encrypt[BLOCKS_1K]]().print(prefix + "_encrypt_1kb")
-    run[bench_decrypt[BLOCKS_1K]]().print(prefix + "_decrypt_1kb")
-
-    run[bench_encrypt[BLOCKS_4K]]().print(prefix + "_encrypt_4kb")
-    run[bench_decrypt[BLOCKS_4K]]().print(prefix + "_decrypt_4kb")
-
-    run[bench_encrypt[BLOCKS_8K]]().print(prefix + "_encrypt_8kb")
-    run[bench_decrypt[BLOCKS_8K]]().print(prefix + "_decrypt_8kb")
-
-    run[bench_encrypt[BLOCKS_16K]]().print(prefix + "_encrypt_16kb")
-    run[bench_decrypt[BLOCKS_16K]]().print(prefix + "_decrypt_16kb")
+    bench[BLOCKS_4K, "4kb"]()
+    bench[BLOCKS_8K, "8kb"]()
+    bench[BLOCKS_16K, "16kb"]()
 
 
 def main() raises:
