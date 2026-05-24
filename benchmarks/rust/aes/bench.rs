@@ -5,8 +5,10 @@ use criterion::{
 };
 
 const BLOCKS_256: usize = 256;
-const BLOCKS_1K: usize = 1024;
-const BLOCKS_4K: usize = 4096;
+const BLOCKS_1K: usize = 1_024;
+const BLOCKS_4K: usize = 4_096;
+const BLOCKS_8K: usize = 8_192;
+const BLOCKS_16K: usize = 16_384;
 
 fn bench_aes128(c: &mut Criterion) {
     let cipher = Aes128::new_from_slice(&[0u8; 16]).unwrap();
@@ -34,9 +36,11 @@ fn bench_all_block_counts<C: BlockCipherEncrypt + BlockCipherDecrypt>(
     cipher: &C,
 ) {
     for (n, label) in [
-        (BLOCKS_256, "256blk"),
-        (BLOCKS_1K, "1kblk"),
-        (BLOCKS_4K, "4kblk"),
+        (BLOCKS_256, "256b"),
+        (BLOCKS_1K, "1kb"),
+        (BLOCKS_4K, "4kb"),
+        (BLOCKS_8K, "8kb"),
+        (BLOCKS_16K, "16kb"),
     ] {
         group.bench_function(BenchmarkId::new("encrypt", label), |b| {
             let mut blocks = vec![Block::<C>::default(); n / C::block_size()];
