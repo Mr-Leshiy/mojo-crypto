@@ -88,7 +88,7 @@ def _encrypt_cpu[
 ](mut data: InlineArray[UInt8, Size], w: InlineArray[UInt32, WordsSize]):
     _assert_block_aligned[Size]()
     var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-    comptime for i in range(Size // BLOCK_SIZE):
+    for i in range(Size // BLOCK_SIZE):
         memcpy(
             dest=block.unsafe_ptr(),
             src=data.unsafe_ptr() + i * BLOCK_SIZE,
@@ -107,7 +107,7 @@ def _decrypt_cpu[
 ](mut data: InlineArray[UInt8, Size], w: InlineArray[UInt32, WordsSize]):
     _assert_block_aligned[Size]()
     var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-    comptime for i in range(Size // BLOCK_SIZE):
+    for i in range(Size // BLOCK_SIZE):
         memcpy(
             dest=block.unsafe_ptr(),
             src=data.unsafe_ptr() + i * BLOCK_SIZE,
