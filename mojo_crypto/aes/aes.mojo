@@ -7,7 +7,18 @@ from mojo_crypto.errors import GpuContextError
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
 from .gpu.cipher import cipher as gpu_cipher, decipher as gpu_decipher
 from .expand import key_expansion
-from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV
+from .common import (
+    Nb,
+    BLOCK_SIZE,
+    SBOX,
+    SBOX_INV,
+    MUL2,
+    MUL3,
+    MUL9,
+    MUL11,
+    MUL13,
+    MUL14,
+)
 
 
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
@@ -44,8 +55,9 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
     ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
         if not self._gpu:
             raise GpuContextError()
+        ref g = self._gpu.value()
         data = _encrypt_gpu[Size, Self.Nr](
-            ctx, self._gpu.value().w, self._gpu.value().sbox, data
+            ctx, g.w, g.sbox, g.mul2, g.mul3, data
         )
 
     def decrypt[
@@ -53,8 +65,9 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
     ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
         if not self._gpu:
             raise GpuContextError()
+        ref g = self._gpu.value()
         data = _decrypt_gpu[Size, Self.Nr](
-            ctx, self._gpu.value().w, self._gpu.value().sbox_inv, data
+            ctx, g.w, g.sbox_inv, g.mul9, g.mul11, g.mul13, g.mul14, data
         )
 
 
@@ -62,6 +75,12 @@ struct AesGpuSetup(ImplicitlyDestructible, Movable):
     var w: DeviceBuffer[DType.uint32]
     var sbox: DeviceBuffer[DType.uint32]
     var sbox_inv: DeviceBuffer[DType.uint8]
+    var mul2: DeviceBuffer[DType.uint8]
+    var mul3: DeviceBuffer[DType.uint8]
+    var mul9: DeviceBuffer[DType.uint8]
+    var mul11: DeviceBuffer[DType.uint8]
+    var mul13: DeviceBuffer[DType.uint8]
+    var mul14: DeviceBuffer[DType.uint8]
 
     def __init__[
         WordsSize: Int
@@ -74,6 +93,24 @@ struct AesGpuSetup(ImplicitlyDestructible, Movable):
 
         self.sbox_inv = ctx.enqueue_create_buffer[DType.uint8](256)
         self.sbox_inv.enqueue_copy_from(SBOX_INV.unsafe_ptr())
+
+        self.mul2 = ctx.enqueue_create_buffer[DType.uint8](256)
+        self.mul2.enqueue_copy_from(MUL2.unsafe_ptr())
+
+        self.mul3 = ctx.enqueue_create_buffer[DType.uint8](256)
+        self.mul3.enqueue_copy_from(MUL3.unsafe_ptr())
+
+        self.mul9 = ctx.enqueue_create_buffer[DType.uint8](256)
+        self.mul9.enqueue_copy_from(MUL9.unsafe_ptr())
+
+        self.mul11 = ctx.enqueue_create_buffer[DType.uint8](256)
+        self.mul11.enqueue_copy_from(MUL11.unsafe_ptr())
+
+        self.mul13 = ctx.enqueue_create_buffer[DType.uint8](256)
+        self.mul13.enqueue_copy_from(MUL13.unsafe_ptr())
+
+        self.mul14 = ctx.enqueue_create_buffer[DType.uint8](256)
+        self.mul14.enqueue_copy_from(MUL14.unsafe_ptr())
 
 
 @always_inline
@@ -127,6 +164,8 @@ def _encrypt_gpu[
     ctx: DeviceContext,
     w: DeviceBuffer[DType.uint32],
     sbox: DeviceBuffer[DType.uint32],
+    mul2: DeviceBuffer[DType.uint8],
+    mul3: DeviceBuffer[DType.uint8],
     data: InlineArray[UInt8, Size],
 ) raises -> InlineArray[UInt8, Size]:
     _assert_block_aligned[Size]()
@@ -141,6 +180,8 @@ def _encrypt_gpu[
         buf,
         w,
         sbox,
+        mul2,
+        mul3,
         grid_dim=num_blocks,
         block_dim=BLOCK_SIZE,
     )
@@ -155,6 +196,10 @@ def _decrypt_gpu[
     ctx: DeviceContext,
     w: DeviceBuffer[DType.uint32],
     sbox_inv: DeviceBuffer[DType.uint8],
+    mul9: DeviceBuffer[DType.uint8],
+    mul11: DeviceBuffer[DType.uint8],
+    mul13: DeviceBuffer[DType.uint8],
+    mul14: DeviceBuffer[DType.uint8],
     data: InlineArray[UInt8, Size],
 ) raises -> InlineArray[UInt8, Size]:
     _assert_block_aligned[Size]()
@@ -169,6 +214,10 @@ def _decrypt_gpu[
         buf,
         w,
         sbox_inv,
+        mul9,
+        mul11,
+        mul13,
+        mul14,
         grid_dim=num_blocks,
         block_dim=BLOCK_SIZE,
     )

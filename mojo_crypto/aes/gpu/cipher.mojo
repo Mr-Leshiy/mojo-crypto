@@ -15,6 +15,8 @@ def cipher[
     in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
     w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
     sbox: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    mul2: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul3: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
 ):
     var state = stack_allocation[
         BLOCK_SIZE, Scalar[DType.uint8], address_space=AddressSpace.SHARED
@@ -29,7 +31,7 @@ def cipher[
     for r in range(1, Nr):
         sub_bytes(local_i, state, sbox)
         shift_rows(local_i, state)
-        mix_columns(local_i, state)
+        mix_columns(local_i, state, mul2, mul3)
         add_round_key(local_i, state, r, w)
     sub_bytes(local_i, state, sbox)
     shift_rows(local_i, state)
@@ -45,6 +47,10 @@ def decipher[
     in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
     w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
     sbox_inv: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul9: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul11: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul13: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul14: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
 ):
     var state = stack_allocation[
         BLOCK_SIZE, Scalar[DType.uint8], address_space=AddressSpace.SHARED
@@ -60,7 +66,7 @@ def decipher[
         inv_shift_rows(local_i, state)
         inv_sub_bytes(local_i, state, sbox_inv)
         add_round_key(local_i, state, r, w)
-        inv_mix_columns(local_i, state)
+        inv_mix_columns(local_i, state, mul9, mul11, mul13, mul14)
     inv_shift_rows(local_i, state)
     inv_sub_bytes(local_i, state, sbox_inv)
     add_round_key(local_i, state, 0, w)
@@ -150,6 +156,8 @@ def mix_columns(
     state: UnsafePointer[
         Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
     ],
+    mul2: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul3: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
 ):
     var r = i % Nb
     var c = i // Nb
@@ -159,13 +167,13 @@ def mix_columns(
     var s3 = state[3 + 4 * c]
     barrier()
     if r == 0:
-        state[i] = multiply(0x02, s0) ^ multiply(0x03, s1) ^ s2 ^ s3
+        state[i] = mul2[Int(s0)] ^ mul3[Int(s1)] ^ s2 ^ s3
     elif r == 1:
-        state[i] = s0 ^ multiply(0x02, s1) ^ multiply(0x03, s2) ^ s3
+        state[i] = s0 ^ mul2[Int(s1)] ^ mul3[Int(s2)] ^ s3
     elif r == 2:
-        state[i] = s0 ^ s1 ^ multiply(0x02, s2) ^ multiply(0x03, s3)
+        state[i] = s0 ^ s1 ^ mul2[Int(s2)] ^ mul3[Int(s3)]
     else:
-        state[i] = multiply(0x03, s0) ^ s1 ^ s2 ^ multiply(0x02, s3)
+        state[i] = mul3[Int(s0)] ^ s1 ^ s2 ^ mul2[Int(s3)]
     barrier()
 
 
@@ -178,6 +186,10 @@ def inv_mix_columns(
     state: UnsafePointer[
         Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
     ],
+    mul9: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul11: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul13: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    mul14: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
 ):
     var r = i % Nb
     var c = i // Nb
@@ -188,53 +200,18 @@ def inv_mix_columns(
     barrier()
     if r == 0:
         state[i] = (
-            multiply(0x0E, s0)
-            ^ multiply(0x0B, s1)
-            ^ multiply(0x0D, s2)
-            ^ multiply(0x09, s3)
+            mul14[Int(s0)] ^ mul11[Int(s1)] ^ mul13[Int(s2)] ^ mul9[Int(s3)]
         )
     elif r == 1:
         state[i] = (
-            multiply(0x09, s0)
-            ^ multiply(0x0E, s1)
-            ^ multiply(0x0B, s2)
-            ^ multiply(0x0D, s3)
+            mul9[Int(s0)] ^ mul14[Int(s1)] ^ mul11[Int(s2)] ^ mul13[Int(s3)]
         )
     elif r == 2:
         state[i] = (
-            multiply(0x0D, s0)
-            ^ multiply(0x09, s1)
-            ^ multiply(0x0E, s2)
-            ^ multiply(0x0B, s3)
+            mul13[Int(s0)] ^ mul9[Int(s1)] ^ mul14[Int(s2)] ^ mul11[Int(s3)]
         )
     else:
         state[i] = (
-            multiply(0x0B, s0)
-            ^ multiply(0x0D, s1)
-            ^ multiply(0x09, s2)
-            ^ multiply(0x0E, s3)
+            mul11[Int(s0)] ^ mul13[Int(s1)] ^ mul9[Int(s2)] ^ mul14[Int(s3)]
         )
     barrier()
-
-
-# General GF(2^8) multiply via Russian peasant: iterate over bits of `a`
-@always_inline
-def multiply(a: UInt8, b: UInt8) -> UInt8:
-    var result: UInt8 = 0
-    var factor = b
-    var scalar = a
-    while scalar != 0:
-        if scalar & 1:
-            result ^= factor
-        factor = xtime(factor)
-        scalar >>= 1
-    return result
-
-
-# Multiply by 0x02 in GF(2^8) with AES reduction polynomial x^8+x^4+x^3+x+1
-@always_inline
-def xtime(a: UInt8) -> UInt8:
-    var result = a << 1
-    if a & 0x80:
-        result ^= 0x1B
-    return result
