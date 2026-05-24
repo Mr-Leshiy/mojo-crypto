@@ -1,3 +1,5 @@
+from .ml_tables import MUL2, MUL3, MUL9, MUL11, MUL13, MUL14
+
 # The number of columns comprising the state, where each column is a 32-bit word.
 # For this AES Standard, Nb = 4.
 comptime Nb: Int = 4

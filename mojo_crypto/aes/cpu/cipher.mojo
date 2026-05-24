@@ -1,4 +1,4 @@
-from ..common import Nb, SBOX, SBOX_INV
+from ..common import Nb, SBOX, SBOX_INV, MUL2, MUL3, MUL9, MUL11, MUL13, MUL14
 
 
 # FIPS 197 §5.1 Cipher()
@@ -91,10 +91,10 @@ def mix_columns(mut state: InlineArray[UInt8, 16]):
         var s1 = state[1 + 4 * col]
         var s2 = state[2 + 4 * col]
         var s3 = state[3 + 4 * col]
-        state[4 * col] = multiply(0x02, s0) ^ multiply(0x03, s1) ^ s2 ^ s3
-        state[1 + 4 * col] = s0 ^ multiply(0x02, s1) ^ multiply(0x03, s2) ^ s3
-        state[2 + 4 * col] = s0 ^ s1 ^ multiply(0x02, s2) ^ multiply(0x03, s3)
-        state[3 + 4 * col] = multiply(0x03, s0) ^ s1 ^ s2 ^ multiply(0x02, s3)
+        state[4 * col] = MUL2[Int(s0)] ^ MUL3[Int(s1)] ^ s2 ^ s3
+        state[1 + 4 * col] = s0 ^ MUL2[Int(s1)] ^ MUL3[Int(s2)] ^ s3
+        state[2 + 4 * col] = s0 ^ s1 ^ MUL2[Int(s2)] ^ MUL3[Int(s3)]
+        state[3 + 4 * col] = MUL3[Int(s0)] ^ s1 ^ s2 ^ MUL2[Int(s3)]
 
 
 # FIPS 197 §5.3.3 InvMixColumns() — GF(2^8) inverse matrix multiply on each column
@@ -105,49 +105,14 @@ def inv_mix_columns(mut state: InlineArray[UInt8, 16]):
         var s2 = state[2 + 4 * col]
         var s3 = state[3 + 4 * col]
         state[4 * col] = (
-            multiply(0x0E, s0)
-            ^ multiply(0x0B, s1)
-            ^ multiply(0x0D, s2)
-            ^ multiply(0x09, s3)
+            MUL14[Int(s0)] ^ MUL11[Int(s1)] ^ MUL13[Int(s2)] ^ MUL9[Int(s3)]
         )
         state[1 + 4 * col] = (
-            multiply(0x09, s0)
-            ^ multiply(0x0E, s1)
-            ^ multiply(0x0B, s2)
-            ^ multiply(0x0D, s3)
+            MUL9[Int(s0)] ^ MUL14[Int(s1)] ^ MUL11[Int(s2)] ^ MUL13[Int(s3)]
         )
         state[2 + 4 * col] = (
-            multiply(0x0D, s0)
-            ^ multiply(0x09, s1)
-            ^ multiply(0x0E, s2)
-            ^ multiply(0x0B, s3)
+            MUL13[Int(s0)] ^ MUL9[Int(s1)] ^ MUL14[Int(s2)] ^ MUL11[Int(s3)]
         )
         state[3 + 4 * col] = (
-            multiply(0x0B, s0)
-            ^ multiply(0x0D, s1)
-            ^ multiply(0x09, s2)
-            ^ multiply(0x0E, s3)
+            MUL11[Int(s0)] ^ MUL13[Int(s1)] ^ MUL9[Int(s2)] ^ MUL14[Int(s3)]
         )
-
-
-# General GF(2^8) multiply via Russian peasant: iterate over bits of `a`
-@always_inline
-def multiply(a: UInt8, b: UInt8) -> UInt8:
-    var result: UInt8 = 0
-    var factor = b
-    var scalar = a
-    while scalar != 0:
-        if scalar & 1:
-            result ^= factor
-        factor = xtime(factor)
-        scalar >>= 1
-    return result
-
-
-# Multiply by 0x02 in GF(2^8) with AES reduction polynomial x^8+x^4+x^3+x+1
-@always_inline
-def xtime(a: UInt8) -> UInt8:
-    var result = a << 1
-    if a & 0x80:
-        result ^= 0x1B
-    return result
