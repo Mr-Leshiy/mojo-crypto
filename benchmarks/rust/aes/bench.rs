@@ -33,23 +33,19 @@ fn bench_all_block_counts<C: BlockCipherEncrypt + BlockCipherDecrypt>(
     group: &mut BenchmarkGroup<WallTime>,
     cipher: &C,
 ) {
-    for n in [BLOCKS_256, BLOCKS_1K, BLOCKS_4K] {
-        group.bench_with_input(
-            BenchmarkId::new("encrypt", format!("{}blk", n)),
-            &n,
-            |b, &n| {
-                let mut blocks = vec![Block::<C>::default(); n];
-                b.iter(|| cipher.encrypt_blocks(&mut blocks))
-            },
-        );
-        group.bench_with_input(
-            BenchmarkId::new("decrypt", format!("{}blk", n)),
-            &n,
-            |b, &n| {
-                let mut blocks = vec![Block::<C>::default(); n];
-                b.iter(|| cipher.decrypt_blocks(&mut blocks))
-            },
-        );
+    for (n, label) in [
+        (BLOCKS_256, "256blk"),
+        (BLOCKS_1K, "1kblk"),
+        (BLOCKS_4K, "4kblk"),
+    ] {
+        group.bench_function(BenchmarkId::new("encrypt", label), |b| {
+            let mut blocks = vec![Block::<C>::default(); n / C::block_size()];
+            b.iter(|| cipher.encrypt_blocks(&mut blocks))
+        });
+        group.bench_function(BenchmarkId::new("decrypt", label), |b| {
+            let mut blocks = vec![Block::<C>::default(); n / C::block_size()];
+            b.iter(|| cipher.decrypt_blocks(&mut blocks))
+        });
     }
 }
 

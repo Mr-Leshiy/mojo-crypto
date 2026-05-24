@@ -23,12 +23,12 @@ def bench_cpu_cipher[
 
     @parameter
     def bench_encrypt[N: Int]() raises:
-        var data = InlineArray[UInt8, N * BLOCK_SIZE](fill=0)
+        var data = InlineArray[UInt8, N](fill=0)
         cipher.encrypt(data)
 
     @parameter
     def bench_decrypt[N: Int]() raises:
-        var data = InlineArray[UInt8, N * BLOCK_SIZE](fill=0)
+        var data = InlineArray[UInt8, N](fill=0)
         cipher.decrypt(data)
 
     run[bench_encrypt[BLOCKS_256]]().print(prefix + "_encrypt_256blk")
@@ -53,13 +53,13 @@ def bench_gpu_cipher[
 
     @parameter
     def bench_encrypt[N: Int]() raises:
-        var data = InlineArray[UInt8, N * BLOCK_SIZE](fill=0)
+        var data = InlineArray[UInt8, N](fill=0)
         cipher.encrypt(ctx, data)
         ctx.synchronize()
 
     @parameter
     def bench_decrypt[N: Int]() raises:
-        var data = InlineArray[UInt8, N * BLOCK_SIZE](fill=0)
+        var data = InlineArray[UInt8, N](fill=0)
         cipher.decrypt(ctx, data)
         ctx.synchronize()
 
