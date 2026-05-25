@@ -4,19 +4,23 @@ from std.memory import memcpy
 from mojo_crypto.block_cipher import BlockCipher, GpuBlockCipher
 from mojo_crypto.errors import GpuContextError, BlockSizeError
 
+from std.sys import CompilationTarget
+
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
+from .cpu.setup import AesCpuSetup
+from .armv8.cipher import cipher as armv8_cipher, decipher as armv8_decipher
+from .armv8.setup import AesArmv8Setup
 from .gpu.cipher import cipher as gpu_cipher, decipher as gpu_decipher
-from .expand import key_expansion
-from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV
+from .gpu.setup import AesGpuSetup
+from .common import Nb, BLOCK_SIZE
 
 
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
 struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
-    comptime Nk: Int = Self.KeySize // 4
-    comptime Nr: Int = Self.Nk + 6
-    comptime WordsSize: Int = Nb * (Self.Nr + 1)
+    comptime Nr: Int = AesCpuSetup[Self.KeySize].Nr
 
-    var w: InlineArray[UInt32, Self.WordsSize]
+    var _cpu: AesCpuSetup[Self.KeySize]
+    var _armv8: Optional[AesArmv8Setup[Self.KeySize]]
     var _gpu: Optional[AesGpuSetup]
 
     def __init__(
@@ -27,17 +31,27 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         comptime assert (
             Self.KeySize == 16 or Self.KeySize == 24 or Self.KeySize == 32
         ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
-        self.w = key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
+        self._cpu = AesCpuSetup[Self.KeySize](key)
+        comptime if not CompilationTarget.is_x86():
+            self._armv8 = AesArmv8Setup[Self.KeySize](key)
+        else:
+            self._armv8 = None
         if ctx:
-            self._gpu = AesGpuSetup(ctx.value(), self.w)
+            self._gpu = AesGpuSetup(ctx.value(), self._cpu.w)
         else:
             self._gpu = None
 
     def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
-        _encrypt_cpu[Self.Nr](data, self.w)
+        comptime if not CompilationTarget.is_x86():
+            _encrypt_armv8(data, self._armv8.value())
+        else:
+            _encrypt_cpu[Self.Nr](data, self._cpu.w)
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
-        _decrypt_cpu[Self.Nr](data, self.w)
+        comptime if not CompilationTarget.is_x86():
+            _decrypt_armv8(data, self._armv8.value())
+        else:
+            _decrypt_cpu[Self.Nr](data, self._cpu.w)
 
     def encrypt[
         o: MutOrigin
@@ -58,27 +72,28 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         )
 
 
-struct AesGpuSetup(ImplicitlyDestructible, Movable):
-    var w: DeviceBuffer[DType.uint32]
-    var sbox: DeviceBuffer[DType.uint32]
-    var sbox_inv: DeviceBuffer[DType.uint8]
-
-    def __init__[
-        WordsSize: Int
-    ](out self, ctx: DeviceContext, w: InlineArray[UInt32, WordsSize]) raises:
-        self.w = ctx.enqueue_create_buffer[DType.uint32](WordsSize)
-        self.w.enqueue_copy_from(w)
-
-        self.sbox = ctx.enqueue_create_buffer[DType.uint32](256)
-        self.sbox.enqueue_copy_from(SBOX.unsafe_ptr())
-
-        self.sbox_inv = ctx.enqueue_create_buffer[DType.uint8](256)
-        self.sbox_inv.enqueue_copy_from(SBOX_INV.unsafe_ptr())
-
 
 def _check_block_aligned(size: Int) raises:
     if size % BLOCK_SIZE != 0:
         raise BlockSizeError(size)
+
+
+def _encrypt_armv8[
+    KeySize: Int, o: MutOrigin
+](data: Span[UInt8, o], armv8: AesArmv8Setup[KeySize]) raises:
+    _check_block_aligned(len(data))
+    for i in range(len(data) // BLOCK_SIZE):
+        var offset = i * BLOCK_SIZE
+        armv8_cipher(data[offset : offset + BLOCK_SIZE], armv8.enc_rks)
+
+
+def _decrypt_armv8[
+    KeySize: Int, o: MutOrigin
+](data: Span[UInt8, o], armv8: AesArmv8Setup[KeySize]) raises:
+    _check_block_aligned(len(data))
+    for i in range(len(data) // BLOCK_SIZE):
+        var offset = i * BLOCK_SIZE
+        armv8_decipher(data[offset : offset + BLOCK_SIZE], armv8.dec_rks)
 
 
 def _encrypt_cpu[
