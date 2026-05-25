@@ -35,7 +35,9 @@ struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
             var cpu = AesCpuSetup[Self.KeySize](key)
             self._backend = AesGpuSetup(ctx.value(), cpu.w)
         else:
-            comptime if not CompilationTarget.is_x86():
+            # has_neon() is the correct AArch64 guard: NEON is mandatory in
+            # the AArch64 spec and implies the AES crypto extension.
+            comptime if CompilationTarget.has_neon():
                 self._backend = AesArmv8Setup[Self.KeySize](key)
             else:
                 self._backend = AesCpuSetup[Self.KeySize](key)
