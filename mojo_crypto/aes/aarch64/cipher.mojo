@@ -1,22 +1,12 @@
-# ARMv8 Cryptography Extension — AES acceleration.
+# LLVM aarch64 crypto aes intrinsics.
 #
-# Uses four LLVM intrinsics that map 1:1 to ARMv8-A AES instructions.
 # LLVM AArch64 intrinsic definitions (no separate doc page exists; .td is authoritative):
 #   https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/IntrinsicsAArch64.td
 # ARM intrinsics browser (filter by "AES", A64 SIMD):
 #   https://developer.arm.com/architectures/instruction-sets/intrinsics/
 # ARM Architecture Reference Manual (A-profile), section C7.2 (crypto instructions):
 #   https://developer.arm.com/documentation/ddi0487/latest
-#
-# Intrinsic → ARM instruction → operation
-#   llvm.aarch64.crypto.aese  → AESE  → AddRoundKey(state, key); SubBytes; ShiftRows
-#   llvm.aarch64.crypto.aesmc → AESMC → MixColumns
-#   llvm.aarch64.crypto.aesd  → AESD  → AddRoundKey(state, key); InvSubBytes; InvShiftRows
-#   llvm.aarch64.crypto.aesimc→ AESIMC→ InvMixColumns
-#
-# All four operate on 128-bit vectors (SIMD[DType.uint8, 16]).
-# Requires +aes CPU feature (implied by ARMv8-A and later; always present on
-# Apple Silicon and Linux aarch64 server/desktop hardware).
+
 
 
 from std.sys import CompilationTarget
