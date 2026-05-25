@@ -2,7 +2,7 @@ from std.gpu.host import DeviceContext, DeviceBuffer
 from std.memory import memcpy
 
 from mojo_crypto.block_cipher import BlockCipher, GpuBlockCipher
-from mojo_crypto.errors import GpuContextError
+from mojo_crypto.errors import GpuContextError, BlockSizeError
 
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
 from .gpu.cipher import cipher as gpu_cipher, decipher as gpu_decipher
@@ -33,27 +33,27 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         else:
             self._gpu = None
 
-    def encrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]):
-        _encrypt_cpu[Size, Self.Nr](data, self.w)
+    def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
+        _encrypt_cpu[Self.Nr](data, self.w)
 
-    def decrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]):
-        _decrypt_cpu[Size, Self.Nr](data, self.w)
+    def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
+        _decrypt_cpu[Self.Nr](data, self.w)
 
     def encrypt[
-        Size: Int
-    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
+        o: MutOrigin
+    ](self, ctx: DeviceContext, data: Span[UInt8, o]) raises:
         if not self._gpu:
             raise GpuContextError()
-        data = _encrypt_gpu[Size, Self.Nr](
+        _encrypt_gpu[Self.Nr](
             ctx, self._gpu.value().w, self._gpu.value().sbox, data
         )
 
     def decrypt[
-        Size: Int
-    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
+        o: MutOrigin
+    ](self, ctx: DeviceContext, data: Span[UInt8, o]) raises:
         if not self._gpu:
             raise GpuContextError()
-        data = _decrypt_gpu[Size, Self.Nr](
+        _decrypt_gpu[Self.Nr](
             ctx, self._gpu.value().w, self._gpu.value().sbox_inv, data
         )
 
@@ -76,19 +76,17 @@ struct AesGpuSetup(ImplicitlyDestructible, Movable):
         self.sbox_inv.enqueue_copy_from(SBOX_INV.unsafe_ptr())
 
 
-@always_inline
-def _assert_block_aligned[Size: Int]():
-    comptime assert (
-        Size % BLOCK_SIZE == 0
-    ), "input size must be a multiple of 16 (BLOCK_SIZE)"
+def _check_block_aligned(size: Int) raises:
+    if size % BLOCK_SIZE != 0:
+        raise BlockSizeError(size)
 
 
 def _encrypt_cpu[
-    Size: Int, Nr: Int, WordsSize: Int
-](mut data: InlineArray[UInt8, Size], w: InlineArray[UInt32, WordsSize]):
-    _assert_block_aligned[Size]()
+    Nr: Int, WordsSize: Int, o: MutOrigin
+](data: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]) raises:
+    _check_block_aligned(len(data))
     var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-    for i in range(Size // BLOCK_SIZE):
+    for i in range(len(data) // BLOCK_SIZE):
         memcpy(
             dest=block.unsafe_ptr(),
             src=data.unsafe_ptr() + i * BLOCK_SIZE,
@@ -103,11 +101,11 @@ def _encrypt_cpu[
 
 
 def _decrypt_cpu[
-    Size: Int, Nr: Int, WordsSize: Int
-](mut data: InlineArray[UInt8, Size], w: InlineArray[UInt32, WordsSize]):
-    _assert_block_aligned[Size]()
+    Nr: Int, WordsSize: Int, o: MutOrigin
+](data: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]) raises:
+    _check_block_aligned(len(data))
     var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-    for i in range(Size // BLOCK_SIZE):
+    for i in range(len(data) // BLOCK_SIZE):
         memcpy(
             dest=block.unsafe_ptr(),
             src=data.unsafe_ptr() + i * BLOCK_SIZE,
@@ -122,20 +120,20 @@ def _decrypt_cpu[
 
 
 def _encrypt_gpu[
-    Size: Int, Nr: Int
+    Nr: Int, o: MutOrigin
 ](
     ctx: DeviceContext,
     w: DeviceBuffer[DType.uint32],
     sbox: DeviceBuffer[DType.uint32],
-    data: InlineArray[UInt8, Size],
-) raises -> InlineArray[UInt8, Size]:
-    _assert_block_aligned[Size]()
-    comptime num_blocks = Size // BLOCK_SIZE
+    data: Span[UInt8, o],
+) raises:
+    _check_block_aligned(len(data))
+    var size = len(data)
+    var num_blocks = size // BLOCK_SIZE
     comptime kernel = gpu_cipher[Nr]
 
-    var result = InlineArray[UInt8, Size](uninitialized=True)
-    var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
-    buf.enqueue_copy_from(data)
+    var buf = ctx.enqueue_create_buffer[DType.uint8](size)
+    buf.enqueue_copy_from(data.unsafe_ptr())
 
     ctx.enqueue_function[kernel, kernel](
         buf,
@@ -145,25 +143,24 @@ def _encrypt_gpu[
         block_dim=BLOCK_SIZE,
     )
 
-    buf.enqueue_copy_to(result.unsafe_ptr())
-    return result
+    buf.enqueue_copy_to(data.unsafe_ptr())
 
 
 def _decrypt_gpu[
-    Size: Int, Nr: Int
+    Nr: Int, o: MutOrigin
 ](
     ctx: DeviceContext,
     w: DeviceBuffer[DType.uint32],
     sbox_inv: DeviceBuffer[DType.uint8],
-    data: InlineArray[UInt8, Size],
-) raises -> InlineArray[UInt8, Size]:
-    _assert_block_aligned[Size]()
-    comptime num_blocks = Size // BLOCK_SIZE
+    data: Span[UInt8, o],
+) raises:
+    _check_block_aligned(len(data))
+    var size = len(data)
+    var num_blocks = size // BLOCK_SIZE
     comptime kernel = gpu_decipher[Nr]
 
-    var result = InlineArray[UInt8, Size](uninitialized=True)
-    var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
-    buf.enqueue_copy_from(data)
+    var buf = ctx.enqueue_create_buffer[DType.uint8](size)
+    buf.enqueue_copy_from(data.unsafe_ptr())
 
     ctx.enqueue_function[kernel, kernel](
         buf,
@@ -172,5 +169,4 @@ def _decrypt_gpu[
         grid_dim=num_blocks,
         block_dim=BLOCK_SIZE,
     )
-    buf.enqueue_copy_to(result.unsafe_ptr())
-    return result
+    buf.enqueue_copy_to(data.unsafe_ptr())
