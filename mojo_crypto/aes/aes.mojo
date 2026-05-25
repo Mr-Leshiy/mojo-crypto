@@ -46,7 +46,9 @@ struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
         elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
             _encrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
         else:
-            _encrypt_cpu[Self.Nr](data, self._backend[AesCpuSetup[Self.KeySize]].w)
+            _encrypt_cpu[Self.Nr](
+                data, self._backend[AesCpuSetup[Self.KeySize]].w
+            )
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         if self._backend.isa[AesGpuSetup]():
@@ -54,7 +56,9 @@ struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
         elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
             _decrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
         else:
-            _decrypt_cpu[Self.Nr](data, self._backend[AesCpuSetup[Self.KeySize]].w)
+            _decrypt_cpu[Self.Nr](
+                data, self._backend[AesCpuSetup[Self.KeySize]].w
+            )
 
 
 def _check_block_aligned(size: Int) raises:
@@ -118,9 +122,9 @@ def _decrypt_cpu[
         )
 
 
-def _encrypt_gpu[Nr: Int, o: MutOrigin](
-    gpu: AesGpuSetup, data: Span[UInt8, o]
-) raises:
+def _encrypt_gpu[
+    Nr: Int, o: MutOrigin
+](gpu: AesGpuSetup, data: Span[UInt8, o]) raises:
     _check_block_aligned(len(data))
     var size = len(data)
     var num_blocks = size // BLOCK_SIZE
@@ -140,9 +144,9 @@ def _encrypt_gpu[Nr: Int, o: MutOrigin](
     buf.enqueue_copy_to(data.unsafe_ptr())
 
 
-def _decrypt_gpu[Nr: Int, o: MutOrigin](
-    gpu: AesGpuSetup, data: Span[UInt8, o]
-) raises:
+def _decrypt_gpu[
+    Nr: Int, o: MutOrigin
+](gpu: AesGpuSetup, data: Span[UInt8, o]) raises:
     _check_block_aligned(len(data))
     var size = len(data)
     var num_blocks = size // BLOCK_SIZE

@@ -108,7 +108,7 @@ def test_aes_kat() raises:
             KeySize: Int
         ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
             return Aes[KeySize](key, ctx)
-        
+
         check_aes_kat[Aes[16], 16, aes[16]](vectors)
         check_aes_kat[Aes[24], 24, aes[24]](vectors)
         check_aes_kat[Aes[32], 32, aes[32]](vectors)
