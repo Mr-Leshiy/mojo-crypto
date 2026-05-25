@@ -1,5 +1,6 @@
 from ..common import Nb, SBOX
 
+
 struct AesCpuSetup[KeySize: Int](ImplicitlyDestructible, Movable):
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
@@ -8,9 +9,8 @@ struct AesCpuSetup[KeySize: Int](ImplicitlyDestructible, Movable):
     var w: InlineArray[UInt32, Self.WordsSize]
 
     def __init__(out self, key: InlineArray[UInt8, Self.KeySize]):
-        self.w = _key_expansion[
-            WordsSize = Self.WordsSize, Nk = Self.Nk
-        ](key)
+        self.w = _key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
+
 
 # FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.
 comptime RCON: InlineArray[UInt32, 10] = [

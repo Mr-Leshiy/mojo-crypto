@@ -28,7 +28,9 @@ struct AesArmv8Setup[KeySize: Int](ImplicitlyDestructible, Movable):
 # order in kb[] directly, so each round key is a plain 16-byte load.
 def _expand_enc_rks[
     Nr: Int, Nk: Int, KeySize: Int
-](key: InlineArray[UInt8, KeySize]) -> InlineArray[SIMD[DType.uint8, 16], Nr + 1]:
+](key: InlineArray[UInt8, KeySize]) -> InlineArray[
+    SIMD[DType.uint8, 16], Nr + 1
+]:
     var kb = InlineArray[UInt8, (Nr + 1) * 16](uninitialized=True)
     for i in range(KeySize):
         kb[i] = key[i]
@@ -50,7 +52,7 @@ def _expand_enc_rks[
                 b1 = UInt8(SBOX[b1])
                 b2 = UInt8(SBOX[b2])
                 b3 = UInt8(SBOX[b3])
-        kb[wi * 4]     = kb[(wi - Nk) * 4]     ^ b0
+        kb[wi * 4] = kb[(wi - Nk) * 4] ^ b0
         kb[wi * 4 + 1] = kb[(wi - Nk) * 4 + 1] ^ b1
         kb[wi * 4 + 2] = kb[(wi - Nk) * 4 + 2] ^ b2
         kb[wi * 4 + 3] = kb[(wi - Nk) * 4 + 3] ^ b3

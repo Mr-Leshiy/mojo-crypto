@@ -72,7 +72,6 @@ struct Aes[KeySize: Int](BlockCipher, GpuBlockCipher, ImplicitlyDestructible):
         )
 
 
-
 def _check_block_aligned(size: Int) raises:
     if size % BLOCK_SIZE != 0:
         raise BlockSizeError(size)

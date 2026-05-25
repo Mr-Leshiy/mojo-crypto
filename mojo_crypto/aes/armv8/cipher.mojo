@@ -68,9 +68,9 @@ def _inv_mix(v: SIMD[DType.uint8, 16]) -> SIMD[DType.uint8, 16]:
 # State layout is column-major (FIPS 197 §3.4): bytes[4*c + r] = row r, col c.
 # Each word w[round*4+c] encodes column c big-endian: byte0=w>>24 .. byte3=w&0xFF.
 @always_inline
-def _rk[WordsSize: Int](
-    w: InlineArray[UInt32, WordsSize], round: Int
-) -> SIMD[DType.uint8, 16]:
+def _rk[
+    WordsSize: Int
+](w: InlineArray[UInt32, WordsSize], round: Int) -> SIMD[DType.uint8, 16]:
     var rk = SIMD[DType.uint8, 16](0)
     comptime for c in range(Nb):
         var word = w[round * Nb + c]
@@ -85,7 +85,9 @@ def _rk[WordsSize: Int](
 # Called once before a multi-block encrypt loop; avoids recomputing _rk per block.
 def expand_round_keys[
     Nr: Int, WordsSize: Int
-](w: InlineArray[UInt32, WordsSize]) -> InlineArray[SIMD[DType.uint8, 16], Nr + 1]:
+](w: InlineArray[UInt32, WordsSize]) -> InlineArray[
+    SIMD[DType.uint8, 16], Nr + 1
+]:
     var rks = InlineArray[SIMD[DType.uint8, 16], Nr + 1](uninitialized=True)
     comptime for r in range(Nr + 1):
         rks[r] = _rk(w, r)
@@ -103,7 +105,9 @@ def expand_round_keys[
 #   dk[Nr]      = ek[0]              (final XOR — no InvMixColumns)
 def expand_round_keys_inv[
     Nr: Int, WordsSize: Int
-](w: InlineArray[UInt32, WordsSize]) -> InlineArray[SIMD[DType.uint8, 16], Nr + 1]:
+](w: InlineArray[UInt32, WordsSize]) -> InlineArray[
+    SIMD[DType.uint8, 16], Nr + 1
+]:
     var rks = InlineArray[SIMD[DType.uint8, 16], Nr + 1](uninitialized=True)
     rks[0] = _rk(w, Nr)
     comptime for r in range(1, Nr):
