@@ -1,11 +1,7 @@
-# LLVM aarch64 crypto aes intrinsics.
+# LLVM AArch64 crypto AES intrinsics.
 #
 # LLVM AArch64 intrinsic definitions (no separate doc page exists; .td is authoritative):
 #   https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/IntrinsicsAArch64.td
-# ARM intrinsics browser (filter by "AES", A64 SIMD):
-#   https://developer.arm.com/architectures/instruction-sets/intrinsics/
-# ARM Architecture Reference Manual (A-profile), section C7.2 (crypto instructions):
-#   https://developer.arm.com/documentation/ddi0487/latest
 
 
 from std.sys import CompilationTarget

@@ -10,6 +10,8 @@ from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
 from .cpu.setup import AesCpuSetup
 from .aarch64.cipher import cipher as armv8_cipher, decipher as armv8_decipher
 from .aarch64.setup import AesArmv8Setup
+from .x86.cipher import cipher as x86_cipher, decipher as x86_decipher
+from .x86.setup import AesX86Setup
 from .gpu.cipher import cipher as gpu_cipher, decipher as gpu_decipher
 from .gpu.setup import AesGpuSetup
 from .common import BLOCK_SIZE
@@ -20,7 +22,10 @@ struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
     comptime Nr: Int = AesCpuSetup[Self.KeySize].Nr
 
     var _backend: Variant[
-        AesCpuSetup[Self.KeySize], AesArmv8Setup[Self.KeySize], AesGpuSetup
+        AesCpuSetup[Self.KeySize],
+        AesArmv8Setup[Self.KeySize],
+        AesX86Setup[Self.KeySize],
+        AesGpuSetup,
     ]
 
     def __init__(
@@ -47,6 +52,8 @@ struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
             _encrypt_gpu[Self.Nr](self._backend[AesGpuSetup], data)
         elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
             _encrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
+        elif self._backend.isa[AesX86Setup[Self.KeySize]]():
+            _encrypt_x86(data, self._backend[AesX86Setup[Self.KeySize]])
         else:
             _encrypt_cpu[Self.Nr](
                 data, self._backend[AesCpuSetup[Self.KeySize]].w
@@ -57,6 +64,8 @@ struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
             _decrypt_gpu[Self.Nr](self._backend[AesGpuSetup], data)
         elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
             _decrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
+        elif self._backend.isa[AesX86Setup[Self.KeySize]]():
+            _decrypt_x86(data, self._backend[AesX86Setup[Self.KeySize]])
         else:
             _decrypt_cpu[Self.Nr](
                 data, self._backend[AesCpuSetup[Self.KeySize]].w
@@ -84,6 +93,24 @@ def _decrypt_armv8[
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         armv8_decipher(data[offset : offset + BLOCK_SIZE], armv8.dec_rks)
+
+
+def _encrypt_x86[
+    KeySize: Int, o: MutOrigin
+](data: Span[UInt8, o], x86: AesX86Setup[KeySize]) raises:
+    _check_block_aligned(len(data))
+    for i in range(len(data) // BLOCK_SIZE):
+        var offset = i * BLOCK_SIZE
+        x86_cipher(data[offset : offset + BLOCK_SIZE], x86.enc_rks)
+
+
+def _decrypt_x86[
+    KeySize: Int, o: MutOrigin
+](data: Span[UInt8, o], x86: AesX86Setup[KeySize]) raises:
+    _check_block_aligned(len(data))
+    for i in range(len(data) // BLOCK_SIZE):
+        var offset = i * BLOCK_SIZE
+        x86_decipher(data[offset : offset + BLOCK_SIZE], x86.dec_rks)
 
 
 def _encrypt_cpu[
