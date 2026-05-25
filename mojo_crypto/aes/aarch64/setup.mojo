@@ -2,8 +2,8 @@ from ..common import SBOX
 from .cipher import _inv_mix
 
 
-# FIPS 197 Table 2 round constants, byte form (only the MSB matters).
-comptime RCON_BYTE: InlineArray[UInt8, 10] = [
+# FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.
+comptime RCON: InlineArray[UInt8, 10] = [
     # fmt: off
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36,
     # fmt: on
@@ -42,7 +42,7 @@ def _expand_enc_rks[
         if wi % Nk == 0:
             # RotWord: [b0,b1,b2,b3] → [b1,b2,b3,b0]; SubWord; XOR Rcon (MSB only).
             var t = UInt8(SBOX[b0])
-            b0 = UInt8(SBOX[b1]) ^ RCON_BYTE[wi // Nk - 1]
+            b0 = UInt8(SBOX[b1]) ^ RCON[wi // Nk - 1]
             b1 = UInt8(SBOX[b2])
             b2 = UInt8(SBOX[b3])
             b3 = t
