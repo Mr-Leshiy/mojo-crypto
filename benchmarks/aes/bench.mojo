@@ -89,6 +89,6 @@ def main() raises:
         # bench_cpu_cipher[Aes[24], 24, aes[24], "aes192"]()
         # bench_cpu_cipher[Aes[32], 32, aes[32], "aes256"]()
 
-        # bench_gpu_cipher[Aes[16], 16, aes[16], "aes128"](ctx)
+        bench_gpu_cipher[Aes[16], 16, aes[16], "aes128"](ctx)
         # bench_gpu_cipher[Aes[24], 24, aes[24], "aes192"](ctx)
         # bench_gpu_cipher[Aes[32], 32, aes[32], "aes256"](ctx)

@@ -5,20 +5,20 @@ from .errors import GpuContextError
 
 
 trait BlockCipher:
-    def encrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]) raises:
+    def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         ...
 
-    def decrypt[Size: Int](self, mut data: InlineArray[UInt8, Size]) raises:
+    def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         ...
 
 
 trait GpuBlockCipher:
     def encrypt[
-        Size: Int
-    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
+        o: MutOrigin
+    ](self, ctx: DeviceContext, data: Span[UInt8, o]) raises:
         ...
 
     def decrypt[
-        Size: Int
-    ](self, ctx: DeviceContext, mut data: InlineArray[UInt8, Size]) raises:
+        o: MutOrigin
+    ](self, ctx: DeviceContext, data: Span[UInt8, o]) raises:
         ...

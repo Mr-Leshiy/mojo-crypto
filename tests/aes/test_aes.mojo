@@ -401,7 +401,7 @@ def test_256_key_expansion() raises:
 
 
 def check_aes_kat[
-    C: BlockCipher & GpuBlockCipher,
+    C: BlockCipher & GpuBlockCipher & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](ctx: DeviceContext, vectors: PythonObject) raises:
@@ -446,7 +446,7 @@ def test_aes_kat() raises:
 
 
 def check_aes_mct[
-    C: BlockCipher & GpuBlockCipher,
+    C: BlockCipher & GpuBlockCipher & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](ctx: DeviceContext, vectors: PythonObject) raises:
