@@ -6,8 +6,8 @@ from ..common import Nb, SBOX, SBOX_INV
 # All helpers operate directly on the flat InlineArray[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 def cipher[
-    Nr: Int, WordsSize: Int
-](mut state: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]):
+    Nr: Int, WordsSize: Int, o: MutOrigin
+](state: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]):
     add_round_key(state, 0, w)
     for r in range(1, Nr):
         sub_bytes(state)
@@ -21,8 +21,8 @@ def cipher[
 
 # FIPS 197 §5.3 InvCipher()
 def decipher[
-    Nr: Int, WordsSize: Int
-](mut state: InlineArray[UInt8, 16], w: InlineArray[UInt32, WordsSize]):
+    Nr: Int, WordsSize: Int, o: MutOrigin
+](state: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]):
     add_round_key(state, Nr, w)
     for r in range(Nr - 1, 0, -1):
         inv_shift_rows(state)
@@ -36,12 +36,8 @@ def decipher[
 
 # FIPS 197 §5.1.4 AddRoundKey()
 def add_round_key[
-    WordsSize: Int
-](
-    mut state: InlineArray[UInt8, 16],
-    round: Int,
-    w: InlineArray[UInt32, WordsSize],
-):
+    WordsSize: Int, o: MutOrigin
+](state: Span[UInt8, o], round: Int, w: InlineArray[UInt32, WordsSize],):
     for c in range(Nb):
         var w_idx = Nb * round + c
         state[4 * c] ^= UInt8(w[w_idx] >> 24)
@@ -51,20 +47,20 @@ def add_round_key[
 
 
 # FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
-def sub_bytes(mut state: InlineArray[UInt8, 16]):
+def sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
     for i in range(16):
         state[i] = UInt8(SBOX[Int(state[i])])
 
 
 # FIPS 197 §5.3.2 InvSubBytes() — apply inverse S-box to every byte
-def inv_sub_bytes(mut state: InlineArray[UInt8, 16]):
+def inv_sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
     for i in range(16):
         state[i] = SBOX_INV[Int(state[i])]
 
 
 # FIPS 197 §5.1.2 ShiftRows() — cyclic left shift of row r by r positions
 # Row r in flat layout occupies indices r, r+4, r+8, r+12
-def shift_rows(mut state: InlineArray[UInt8, 16]):
+def shift_rows[o: MutOrigin](state: Span[UInt8, o]):
     for r in range(1, Nb):
         var tmp = InlineArray[UInt8, Nb](uninitialized=True)
         for c in range(Nb):
@@ -74,7 +70,7 @@ def shift_rows(mut state: InlineArray[UInt8, 16]):
 
 
 # FIPS 197 §5.3.1 InvShiftRows() — cyclic right shift of row r by r positions
-def inv_shift_rows(mut state: InlineArray[UInt8, 16]):
+def inv_shift_rows[o: MutOrigin](state: Span[UInt8, o]):
     for r in range(1, Nb):
         var tmp = InlineArray[UInt8, Nb](uninitialized=True)
         for c in range(Nb):
@@ -85,7 +81,7 @@ def inv_shift_rows(mut state: InlineArray[UInt8, 16]):
 
 # FIPS 197 §5.1.3 MixColumns() — GF(2^8) matrix multiply on each column
 # Column col in flat layout occupies indices 4*col, 1+4*col, 2+4*col, 3+4*col
-def mix_columns(mut state: InlineArray[UInt8, 16]):
+def mix_columns[o: MutOrigin](state: Span[UInt8, o]):
     for col in range(Nb):
         var s0 = state[4 * col]
         var s1 = state[1 + 4 * col]
@@ -98,7 +94,7 @@ def mix_columns(mut state: InlineArray[UInt8, 16]):
 
 
 # FIPS 197 §5.3.3 InvMixColumns() — GF(2^8) inverse matrix multiply on each column
-def inv_mix_columns(mut state: InlineArray[UInt8, 16]):
+def inv_mix_columns[o: MutOrigin](state: Span[UInt8, o]):
     for col in range(Nb):
         var s0 = state[4 * col]
         var s1 = state[1 + 4 * col]

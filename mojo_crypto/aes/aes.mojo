@@ -90,38 +90,18 @@ def _encrypt_cpu[
     Nr: Int, WordsSize: Int, o: MutOrigin
 ](data: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]) raises:
     _check_block_aligned(len(data))
-    var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
     for i in range(len(data) // BLOCK_SIZE):
-        memcpy(
-            dest=block.unsafe_ptr(),
-            src=data.unsafe_ptr() + i * BLOCK_SIZE,
-            count=BLOCK_SIZE,
-        )
-        cpu_cipher[Nr=Nr](block, w)
-        memcpy(
-            dest=data.unsafe_ptr() + i * BLOCK_SIZE,
-            src=block.unsafe_ptr(),
-            count=BLOCK_SIZE,
-        )
+        var offset = i * BLOCK_SIZE
+        cpu_cipher[Nr=Nr](data[offset : offset + BLOCK_SIZE], w)
 
 
 def _decrypt_cpu[
     Nr: Int, WordsSize: Int, o: MutOrigin
 ](data: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]) raises:
     _check_block_aligned(len(data))
-    var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
     for i in range(len(data) // BLOCK_SIZE):
-        memcpy(
-            dest=block.unsafe_ptr(),
-            src=data.unsafe_ptr() + i * BLOCK_SIZE,
-            count=BLOCK_SIZE,
-        )
-        cpu_decipher[Nr=Nr](block, w)
-        memcpy(
-            dest=data.unsafe_ptr() + i * BLOCK_SIZE,
-            src=block.unsafe_ptr(),
-            count=BLOCK_SIZE,
-        )
+        var offset = i * BLOCK_SIZE
+        cpu_decipher[Nr=Nr](data[offset : offset + BLOCK_SIZE], w)
 
 
 def _encrypt_gpu[
