@@ -83,12 +83,18 @@ def main() raises:
         def aes[
             KeySize: Int
         ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+            return Aes[KeySize](key)
+
+        @parameter
+        def aes_gpu[
+            KeySize: Int
+        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
             return Aes[KeySize](key, ctx)
 
         bench_cpu_cipher[Aes[16], 16, aes[16], "aes128"]()
         # bench_cpu_cipher[Aes[24], 24, aes[24], "aes192"]()
         # bench_cpu_cipher[Aes[32], 32, aes[32], "aes256"]()
 
-        bench_gpu_cipher[Aes[16], 16, aes[16], "aes128"](ctx)
-        # bench_gpu_cipher[Aes[24], 24, aes[24], "aes192"](ctx)
-        # bench_gpu_cipher[Aes[32], 32, aes[32], "aes256"](ctx)
+        bench_gpu_cipher[Aes[16], 16, aes_gpu[16], "aes128"](ctx)
+        # bench_gpu_cipher[Aes[24], 24, aes_gpu[24], "aes192"](ctx)
+        # bench_gpu_cipher[Aes[32], 32, aes_gpu[32], "aes256"](ctx)

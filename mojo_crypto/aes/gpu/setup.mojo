@@ -4,6 +4,7 @@ from ..common import SBOX, SBOX_INV
 
 
 struct AesGpuSetup(ImplicitlyDestructible, Movable):
+    var ctx: DeviceContext
     var w: DeviceBuffer[DType.uint32]
     var sbox: DeviceBuffer[DType.uint32]
     var sbox_inv: DeviceBuffer[DType.uint8]
@@ -11,6 +12,7 @@ struct AesGpuSetup(ImplicitlyDestructible, Movable):
     def __init__[
         WordsSize: Int
     ](out self, ctx: DeviceContext, w: InlineArray[UInt32, WordsSize]) raises:
+        self.ctx = ctx
         self.w = ctx.enqueue_create_buffer[DType.uint32](WordsSize)
         self.w.enqueue_copy_from(w)
 

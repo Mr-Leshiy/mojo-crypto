@@ -4,7 +4,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.aes import Aes, BLOCK_SIZE
-from mojo_crypto.block_cipher import BlockCipher, GpuBlockCipher
+from mojo_crypto.block_cipher import BlockCipher
 
 from tests.aes.utils import (
     AesTestVector,
@@ -72,10 +72,10 @@ def test_aes_128() raises:
 
 
 def check_aes_kat[
-    C: BlockCipher & GpuBlockCipher & ImplicitlyDestructible,
+    C: BlockCipher & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](ctx: DeviceContext, vectors: PythonObject) raises:
+](vectors: PythonObject) raises:
     for v in load_aes_vectors[KeySize](vectors):
         var cipher = cipher_init(v.key)
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
@@ -87,14 +87,6 @@ def check_aes_kat[
         var ct = v.ct
         cipher.decrypt(ct)
         assert_equal(ct, v.pt, msg=msg)
-
-        var pt_gpu = v.pt
-        cipher.encrypt(ctx, pt_gpu)
-        assert_equal(pt_gpu, v.ct, msg=msg)
-
-        var ct_gpu = v.ct
-        cipher.decrypt(ctx, ct_gpu)
-        assert_equal(ct_gpu, v.pt, msg=msg)
 
 
 # AES Known Answer Test (KAT) Vectors
@@ -109,18 +101,28 @@ def test_aes_kat() raises:
         def aes[
             KeySize: Int
         ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-            return Aes[KeySize](key, ctx)
+            return Aes[KeySize](key)
 
-        check_aes_kat[Aes[16], 16, aes[16]](ctx, vectors)
-        check_aes_kat[Aes[24], 24, aes[24]](ctx, vectors)
-        check_aes_kat[Aes[32], 32, aes[32]](ctx, vectors)
+        @parameter
+        def aes_gpu[
+            KeySize: Int
+        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+            return Aes[KeySize](key, ctx)
+        
+        check_aes_kat[Aes[16], 16, aes[16]](vectors)
+        check_aes_kat[Aes[24], 24, aes[24]](vectors)
+        check_aes_kat[Aes[32], 32, aes[32]](vectors)
+
+        check_aes_kat[Aes[16], 16, aes_gpu[16]](vectors)
+        check_aes_kat[Aes[24], 24, aes_gpu[24]](vectors)
+        check_aes_kat[Aes[32], 32, aes_gpu[32]](vectors)
 
 
 def check_aes_mct[
-    C: BlockCipher & GpuBlockCipher & ImplicitlyDestructible,
+    C: BlockCipher & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](ctx: DeviceContext, vectors: PythonObject) raises:
+](vectors: PythonObject) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
@@ -129,19 +131,15 @@ def check_aes_mct[
         var initial = v.pt if v.is_encrypt else v.ct
         var expected = v.ct if v.is_encrypt else v.pt
         var cipher = cipher_init(v.key)
-        var block_cpu = initial
-        var block_gpu = initial
+        var block = initial
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
-                cipher.encrypt(block_cpu)
-                cipher.encrypt(ctx, block_gpu)
+                cipher.encrypt(block)
             else:
-                cipher.decrypt(block_cpu)
-                cipher.decrypt(ctx, block_gpu)
+                cipher.decrypt(block)
 
         var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
-        assert_equal(block_cpu, expected, msg=msg)
-        assert_equal(block_gpu, expected, msg=msg)
+        assert_equal(block, expected, msg=msg)
 
 
 # AES Monte Carlo Test (MCT) Sample Vectors
@@ -156,11 +154,21 @@ def aes_mct() raises:
         def aes[
             KeySize: Int
         ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+            return Aes[KeySize](key)
+
+        @parameter
+        def aes_gpu[
+            KeySize: Int
+        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
             return Aes[KeySize](key, ctx)
 
-        check_aes_mct[Aes[16], 16, aes[16]](ctx, vectors)
-        check_aes_mct[Aes[24], 24, aes[24]](ctx, vectors)
-        check_aes_mct[Aes[32], 32, aes[32]](ctx, vectors)
+        check_aes_mct[Aes[16], 16, aes[16]](vectors)
+        check_aes_mct[Aes[24], 24, aes[24]](vectors)
+        check_aes_mct[Aes[32], 32, aes[32]](vectors)
+
+        check_aes_mct[Aes[16], 16, aes_gpu[16]](vectors)
+        check_aes_mct[Aes[24], 24, aes_gpu[24]](vectors)
+        check_aes_mct[Aes[32], 32, aes_gpu[32]](vectors)
 
 
 def main() raises:
