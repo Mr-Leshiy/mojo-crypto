@@ -8,8 +8,8 @@ from mojo_crypto.errors import BlockSizeError
 
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
 from .cpu.setup import AesCpuSetup
-from .armv8.cipher import cipher as armv8_cipher, decipher as armv8_decipher
-from .armv8.setup import AesArmv8Setup
+from .aarch64.cipher import cipher as armv8_cipher, decipher as armv8_decipher
+from .aarch64.setup import AesArmv8Setup
 from .gpu.cipher import cipher as gpu_cipher, decipher as gpu_decipher
 from .gpu.setup import AesGpuSetup
 from .common import BLOCK_SIZE
