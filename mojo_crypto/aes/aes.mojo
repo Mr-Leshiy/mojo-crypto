@@ -1,10 +1,10 @@
 from std.gpu.host import DeviceContext
 from std.memory import memcpy
+from std.sys import CompilationTarget
+from std.utils import Variant
 
 from mojo_crypto.block_cipher import BlockCipher
 from mojo_crypto.errors import BlockSizeError
-
-from std.sys import CompilationTarget
 
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
 from .cpu.setup import AesCpuSetup
@@ -19,9 +19,9 @@ from .common import BLOCK_SIZE
 struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
     comptime Nr: Int = AesCpuSetup[Self.KeySize].Nr
 
-    var _cpu: AesCpuSetup[Self.KeySize]
-    var _armv8: Optional[AesArmv8Setup[Self.KeySize]]
-    var _gpu: Optional[AesGpuSetup]
+    var _backend: Variant[
+        AesCpuSetup[Self.KeySize], AesArmv8Setup[Self.KeySize], AesGpuSetup
+    ]
 
     def __init__(
         out self,
@@ -31,33 +31,30 @@ struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
         comptime assert (
             Self.KeySize == 16 or Self.KeySize == 24 or Self.KeySize == 32
         ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
-        self._cpu = AesCpuSetup[Self.KeySize](key)
-        comptime if not CompilationTarget.is_x86():
-            self._armv8 = AesArmv8Setup[Self.KeySize](key)
-        else:
-            self._armv8 = None
         if ctx:
-            self._gpu = AesGpuSetup(ctx.value(), self._cpu.w)
+            var cpu = AesCpuSetup[Self.KeySize](key)
+            self._backend = AesGpuSetup(ctx.value(), cpu.w)
         else:
-            self._gpu = None
+            comptime if not CompilationTarget.is_x86():
+                self._backend = AesArmv8Setup[Self.KeySize](key)
+            else:
+                self._backend = AesCpuSetup[Self.KeySize](key)
 
     def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
-        if self._gpu:
-            _encrypt_gpu[Self.Nr](self._gpu.value(), data)
+        if self._backend.isa[AesGpuSetup]():
+            _encrypt_gpu[Self.Nr](self._backend[AesGpuSetup], data)
+        elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
+            _encrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
         else:
-            comptime if not CompilationTarget.is_x86():
-                _encrypt_armv8(data, self._armv8.value())
-            else:
-                _encrypt_cpu[Self.Nr](data, self._cpu.w)
+            _encrypt_cpu[Self.Nr](data, self._backend[AesCpuSetup[Self.KeySize]].w)
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
-        if self._gpu:
-            _decrypt_gpu[Self.Nr](self._gpu.value(), data)
+        if self._backend.isa[AesGpuSetup]():
+            _decrypt_gpu[Self.Nr](self._backend[AesGpuSetup], data)
+        elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
+            _decrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
         else:
-            comptime if not CompilationTarget.is_x86():
-                _decrypt_armv8(data, self._armv8.value())
-            else:
-                _decrypt_cpu[Self.Nr](data, self._cpu.w)
+            _decrypt_cpu[Self.Nr](data, self._backend[AesCpuSetup[Self.KeySize]].w)
 
 
 def _check_block_aligned(size: Int) raises:
