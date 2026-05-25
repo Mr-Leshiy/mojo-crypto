@@ -67,12 +67,12 @@ def _inv_mix(v: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
 def cipher[
     Nr: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], Nr + 1]):
-    var s = data.unsafe_ptr().load[width=BLOCK_SIZE]().bitcast[DType.uint64]()
+    var s = data.unsafe_ptr().bitcast[UInt64]().load[width=2]()
     s ^= rks[0]
     comptime for r in range(1, Nr):
         s = _aesenc(s, rks[r])
     s = _aesenclast(s, rks[Nr])
-    data.unsafe_ptr().store(s.bitcast[DType.uint8]())
+    data.unsafe_ptr().bitcast[UInt64]().store(s)
 
 
 # FIPS 197 §5.3 InvCipher() via AES-NI (equivalent inverse).
@@ -81,9 +81,9 @@ def cipher[
 def decipher[
     Nr: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], Nr + 1]):
-    var s = data.unsafe_ptr().load[width=BLOCK_SIZE]().bitcast[DType.uint64]()
+    var s = data.unsafe_ptr().bitcast[UInt64]().load[width=2]()
     s ^= rks[0]
     comptime for r in range(1, Nr):
         s = _aesdec(s, rks[r])
     s = _aesdeclast(s, rks[Nr])
-    data.unsafe_ptr().store(s.bitcast[DType.uint8]())
+    data.unsafe_ptr().bitcast[UInt64]().store(s)
