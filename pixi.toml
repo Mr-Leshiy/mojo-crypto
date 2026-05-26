@@ -15,7 +15,6 @@ mojo run -I . tests/aes/test_aes.mojo
 
 bench  = "python -m benchmarks.cli"
 bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
-run        = 
 
 [dependencies]
 mojo = ">=1.0.0b1,<2"
