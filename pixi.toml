@@ -4,6 +4,7 @@ channels = ["conda-forge", "https://conda.modular.com/max"]
 name = "mojo-crypto"
 platforms = ["osx-arm64", "linux-aarch64", "linux-64"]
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 
 [tasks]
 fmt    = "mojo format ."
@@ -12,11 +13,12 @@ test   = """
 mojo run -I . tests/aes/test_aes.mojo
 """
 
-bench  = """
-mojo run -O3 -I . benchmarks/aes/bench.mojo
-"""
+bench  = "python -m benchmarks.cli"
 bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
 
 [dependencies]
 mojo = ">=1.0.0b1,<2"
 rust = ">=1.80.0,<2"
+
+[pypi-dependencies]
+typer = ">=0.12"
