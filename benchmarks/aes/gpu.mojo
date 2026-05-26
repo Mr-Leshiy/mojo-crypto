@@ -13,7 +13,9 @@ def main() raises:
         @parameter
         def aes[
             KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize, AesGpuBackend]:
+        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+            KeySize, AesGpuBackend
+        ]:
             return Aes[KeySize, AesGpuBackend](
                 AesGpuBackend(ctx, AesCpuBackend[KeySize](key).w)
             )

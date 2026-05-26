@@ -13,6 +13,7 @@ from tests.aes.utils import (
 
 comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
 
+
 def check_aes_kat[
     C: BlockCipher & ImplicitlyDestructible,
     KeySize: Int,
