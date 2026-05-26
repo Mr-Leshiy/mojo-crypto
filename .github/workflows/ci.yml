@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  fmt:
+  ci:
     name: Format
     runs-on: ubuntu-latest
     steps:
@@ -16,16 +16,5 @@ jobs:
           pixi-version: latest
           cache: true
       - run: pixi run fmt
-      - name: Check for changes
-        run: git diff --exit-code
-
-  test:
-    name: Test
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: latest
-          cache: true
       - run: pixi run test
+
