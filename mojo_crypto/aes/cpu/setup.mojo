@@ -1,7 +1,7 @@
 from ..common import Nb, SBOX
 
 
-struct AesCpuSetup[KeySize: Int](ImplicitlyDestructible, Movable):
+struct AesCpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
     comptime WordsSize: Int = Nb * (Self.Nr + 1)

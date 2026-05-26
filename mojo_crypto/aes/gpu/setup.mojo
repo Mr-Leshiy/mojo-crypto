@@ -3,7 +3,7 @@ from std.gpu.host import DeviceContext, DeviceBuffer
 from ..common import SBOX, SBOX_INV
 
 
-struct AesGpuSetup(ImplicitlyDestructible, Movable):
+struct AesGpuBackend(ImplicitlyDestructible, Movable):
     var ctx: DeviceContext
     var w: DeviceBuffer[DType.uint32]
     var sbox: DeviceBuffer[DType.uint32]

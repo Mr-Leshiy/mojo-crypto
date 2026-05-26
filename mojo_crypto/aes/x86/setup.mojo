@@ -10,7 +10,7 @@ comptime RCON: InlineArray[UInt8, 10] = [
 ]
 
 
-struct AesX86Setup[KeySize: Int](ImplicitlyDestructible, Movable):
+struct AesX86Backend[KeySize: Int](ImplicitlyDestructible, Movable):
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
 

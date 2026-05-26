@@ -10,7 +10,7 @@ comptime RCON: InlineArray[UInt8, 10] = [
 ]
 
 
-struct AesArmv8Setup[KeySize: Int](ImplicitlyDestructible, Movable):
+struct AesArmv8Backend[KeySize: Int](ImplicitlyDestructible, Movable):
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
 
