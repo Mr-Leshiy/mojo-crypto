@@ -9,10 +9,10 @@ Cryptographic primitives implemented in [Mojo](https://www.modular.com/mojo).
 ## Commands
 
 ```bash
-pixi run fmt          # format all Mojo source files
-pixi run test         # run the AES test suite
-pixi run bench        # run Mojo AES benchmarks (-O3)
-pixi run bench-rust   # run Rust AES benchmarks (Criterion)
+pixi run fmt
+pixi run test
+pixi run bench
+pixi run bench-rust
 ```
 
 ## License
