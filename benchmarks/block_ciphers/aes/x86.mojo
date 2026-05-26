@@ -1,6 +1,6 @@
-from mojo_crypto.aes import Aes, AesX86Backend
+from mojo_crypto.block_ciphers.aes import Aes, AesX86Backend
 
-from benchmarks.aes.common import bench_cipher
+from benchmarks.block_ciphers.aes.common import bench_cipher
 
 
 def main() raises:

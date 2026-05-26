@@ -29,7 +29,7 @@ def parse_hex[N: Int](s: String) -> InlineArray[UInt8, N]:
 
 def load_python_aes_vectors(dir: String, mode: String) raises -> PythonObject:
     var sys = Python.import_module("sys")
-    sys.path.insert(0, PythonObject("tests/aes"))
+    sys.path.insert(0, PythonObject("tests/block_ciphers/aes"))
     var load_test_vectors = Python.import_module("load_test_vectors")
     return load_test_vectors.load(dir, load_test_vectors.AesMode(mode))
 

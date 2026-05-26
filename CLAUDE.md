@@ -17,7 +17,7 @@ Tests and benchmarks require an NVIDIA CUDA GPU. CI only runs `fmt` because free
 
 To run tests directly (equivalent to `pixi run test`):
 ```bash
-mojo run -I . tests/aes/test_aes.mojo
+mojo run -I . tests/block_ciphers/aes/test_aes.mojo
 ```
 
 ## Architecture
@@ -30,7 +30,7 @@ Two traits define the public interface:
 
 `Size` must be a compile-time multiple of 16 (enforced by `_assert_block_aligned`, a `comptime assert`).
 
-### `Aes[KeySize]` struct (`mojo_crypto/aes/aes.mojo`)
+### `Aes[KeySize]` struct (`mojo_crypto/block_ciphers/aes/aes.mojo`)
 
 The main struct implements both traits. `KeySize` is 16 (AES-128), 24 (AES-192), or 32 (AES-256) — validated at comptime. Round count `Nr = KeySize/4 + 6`.
 
@@ -40,11 +40,11 @@ Multi-block CPU path: `_encrypt_cpu`/`_decrypt_cpu` use a `comptime for` loop ov
 
 Multi-block GPU path: `grid_dim = num_blocks`, `block_dim = BLOCK_SIZE (16)`. Each GPU thread block processes exactly one AES block, with 16 threads (one per byte) operating on a shared-memory state array.
 
-### CPU cipher (`mojo_crypto/aes/cpu/cipher.mojo`)
+### CPU cipher (`mojo_crypto/block_ciphers/aes/cpu/cipher.mojo`)
 
 Straightforward FIPS 197 implementation. State layout is column-major: `state[r][c] ↔ state[r + 4*c]`. GF(2⁸) multiplication uses Russian-peasant via `multiply`/`xtime`.
 
-### ARMv8 hardware cipher (`mojo_crypto/aes/aarch64/`)
+### ARMv8 hardware cipher (`mojo_crypto/block_ciphers/aes/aarch64/`)
 
 Uses ARMv8 Crypto Extension via LLVM intrinsics (`llvm.aarch64.crypto.aese/aesmc/aesd/aesimc`). All four operate on `SIMD[DType.uint8, 16]` directly.
 
@@ -54,7 +54,7 @@ Uses ARMv8 Crypto Extension via LLVM intrinsics (`llvm.aarch64.crypto.aese/aesmc
 
 Dispatched from `aes.mojo` when `CompilationTarget.has_neon()` is true at comptime (NEON is mandatory on AArch64 and implies the AES crypto extension).
 
-### x86 AES-NI cipher (`mojo_crypto/aes/x86/`)
+### x86 AES-NI cipher (`mojo_crypto/block_ciphers/aes/x86/`)
 
 Uses x86 AES-NI via LLVM intrinsics (`llvm.x86.aesni.aesenc/aesenclast/aesdec/aesdeclast/aesimc`). These intrinsics are typed as `v2i64` in LLVM IR; `cipher.mojo` bitcasts to/from `SIMD[DType.uint64, 2]` internally via `_to_v2i64`/`_from_v2i64` helpers, keeping the public API consistent with the AArch64 backend (`SIMD[DType.uint8, 16]`).
 
@@ -62,17 +62,17 @@ Uses x86 AES-NI via LLVM intrinsics (`llvm.x86.aesni.aesenc/aesenclast/aesdec/ae
 
 `setup.mojo` exports `AesX86Setup[KeySize]` with the same `enc_rks`/`dec_rks` structure as `AesArmv8Setup`. **Not yet wired into `aes.mojo` dispatch** — see `PLAN.md` Phase 2/3.
 
-### GPU cipher (`mojo_crypto/aes/gpu/cipher.mojo`)
+### GPU cipher (`mojo_crypto/block_ciphers/aes/gpu/cipher.mojo`)
 
 Each thread handles one byte (`thread_idx.x` = local byte index, `block_idx.x` = AES block index). State lives in `AddressSpace.SHARED`. `shift_rows` and `mix_columns` require `barrier()` calls to prevent read-after-write races between threads in the same block.
 
-### Key expansion (`mojo_crypto/aes/expand.mojo`)
+### Key expansion (`mojo_crypto/block_ciphers/aes/expand.mojo`)
 
 FIPS 197 Algorithm 2. Parameterised by `[WordsSize, Nk, KeySize]`. `Nk = KeySize/4`, `WordsSize = Nb*(Nr+1)`.
 
-### Test vectors (`tests/aes/`)
+### Test vectors (`tests/block_ciphers/aes/`)
 
-NIST KAT and MCT `.rsp` files are loaded via a Python helper (`tests/aes/load_test_vectors.py`). `utils.mojo` bridges Mojo and Python via `std.python`. Tests cover both CPU and GPU paths with the same vectors.
+NIST KAT and MCT `.rsp` files are loaded via a Python helper (`tests/block_ciphers/aes/load_test_vectors.py`). `utils.mojo` bridges Mojo and Python via `std.python`. Tests cover both CPU and GPU paths with the same vectors.
 
 ### Known GPU performance issues
 

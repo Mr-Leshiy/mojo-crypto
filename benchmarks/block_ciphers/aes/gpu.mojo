@@ -1,8 +1,8 @@
 from std.gpu.host import DeviceContext
 
-from mojo_crypto.aes import Aes, AesCpuBackend, AesGpuBackend
+from mojo_crypto.block_ciphers.aes import Aes, AesCpuBackend, AesGpuBackend
 
-from benchmarks.aes.common import bench_cipher
+from benchmarks.block_ciphers.aes.common import bench_cipher
 
 
 def main() raises:

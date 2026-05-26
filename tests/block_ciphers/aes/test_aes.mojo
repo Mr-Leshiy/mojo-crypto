@@ -2,10 +2,10 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.aes import Aes, AesCpuBackend, BLOCK_SIZE
+from mojo_crypto.block_ciphers.aes import Aes, AesCpuBackend, BLOCK_SIZE
 from mojo_crypto.block_cipher import BlockCipher
 
-from tests.aes.utils import (
+from tests.block_ciphers.aes.utils import (
     AesTestVector,
     load_python_aes_vectors,
     load_aes_vectors,
@@ -36,7 +36,7 @@ def check_aes_kat[
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
 def test_aes_kat() raises:
-    var vectors = load_python_aes_vectors("tests/aes/KAT_AES", "ECB")
+    var vectors = load_python_aes_vectors("tests/block_ciphers/aes/KAT_AES", "ECB")
 
     @parameter
     def aes[
@@ -79,7 +79,7 @@ def check_aes_mct[
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
 def test_aes_mct() raises:
-    var vectors = load_python_aes_vectors("tests/aes/aesmct", "ECB")
+    var vectors = load_python_aes_vectors("tests/block_ciphers/aes/aesmct", "ECB")
 
     @parameter
     def aes[
