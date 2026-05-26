@@ -1,65 +1,76 @@
-from std.gpu.host import DeviceContext
-from std.memory import memcpy
-from std.sys import CompilationTarget
-from std.utils import Variant
-
 from mojo_crypto.block_cipher import BlockCipher
 from mojo_crypto.errors import BlockSizeError
 
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
-from .cpu.setup import AesCpuSetup
+from .cpu.setup import AesCpuBackend
 from .aarch64.cipher import cipher as armv8_cipher, decipher as armv8_decipher
-from .aarch64.setup import AesArmv8Setup
+from .aarch64.setup import AesArmv8Backend
+from .x86.cipher import cipher as x86_cipher, decipher as x86_decipher
+from .x86.setup import AesX86Backend
 from .gpu.cipher import cipher as gpu_cipher, decipher as gpu_decipher
-from .gpu.setup import AesGpuSetup
+from .gpu.setup import AesGpuBackend
 from .common import BLOCK_SIZE
 
 
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
-struct Aes[KeySize: Int](BlockCipher, ImplicitlyDestructible):
-    comptime Nr: Int = AesCpuSetup[Self.KeySize].Nr
+#
+# Backend selects the implementation at compile time:
+#   AesArmv8Backend[KeySize]  — AArch64 AES crypto extension
+#   AesX86Backend[KeySize]    — x86 AES-NI
+#   AesCpuBackend[KeySize]    — portable software fallback
+#   AesGpuBackend             — CUDA GPU backend
+#
+struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
+    BlockCipher, ImplicitlyDestructible
+):
+    comptime Nr: Int = AesCpuBackend[Self.KeySize].Nr
 
-    var _backend: Variant[
-        AesCpuSetup[Self.KeySize], AesArmv8Setup[Self.KeySize], AesGpuSetup
-    ]
+    var _backend: Self.Backend
 
-    def __init__(
-        out self,
-        key: InlineArray[UInt8, Self.KeySize],
-        ctx: Optional[DeviceContext] = None,
-    ) raises:
+    def __init__(out self, var backend: Self.Backend):
         comptime assert (
             Self.KeySize == 16 or Self.KeySize == 24 or Self.KeySize == 32
         ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
-        if ctx:
-            var cpu = AesCpuSetup[Self.KeySize](key)
-            self._backend = AesGpuSetup(ctx.value(), cpu.w)
-        else:
-            # has_neon() is the correct AArch64 guard: NEON is mandatory in
-            # the AArch64 spec and implies the AES crypto extension.
-            comptime if CompilationTarget.has_neon():
-                self._backend = AesArmv8Setup[Self.KeySize](key)
-            else:
-                self._backend = AesCpuSetup[Self.KeySize](key)
+        self._backend = backend^
 
     def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
-        if self._backend.isa[AesGpuSetup]():
-            _encrypt_gpu[Self.Nr](self._backend[AesGpuSetup], data)
-        elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
-            _encrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
+        comptime if reflect[Self.Backend]().name() == reflect[
+            AesArmv8Backend[Self.KeySize]
+        ]().name():
+            _encrypt_armv8(
+                data, rebind[AesArmv8Backend[Self.KeySize]](self._backend)
+            )
+        elif reflect[Self.Backend]().name() == reflect[
+            AesX86Backend[Self.KeySize]
+        ]().name():
+            _encrypt_x86(
+                data, rebind[AesX86Backend[Self.KeySize]](self._backend)
+            )
+        elif reflect[Self.Backend]().name() == reflect[AesGpuBackend]().name():
+            _encrypt_gpu[Self.Nr](rebind[AesGpuBackend](self._backend), data)
         else:
             _encrypt_cpu[Self.Nr](
-                data, self._backend[AesCpuSetup[Self.KeySize]].w
+                data, rebind[AesCpuBackend[Self.KeySize]](self._backend).w
             )
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
-        if self._backend.isa[AesGpuSetup]():
-            _decrypt_gpu[Self.Nr](self._backend[AesGpuSetup], data)
-        elif self._backend.isa[AesArmv8Setup[Self.KeySize]]():
-            _decrypt_armv8(data, self._backend[AesArmv8Setup[Self.KeySize]])
+        comptime if reflect[Self.Backend]().name() == reflect[
+            AesArmv8Backend[Self.KeySize]
+        ]().name():
+            _decrypt_armv8(
+                data, rebind[AesArmv8Backend[Self.KeySize]](self._backend)
+            )
+        elif reflect[Self.Backend]().name() == reflect[
+            AesX86Backend[Self.KeySize]
+        ]().name():
+            _decrypt_x86(
+                data, rebind[AesX86Backend[Self.KeySize]](self._backend)
+            )
+        elif reflect[Self.Backend]().name() == reflect[AesGpuBackend]().name():
+            _decrypt_gpu[Self.Nr](rebind[AesGpuBackend](self._backend), data)
         else:
             _decrypt_cpu[Self.Nr](
-                data, self._backend[AesCpuSetup[Self.KeySize]].w
+                data, rebind[AesCpuBackend[Self.KeySize]](self._backend).w
             )
 
 
@@ -70,7 +81,7 @@ def _check_block_aligned(size: Int) raises:
 
 def _encrypt_armv8[
     KeySize: Int, o: MutOrigin
-](data: Span[UInt8, o], armv8: AesArmv8Setup[KeySize]) raises:
+](data: Span[UInt8, o], armv8: AesArmv8Backend[KeySize]) raises:
     _check_block_aligned(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
@@ -79,11 +90,29 @@ def _encrypt_armv8[
 
 def _decrypt_armv8[
     KeySize: Int, o: MutOrigin
-](data: Span[UInt8, o], armv8: AesArmv8Setup[KeySize]) raises:
+](data: Span[UInt8, o], armv8: AesArmv8Backend[KeySize]) raises:
     _check_block_aligned(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         armv8_decipher(data[offset : offset + BLOCK_SIZE], armv8.dec_rks)
+
+
+def _encrypt_x86[
+    KeySize: Int, o: MutOrigin
+](data: Span[UInt8, o], x86: AesX86Backend[KeySize]) raises:
+    _check_block_aligned(len(data))
+    for i in range(len(data) // BLOCK_SIZE):
+        var offset = i * BLOCK_SIZE
+        x86_cipher(data[offset : offset + BLOCK_SIZE], x86.enc_rks)
+
+
+def _decrypt_x86[
+    KeySize: Int, o: MutOrigin
+](data: Span[UInt8, o], x86: AesX86Backend[KeySize]) raises:
+    _check_block_aligned(len(data))
+    for i in range(len(data) // BLOCK_SIZE):
+        var offset = i * BLOCK_SIZE
+        x86_decipher(data[offset : offset + BLOCK_SIZE], x86.dec_rks)
 
 
 def _encrypt_cpu[
@@ -106,7 +135,7 @@ def _decrypt_cpu[
 
 def _encrypt_gpu[
     Nr: Int, o: MutOrigin
-](gpu: AesGpuSetup, data: Span[UInt8, o]) raises:
+](gpu: AesGpuBackend, data: Span[UInt8, o]) raises:
     _check_block_aligned(len(data))
     var size = len(data)
     var num_blocks = size // BLOCK_SIZE
@@ -128,7 +157,7 @@ def _encrypt_gpu[
 
 def _decrypt_gpu[
     Nr: Int, o: MutOrigin
-](gpu: AesGpuSetup, data: Span[UInt8, o]) raises:
+](gpu: AesGpuBackend, data: Span[UInt8, o]) raises:
     _check_block_aligned(len(data))
     var size = len(data)
     var num_blocks = size // BLOCK_SIZE

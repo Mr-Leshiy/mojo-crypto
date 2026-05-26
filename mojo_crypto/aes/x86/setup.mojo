@@ -10,12 +10,12 @@ comptime RCON: InlineArray[UInt8, 10] = [
 ]
 
 
-struct AesArmv8Backend[KeySize: Int](ImplicitlyDestructible, Movable):
+struct AesX86Backend[KeySize: Int](ImplicitlyDestructible, Movable):
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
 
-    var enc_rks: InlineArray[SIMD[DType.uint8, 16], Self.Nr + 1]
-    var dec_rks: InlineArray[SIMD[DType.uint8, 16], Self.Nr + 1]
+    var enc_rks: InlineArray[SIMD[DType.uint64, 2], Self.Nr + 1]
+    var dec_rks: InlineArray[SIMD[DType.uint64, 2], Self.Nr + 1]
 
     def __init__(out self, key: InlineArray[UInt8, Self.KeySize]):
         self.enc_rks = _expand_enc_rks[Self.Nr, Self.Nk](key)
@@ -29,7 +29,7 @@ struct AesArmv8Backend[KeySize: Int](ImplicitlyDestructible, Movable):
 def _expand_enc_rks[
     Nr: Int, Nk: Int, KeySize: Int
 ](key: InlineArray[UInt8, KeySize]) -> InlineArray[
-    SIMD[DType.uint8, 16], Nr + 1
+    SIMD[DType.uint64, 2], Nr + 1
 ]:
     var kb = InlineArray[UInt8, (Nr + 1) * 16](uninitialized=True)
     for i in range(KeySize):
@@ -56,21 +56,20 @@ def _expand_enc_rks[
         kb[wi * 4 + 1] = kb[(wi - Nk) * 4 + 1] ^ b1
         kb[wi * 4 + 2] = kb[(wi - Nk) * 4 + 2] ^ b2
         kb[wi * 4 + 3] = kb[(wi - Nk) * 4 + 3] ^ b3
-    var rks = InlineArray[SIMD[DType.uint8, 16], Nr + 1](uninitialized=True)
+    var rks = InlineArray[SIMD[DType.uint64, 2], Nr + 1](uninitialized=True)
     for r in range(Nr + 1):
-        rks[r] = (kb.unsafe_ptr() + r * 16).load[width=16]()
+        rks[r] = (kb.unsafe_ptr() + r * 16).bitcast[UInt64]().load[width=2]()
     return rks
 
 
 # Convert encrypt round keys to the equivalent-inverse schedule for decipher().
-# Mirrors expand_round_keys_inv() from cipher.mojo, operating on SIMD keys
-# instead of UInt32 words: dk[0]=ek[Nr], dk[1..Nr-1]=aesimc(ek[Nr-r]), dk[Nr]=ek[0].
+# dk[0]=ek[Nr], dk[1..Nr-1]=aesimc(ek[Nr-r]), dk[Nr]=ek[0].
 def _dec_from_enc_rks[
     Nr: Int
-](enc_rks: InlineArray[SIMD[DType.uint8, 16], Nr + 1]) -> InlineArray[
-    SIMD[DType.uint8, 16], Nr + 1
+](enc_rks: InlineArray[SIMD[DType.uint64, 2], Nr + 1]) -> InlineArray[
+    SIMD[DType.uint64, 2], Nr + 1
 ]:
-    var rks = InlineArray[SIMD[DType.uint8, 16], Nr + 1](uninitialized=True)
+    var rks = InlineArray[SIMD[DType.uint64, 2], Nr + 1](uninitialized=True)
     rks[0] = enc_rks[Nr]
     comptime for r in range(1, Nr):
         rks[r] = _inv_mix(enc_rks[Nr - r])

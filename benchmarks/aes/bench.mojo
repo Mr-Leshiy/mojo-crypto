@@ -1,13 +1,10 @@
 from std.benchmark import run
-from std.gpu.host import DeviceContext
 
-from mojo_crypto.aes import Aes, BLOCK_SIZE
+from mojo_crypto.aes import Aes as AesDef, AesCpuBackend, BLOCK_SIZE
 from mojo_crypto.block_cipher import BlockCipher
 
-# Shared block counts — CPU loops this many times, GPU launches this many blocks.
-# Same total work, different parallelism — makes CPU vs GPU comparison meaningful.
-comptime BLOCKS_256: Int = 256
-comptime BLOCKS_1K: Int = 1_024
+comptime Aes[KeySize: Int] = AesDef[KeySize, AesCpuBackend[KeySize]]
+
 comptime BLOCKS_4K: Int = 4_096
 comptime BLOCKS_8K: Int = 8_192
 comptime BLOCKS_16K: Int = 16_384
@@ -44,24 +41,13 @@ def bench_cipher[
 
 def main() raises:
     print("Running aes benches")
-    with DeviceContext() as ctx:
 
-        @parameter
-        def aes[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-            return Aes[KeySize](key)
+    @parameter
+    def aes[
+        KeySize: Int
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+        return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-        @parameter
-        def aes_gpu[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-            return Aes[KeySize](key, ctx)
-
-        bench_cipher[Aes[16], 16, aes[16], "cpu_aes128"]()
-        # bench_cpu_cipher[Aes[24], 24, aes[24], "aes192"]()
-        # bench_cpu_cipher[Aes[32], 32, aes[32], "aes256"]()
-
-        bench_cipher[Aes[16], 16, aes_gpu[16], "gpu_aes128"]()
-        # bench_gpu_cipher[Aes[24], 24, aes_gpu[24], "aes192"]()
-        # bench_gpu_cipher[Aes[32], 32, aes_gpu[32], "aes256"]()
+    bench_cipher[Aes[16], 16, aes[16], "cpu_aes128"]()
+    # bench_cipher[Aes[24], 24, aes[24], "aes192"]()
+    # bench_cipher[Aes[32], 32, aes[32], "aes256"]()

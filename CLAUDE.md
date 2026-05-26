@@ -44,6 +44,24 @@ Multi-block GPU path: `grid_dim = num_blocks`, `block_dim = BLOCK_SIZE (16)`. Ea
 
 Straightforward FIPS 197 implementation. State layout is column-major: `state[r][c] ↔ state[r + 4*c]`. GF(2⁸) multiplication uses Russian-peasant via `multiply`/`xtime`.
 
+### ARMv8 hardware cipher (`mojo_crypto/aes/aarch64/`)
+
+Uses ARMv8 Crypto Extension via LLVM intrinsics (`llvm.aarch64.crypto.aese/aesmc/aesd/aesimc`). All four operate on `SIMD[DType.uint8, 16]` directly.
+
+`AESE` fuses `AddRoundKey` (XOR) *before* `SubBytes+ShiftRows`, producing a lag-by-one key schedule: `cipher()` runs `aesmc(aese(s, rks[r]))` for rounds `0..Nr-2`, then `aese(s, rks[Nr-1])` followed by `s ^= rks[Nr]`. `decipher()` uses `aesd`/`aesimc` with the equivalent-inverse key schedule from `setup.mojo`.
+
+`setup.mojo` exports `AesArmv8Setup[KeySize]`, which precomputes both `enc_rks` and `dec_rks` at construction. The decryption schedule is built by `_dec_from_enc_rks`: `dk[0]=ek[Nr]`, inner keys `dk[1..Nr-1]=aesimc(ek[Nr-r])`, `dk[Nr]=ek[0]`.
+
+Dispatched from `aes.mojo` when `CompilationTarget.has_neon()` is true at comptime (NEON is mandatory on AArch64 and implies the AES crypto extension).
+
+### x86 AES-NI cipher (`mojo_crypto/aes/x86/`)
+
+Uses x86 AES-NI via LLVM intrinsics (`llvm.x86.aesni.aesenc/aesenclast/aesdec/aesdeclast/aesimc`). These intrinsics are typed as `v2i64` in LLVM IR; `cipher.mojo` bitcasts to/from `SIMD[DType.uint64, 2]` internally via `_to_v2i64`/`_from_v2i64` helpers, keeping the public API consistent with the AArch64 backend (`SIMD[DType.uint8, 16]`).
+
+`AESENC` folds `AddRoundKey` at the *end* (after MixColumns), so the key schedule is standard FIPS 197 order: `cipher()` does an explicit `s ^= rks[0]`, then `aesenc(s, rks[r])` for rounds `1..Nr-1`, then `aesenclast(s, rks[Nr])`. `decipher()` mirrors this with `aesdec`/`aesdeclast` and the same equivalent-inverse schedule as the AArch64 backend.
+
+`setup.mojo` exports `AesX86Setup[KeySize]` with the same `enc_rks`/`dec_rks` structure as `AesArmv8Setup`. **Not yet wired into `aes.mojo` dispatch** — see `PLAN.md` Phase 2/3.
+
 ### GPU cipher (`mojo_crypto/aes/gpu/cipher.mojo`)
 
 Each thread handles one byte (`thread_idx.x` = local byte index, `block_idx.x` = AES block index). State lives in `AddressSpace.SHARED`. `shift_rows` and `mix_columns` require `barrier()` calls to prevent read-after-write races between threads in the same block.

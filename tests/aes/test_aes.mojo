@@ -1,9 +1,8 @@
-from std.gpu.host import DeviceContext
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.aes import Aes, BLOCK_SIZE
+from mojo_crypto.aes import Aes as AesDef, AesCpuBackend, BLOCK_SIZE
 from mojo_crypto.block_cipher import BlockCipher
 
 from tests.aes.utils import (
@@ -13,13 +12,16 @@ from tests.aes.utils import (
 )
 
 
+comptime Aes[KeySize: Int] = AesDef[KeySize, AesCpuBackend[KeySize]]
+
+
 def test_aes_128() raises:
     def check_aes(
         plaintext: InlineArray[UInt8, 16],
         key: InlineArray[UInt8, 16],
         expected: InlineArray[UInt8, 16],
     ) raises:
-        var aes = Aes[16](key)
+        var aes = Aes[16](AesCpuBackend[16](key))
         var block = plaintext
         aes.encrypt(block)
         assert_equal(block, expected)
@@ -95,27 +97,15 @@ def check_aes_kat[
 def test_aes_kat() raises:
     var vectors = load_python_aes_vectors("tests/aes/KAT_AES", "ECB")
 
-    with DeviceContext() as ctx:
+    @parameter
+    def aes[
+        KeySize: Int
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+        return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-        @parameter
-        def aes[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-            return Aes[KeySize](key)
-
-        @parameter
-        def aes_gpu[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-            return Aes[KeySize](key, ctx)
-
-        check_aes_kat[Aes[16], 16, aes[16]](vectors)
-        check_aes_kat[Aes[24], 24, aes[24]](vectors)
-        check_aes_kat[Aes[32], 32, aes[32]](vectors)
-
-        check_aes_kat[Aes[16], 16, aes_gpu[16]](vectors)
-        check_aes_kat[Aes[24], 24, aes_gpu[24]](vectors)
-        check_aes_kat[Aes[32], 32, aes_gpu[32]](vectors)
+    check_aes_kat[Aes[16], 16, aes[16]](vectors)
+    check_aes_kat[Aes[24], 24, aes[24]](vectors)
+    check_aes_kat[Aes[32], 32, aes[32]](vectors)
 
 
 def check_aes_mct[
@@ -148,27 +138,15 @@ def check_aes_mct[
 def aes_mct() raises:
     var vectors = load_python_aes_vectors("tests/aes/aesmct", "ECB")
 
-    with DeviceContext() as ctx:
+    @parameter
+    def aes[
+        KeySize: Int
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
+        return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-        @parameter
-        def aes[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-            return Aes[KeySize](key)
-
-        @parameter
-        def aes_gpu[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-            return Aes[KeySize](key, ctx)
-
-        check_aes_mct[Aes[16], 16, aes[16]](vectors)
-        check_aes_mct[Aes[24], 24, aes[24]](vectors)
-        check_aes_mct[Aes[32], 32, aes[32]](vectors)
-
-        check_aes_mct[Aes[16], 16, aes_gpu[16]](vectors)
-        check_aes_mct[Aes[24], 24, aes_gpu[24]](vectors)
-        check_aes_mct[Aes[32], 32, aes_gpu[32]](vectors)
+    check_aes_mct[Aes[16], 16, aes[16]](vectors)
+    check_aes_mct[Aes[24], 24, aes[24]](vectors)
+    check_aes_mct[Aes[32], 32, aes[32]](vectors)
 
 
 def main() raises:
