@@ -13,6 +13,7 @@ from tests.aes.utils import (
 
 comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
 
+
 def test_aes_128() raises:
     def check_aes(
         plaintext: InlineArray[UInt8, 16],
@@ -98,7 +99,9 @@ def test_aes_kat() raises:
     @parameter
     def aes[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize, Backend[KeySize]]:
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+        KeySize, Backend[KeySize]
+    ]:
         return Aes[KeySize](Backend[KeySize](key))
 
     check_aes_kat[Aes[16, Backend[16]], 16, aes[16]](vectors)
@@ -139,7 +142,9 @@ def test_aes_mct() raises:
     @parameter
     def aes[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize, Backend[KeySize]]:
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+        KeySize, Backend[KeySize]
+    ]:
         return Aes[KeySize](Backend[KeySize](key))
 
     check_aes_mct[Aes[16, Backend[16]], 16, aes[16]](vectors)

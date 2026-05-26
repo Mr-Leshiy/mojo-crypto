@@ -4,6 +4,7 @@ channels = ["conda-forge", "https://conda.modular.com/max"]
 name = "mojo-crypto"
 platforms = ["osx-arm64", "linux-aarch64", "linux-64"]
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 
 [tasks]
 fmt    = "mojo format ."

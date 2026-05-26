@@ -45,7 +45,9 @@ def main() raises:
     @parameter
     def aes[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize, Backend[KeySize]]:
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+        KeySize, Backend[KeySize]
+    ]:
         return Aes[KeySize, Backend[KeySize]](Backend[KeySize](key))
 
     bench_cipher[Aes[16, Backend[16]], 16, aes[16], "aes128"]()
