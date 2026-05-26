@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.aes import Aes as AesDef, AesCpuBackend, BLOCK_SIZE
+from mojo_crypto.aes import Aes, AesCpuBackend, BLOCK_SIZE
 from mojo_crypto.block_cipher import BlockCipher
 
 from tests.aes.utils import (
@@ -11,9 +11,7 @@ from tests.aes.utils import (
     load_aes_vectors,
 )
 
-
-comptime Aes[KeySize: Int] = AesDef[KeySize, AesCpuBackend[KeySize]]
-
+comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
 
 def test_aes_128() raises:
     def check_aes(
@@ -21,7 +19,7 @@ def test_aes_128() raises:
         key: InlineArray[UInt8, 16],
         expected: InlineArray[UInt8, 16],
     ) raises:
-        var aes = Aes[16](AesCpuBackend[16](key))
+        var aes = Aes[16](Backend[16](key))
         var block = plaintext
         aes.encrypt(block)
         assert_equal(block, expected)
@@ -100,12 +98,12 @@ def test_aes_kat() raises:
     @parameter
     def aes[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-        return Aes[KeySize](AesCpuBackend[KeySize](key))
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize, Backend[KeySize]]:
+        return Aes[KeySize](Backend[KeySize](key))
 
-    check_aes_kat[Aes[16], 16, aes[16]](vectors)
-    check_aes_kat[Aes[24], 24, aes[24]](vectors)
-    check_aes_kat[Aes[32], 32, aes[32]](vectors)
+    check_aes_kat[Aes[16, Backend[16]], 16, aes[16]](vectors)
+    check_aes_kat[Aes[24, Backend[24]], 24, aes[24]](vectors)
+    check_aes_kat[Aes[32, Backend[32]], 32, aes[32]](vectors)
 
 
 def check_aes_mct[
@@ -135,18 +133,18 @@ def check_aes_mct[
 # AES Monte Carlo Test (MCT) Sample Vectors
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
-def aes_mct() raises:
+def test_aes_mct() raises:
     var vectors = load_python_aes_vectors("tests/aes/aesmct", "ECB")
 
     @parameter
     def aes[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize]:
-        return Aes[KeySize](AesCpuBackend[KeySize](key))
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[KeySize, Backend[KeySize]]:
+        return Aes[KeySize](Backend[KeySize](key))
 
-    check_aes_mct[Aes[16], 16, aes[16]](vectors)
-    check_aes_mct[Aes[24], 24, aes[24]](vectors)
-    check_aes_mct[Aes[32], 32, aes[32]](vectors)
+    check_aes_mct[Aes[16, Backend[16]], 16, aes[16]](vectors)
+    check_aes_mct[Aes[24, Backend[24]], 24, aes[24]](vectors)
+    check_aes_mct[Aes[32, Backend[32]], 32, aes[32]](vectors)
 
 
 def main() raises:
