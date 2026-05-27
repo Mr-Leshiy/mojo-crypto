@@ -25,6 +25,7 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
     BlockCipher, ImplicitlyDestructible, Movable
 ):
     comptime Nr: Int = AesCpuBackend[Self.KeySize].Nr
+    comptime BLOCK_SIZE: Int = 16
 
     var _backend: Self.Backend
 

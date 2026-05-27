@@ -1,12 +1,11 @@
 from mojo_crypto.block_ciphers.traits import BlockCipher
 
 
-comptime BLOCK_SIZE: Int = 16
-
-
 struct CtrMode[Cipher: BlockCipher & Movable & ImplicitlyDestructible](
     BlockCipher, ImplicitlyDestructible
 ):
+    comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
+
     var _cipher: Self.Cipher
     var _nonce: InlineArray[UInt8, 12]
     var _counter: UInt32
@@ -22,21 +21,21 @@ struct CtrMode[Cipher: BlockCipher & Movable & ImplicitlyDestructible](
         self._counter = initial_counter
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
-        var num_full_blocks = len(data) // BLOCK_SIZE
+        var num_full_blocks = len(data) // Self.BLOCK_SIZE
 
         for i in range(num_full_blocks):
             var keystream = _counter_block(self._nonce, self._counter)
             self._cipher.encrypt(keystream)
-            var offset = i * BLOCK_SIZE
-            for j in range(BLOCK_SIZE):
+            var offset = i * Self.BLOCK_SIZE
+            for j in range(Self.BLOCK_SIZE):
                 data[offset + j] ^= keystream[j]
             self._counter += 1
 
-        var remaining = len(data) % BLOCK_SIZE
+        var remaining = len(data) % Self.BLOCK_SIZE
         if remaining > 0:
             var keystream = _counter_block(self._nonce, self._counter)
             self._cipher.encrypt(keystream)
-            var offset = num_full_blocks * BLOCK_SIZE
+            var offset = num_full_blocks * Self.BLOCK_SIZE
             for j in range(remaining):
                 data[offset + j] ^= keystream[j]
             self._counter += 1
