@@ -34,7 +34,7 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
         ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
         self._backend = backend^
 
-    def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         comptime if reflect[Self.Backend]().name() == reflect[
             AesArmv8Backend[Self.KeySize]
         ]().name():
@@ -54,7 +54,7 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
                 data, rebind[AesCpuBackend[Self.KeySize]](self._backend).w
             )
 
-    def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def decrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         comptime if reflect[Self.Backend]().name() == reflect[
             AesArmv8Backend[Self.KeySize]
         ]().name():
