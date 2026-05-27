@@ -1,5 +1,6 @@
-from mojo_crypto.block_cipher import BlockCipher
-from mojo_crypto.errors import BlockSizeError
+from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.errors import BlockSizeError
+
 
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
 from .cpu.setup import AesCpuBackend
@@ -74,15 +75,10 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
             )
 
 
-def _check_block_aligned(size: Int) raises:
-    if size % BLOCK_SIZE != 0:
-        raise BlockSizeError(size)
-
-
 def _encrypt_armv8[
     KeySize: Int, o: MutOrigin
 ](data: Span[UInt8, o], armv8: AesArmv8Backend[KeySize]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         armv8_cipher(data[offset : offset + BLOCK_SIZE], armv8.enc_rks)
@@ -91,7 +87,7 @@ def _encrypt_armv8[
 def _decrypt_armv8[
     KeySize: Int, o: MutOrigin
 ](data: Span[UInt8, o], armv8: AesArmv8Backend[KeySize]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         armv8_decipher(data[offset : offset + BLOCK_SIZE], armv8.dec_rks)
@@ -100,7 +96,7 @@ def _decrypt_armv8[
 def _encrypt_x86[
     KeySize: Int, o: MutOrigin
 ](data: Span[UInt8, o], x86: AesX86Backend[KeySize]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         x86_cipher(data[offset : offset + BLOCK_SIZE], x86.enc_rks)
@@ -109,7 +105,7 @@ def _encrypt_x86[
 def _decrypt_x86[
     KeySize: Int, o: MutOrigin
 ](data: Span[UInt8, o], x86: AesX86Backend[KeySize]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         x86_decipher(data[offset : offset + BLOCK_SIZE], x86.dec_rks)
@@ -118,7 +114,7 @@ def _decrypt_x86[
 def _encrypt_cpu[
     Nr: Int, WordsSize: Int, o: MutOrigin
 ](data: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         cpu_cipher[Nr=Nr](data[offset : offset + BLOCK_SIZE], w)
@@ -127,7 +123,7 @@ def _encrypt_cpu[
 def _decrypt_cpu[
     Nr: Int, WordsSize: Int, o: MutOrigin
 ](data: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     for i in range(len(data) // BLOCK_SIZE):
         var offset = i * BLOCK_SIZE
         cpu_decipher[Nr=Nr](data[offset : offset + BLOCK_SIZE], w)
@@ -136,7 +132,7 @@ def _decrypt_cpu[
 def _encrypt_gpu[
     Nr: Int, o: MutOrigin
 ](gpu: AesGpuBackend, data: Span[UInt8, o]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     var size = len(data)
     var num_blocks = size // BLOCK_SIZE
     comptime kernel = gpu_cipher[Nr]
@@ -158,7 +154,7 @@ def _encrypt_gpu[
 def _decrypt_gpu[
     Nr: Int, o: MutOrigin
 ](gpu: AesGpuBackend, data: Span[UInt8, o]) raises:
-    _check_block_aligned(len(data))
+    BlockSizeError[BLOCK_SIZE].check(len(data))
     var size = len(data)
     var num_blocks = size // BLOCK_SIZE
     comptime kernel = gpu_decipher[Nr]
