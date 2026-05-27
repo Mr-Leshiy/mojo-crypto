@@ -22,7 +22,7 @@ from .common import BLOCK_SIZE
 #   AesGpuBackend             — CUDA GPU backend
 #
 struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
-    BlockCipher, Movable, ImplicitlyDestructible
+    BlockCipher, ImplicitlyDestructible, Movable
 ):
     comptime Nr: Int = AesCpuBackend[Self.KeySize].Nr
 

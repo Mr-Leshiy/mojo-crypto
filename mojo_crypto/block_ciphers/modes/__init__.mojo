@@ -1,2 +1,2 @@
 from .ctr import CtrMode
-from .cbc import CbcMode 
+from .cbc import CbcMode

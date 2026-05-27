@@ -22,7 +22,9 @@ def check_aes_kat[
 ](vectors: PythonObject) raises:
     for v in load_aes_vectors[KeySize](vectors):
         var cipher = cipher_init(v.key)
-        var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
+        var msg = "[{}], file_name={}, count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
 
         var pt = v.pt
         cipher.encrypt(pt)
@@ -37,7 +39,9 @@ def check_aes_kat[
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
 def test_aes_kat() raises:
-    var vectors = load_python_aes_vectors("tests/block_ciphers/aes/KAT_AES", "ECB")
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/KAT_AES", "ECB"
+    )
 
     @parameter
     def aes[
@@ -72,7 +76,9 @@ def check_aes_mct[
             else:
                 cipher.decrypt(block)
 
-        var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
+        var msg = "[{}], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
         assert_equal(block, expected, msg=msg)
 
 
@@ -80,7 +86,9 @@ def check_aes_mct[
 # https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
 def test_aes_mct() raises:
-    var vectors = load_python_aes_vectors("tests/block_ciphers/aes/aesmct", "ECB")
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/aesmct", "ECB"
+    )
 
     @parameter
     def aes[
@@ -102,8 +110,8 @@ def check_cbc_kat[
 ](vectors: PythonObject) raises:
     for v in load_aes_vectors[KeySize](vectors):
         var iv = v.iv.value()
-        var msg = "[CbcMode[{}]], file_name={}".format(
-            reflect[C]().name(), v.file_name
+        var msg = "[CbcMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
         )
 
         var pt = v.pt
@@ -151,7 +159,9 @@ def check_cbc_mct[
     for v in load_aes_vectors[KeySize](vectors):
         var cipher = cipher_init(v.key)
         var iv = v.iv.value()
-        var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
+        var msg = "[{}], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
 
         var ib = iv
         if v.is_encrypt:
