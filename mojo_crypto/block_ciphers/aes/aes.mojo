@@ -1,5 +1,6 @@
-from mojo_crypto.block_cipher import BlockCipher
-from mojo_crypto.errors import BlockSizeError
+from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.errors import BlockSizeError
+
 
 from .cpu.cipher import cipher as cpu_cipher, decipher as cpu_decipher
 from .cpu.setup import AesCpuBackend

@@ -3,7 +3,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.block_ciphers.aes import Aes, AesCpuBackend, BLOCK_SIZE
-from mojo_crypto.block_cipher import BlockCipher
+from mojo_crypto.block_ciphers.traits import BlockCipher
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,

@@ -1,6 +1,6 @@
 from std.benchmark import run
 
-from mojo_crypto.block_cipher import BlockCipher
+from mojo_crypto.block_ciphers.traits import BlockCipher
 
 comptime BLOCKS_4K: Int = 4_096
 comptime BLOCKS_8K: Int = 8_192
