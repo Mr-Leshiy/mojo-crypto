@@ -21,61 +21,36 @@ struct CbcMode[Cipher: BlockCipher & Movable & ImplicitlyDestructible](
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
-        cbc_encrypt(self._cipher, self._iv, data)
-        if len(data) > 0:
-            var offset = len(data) - BLOCK_SIZE
+        var num_blocks = len(data) // BLOCK_SIZE
+        var iv = self._iv
+        for i in range(num_blocks):
+            var offset = i * BLOCK_SIZE
             for j in range(BLOCK_SIZE):
-                self._iv[j] = data[offset + j]
+                data[offset + j] ^= iv[j]
+            self._cipher.encrypt(data[offset : offset + BLOCK_SIZE])
+            for j in range(BLOCK_SIZE):
+                iv[j] = data[offset + j]
 
     def decrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
-        # Save last ciphertext block before it is overwritten by decryption.
-        var next_iv = self._iv
-        if len(data) > 0:
-            var offset = len(data) - BLOCK_SIZE
+        var num_blocks = len(data) // BLOCK_SIZE
+        var iv = self._iv
+        for i in range(num_blocks):
+            var offset = i * BLOCK_SIZE
+            var saved = InlineArray[UInt8, 16](fill=0)
             for j in range(BLOCK_SIZE):
-                next_iv[j] = data[offset + j]
-        cbc_decrypt(self._cipher, self._iv, data)
-        self._iv = next_iv^
-
-
-def cbc_encrypt[
-    C: BlockCipher, o: MutOrigin
-](mut cipher: C, iv: InlineArray[UInt8, 16], data: Span[UInt8, o],) raises:
-    BlockSizeError[BLOCK_SIZE].check(len(data))
-    var num_blocks = len(data) // BLOCK_SIZE
-    var prev = iv
-    for i in range(num_blocks):
-        var offset = i * BLOCK_SIZE
-        for j in range(BLOCK_SIZE):
-            data[offset + j] ^= prev[j]
-        cipher.encrypt(data[offset : offset + BLOCK_SIZE])
-        for j in range(BLOCK_SIZE):
-            prev[j] = data[offset + j]
-
-
-def cbc_decrypt[
-    C: BlockCipher, o: MutOrigin
-](mut cipher: C, iv: InlineArray[UInt8, 16], data: Span[UInt8, o],) raises:
-    BlockSizeError[BLOCK_SIZE].check(len(data))
-    var num_blocks = len(data) // BLOCK_SIZE
-    var prev = iv
-    for i in range(num_blocks):
-        var offset = i * BLOCK_SIZE
-        var saved = InlineArray[UInt8, 16](fill=0)
-        for j in range(BLOCK_SIZE):
-            saved[j] = data[offset + j]
-        cipher.decrypt(data[offset : offset + BLOCK_SIZE])
-        for j in range(BLOCK_SIZE):
-            data[offset + j] ^= prev[j]
-        prev = saved^
+                saved[j] = data[offset + j]
+            self._cipher.decrypt(data[offset : offset + BLOCK_SIZE])
+            for j in range(BLOCK_SIZE):
+                data[offset + j] ^= iv[j]
+            iv = saved^
 
 
 # CBC-MAC: IV fixed to zero, returns the final ciphertext block.
 # Used as a building block for CCM and SIV.
 def cbc_mac[
-    C: BlockCipher, o: MutOrigin
-](mut cipher: C, data: Span[UInt8, o],) raises -> InlineArray[UInt8, 16]:
+    C: BlockCipher & Movable & ImplicitlyDestructible, o: MutOrigin
+](var cipher: C, data: Span[UInt8, o]) raises -> InlineArray[UInt8, 16]:
     BlockSizeError[BLOCK_SIZE].check(len(data))
     var num_blocks = len(data) // BLOCK_SIZE
     var acc = InlineArray[UInt8, 16](fill=0)
