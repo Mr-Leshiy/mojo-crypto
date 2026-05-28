@@ -36,7 +36,6 @@ struct Hex(Decodable, Encodable, ImplicitlyDestructible, Movable):
             )
         return result^
 
-
 @always_inline
 def _nibble(c: UInt8, pos: Int) raises HexError -> UInt8:
     if c >= 48 and c <= 57:
