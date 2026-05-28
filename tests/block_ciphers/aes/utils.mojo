@@ -1,4 +1,7 @@
 from std.python import Python, PythonObject
+from std.memory import memcpy
+
+from mojo_crypto.containers.encoding import hex_decode
 
 
 @fieldwise_init
@@ -21,11 +24,13 @@ def _hex_nibble(b: UInt8) -> UInt8:
     return b - 55
 
 
-def parse_hex[N: Int](s: String) -> InlineArray[UInt8, N]:
+def parse_hex[N: Int](s: String) raises -> InlineArray[UInt8, N]:
     var result = InlineArray[UInt8, N](uninitialized=True)
-    var ptr = s.unsafe_ptr()
-    for i in range(N):
-        result[i] = (_hex_nibble(ptr[2 * i]) << 4) | _hex_nibble(ptr[2 * i + 1])
+
+    var bytes = hex_decode(s)
+    if len(bytes) != N:
+        raise Error("Provided '{}' must have {} size".format(s, N))
+    memcpy(dest=result.unsafe_ptr(), src=bytes.unsafe_ptr(), count=N)
     return result^
 
 
