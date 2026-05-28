@@ -4,6 +4,7 @@ from std.reflection import reflect
 
 from mojo_crypto.block_ciphers.aes import Aes, AesCpuBackend, BLOCK_SIZE
 from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.modes import CbcMode
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -21,7 +22,9 @@ def check_aes_kat[
 ](vectors: PythonObject) raises:
     for v in load_aes_vectors[KeySize](vectors):
         var cipher = cipher_init(v.key)
-        var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
+        var msg = "[{}], file_name={}, count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
 
         var pt = v.pt
         cipher.encrypt(pt)
@@ -29,6 +32,28 @@ def check_aes_kat[
 
         var ct = v.ct
         cipher.decrypt(ct)
+        assert_equal(ct, v.pt, msg=msg)
+
+
+def check_cbc_kat[
+    C: BlockCipher & Movable & ImplicitlyDestructible,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+](vectors: PythonObject) raises:
+    for v in load_aes_vectors[KeySize, C.BLOCK_SIZE](vectors):
+        var iv = v.iv.value()
+        var msg = "[CbcMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
+
+        var pt = v.pt
+        var cbc_enc = CbcMode[C](cipher_init(v.key), iv)
+        cbc_enc.encrypt(pt)
+        assert_equal(pt, v.ct, msg=msg)
+
+        var ct = v.ct
+        var cbc_dec = CbcMode[C](cipher_init(v.key), iv)
+        cbc_dec.decrypt(ct)
         assert_equal(ct, v.pt, msg=msg)
 
 
@@ -53,6 +78,26 @@ def test_aes_kat() raises:
     check_aes_kat[Aes[32, Backend[32]], 32, aes[32]](vectors)
 
 
+# AES-CBC Known Answer Test (KAT) Vectors
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
+def test_cbc_kat() raises:
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/KAT_AES", "CBC"
+    )
+
+    @parameter
+    def aes[
+        KeySize: Int
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+        KeySize, Backend[KeySize]
+    ]:
+        return Aes[KeySize](Backend[KeySize](key))
+
+    check_cbc_kat[Aes[16, Backend[16]], 16, aes[16]](vectors)
+    check_cbc_kat[Aes[24, Backend[24]], 24, aes[24]](vectors)
+    check_cbc_kat[Aes[32, Backend[32]], 32, aes[32]](vectors)
+
+
 def check_aes_mct[
     C: BlockCipher & ImplicitlyDestructible,
     KeySize: Int,
@@ -73,8 +118,44 @@ def check_aes_mct[
             else:
                 cipher.decrypt(block)
 
-        var msg = "[{}], file_name={}".format(reflect[C]().name(), v.file_name)
+        var msg = "[{}], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
         assert_equal(block, expected, msg=msg)
+
+
+def check_cbc_mct[
+    C: BlockCipher & Movable & ImplicitlyDestructible,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+](vectors: PythonObject) raises:
+    comptime MCT_INNER_ITERATIONS: Int = 1000
+
+    for v in load_aes_vectors[KeySize, C.BLOCK_SIZE](vectors):
+        var msg = "[CbcMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
+
+        if v.is_encrypt:
+            var block = v.pt
+            var next_block = v.iv.value()
+            var cbc = CbcMode[C](cipher_init(v.key), v.iv.value())
+            for _ in range(MCT_INNER_ITERATIONS):
+                cbc.encrypt(block)
+                var tmp = block
+                block = next_block
+                next_block = tmp
+            assert_equal(next_block, v.ct, msg=msg)
+        else:
+            var block = v.ct
+            var next_block = v.iv.value()
+            var cbc = CbcMode[C](cipher_init(v.key), v.iv.value())
+            for _ in range(MCT_INNER_ITERATIONS):
+                cbc.decrypt(block)
+                var tmp = block
+                block = next_block
+                next_block = tmp
+            assert_equal(next_block, v.pt, msg=msg)
 
 
 # AES Monte Carlo Test (MCT) Sample Vectors
@@ -96,6 +177,26 @@ def test_aes_mct() raises:
     check_aes_mct[Aes[16, Backend[16]], 16, aes[16]](vectors)
     check_aes_mct[Aes[24, Backend[24]], 24, aes[24]](vectors)
     check_aes_mct[Aes[32, Backend[32]], 32, aes[32]](vectors)
+
+
+# AES-CBC Monte Carlo Test (MCT) Sample Vectors
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
+def test_cbc_mct() raises:
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/aesmct", "CBC"
+    )
+
+    @parameter
+    def aes[
+        KeySize: Int
+    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+        KeySize, Backend[KeySize]
+    ]:
+        return Aes[KeySize](Backend[KeySize](key))
+
+    check_cbc_mct[Aes[16, Backend[16]], 16, aes[16]](vectors)
+    check_cbc_mct[Aes[24, Backend[24]], 24, aes[24]](vectors)
+    check_cbc_mct[Aes[32, Backend[32]], 32, aes[32]](vectors)
 
 
 def main() raises:
