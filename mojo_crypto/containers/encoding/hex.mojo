@@ -1,3 +1,5 @@
+from .traits import Encodable, Decodable
+
 comptime _HEX_CHARS: StaticString = "0123456789abcdef"
 
 
@@ -9,29 +11,30 @@ struct HexError(ImplicitlyDestructible, Writable):
         writer.write(self.message)
 
 
-def hex_encode[o: Origin](data: Span[UInt8, o]) -> String:
-    var result = String()
-    for i in range(len(data)):
-        var b = Int(data[i])
-        result += String(_HEX_CHARS[byte=b >> 4])
-        result += String(_HEX_CHARS[byte=b & 0xF])
-    return result^
+@fieldwise_init
+struct Hex(Decodable, Encodable, ImplicitlyDestructible, Movable):
+    def encode[o: Origin](self, data: Span[UInt8, o]) -> String:
+        var result = String()
+        for i in range(len(data)):
+            var b = Int(data[i])
+            result += String(_HEX_CHARS[byte=b >> 4])
+            result += String(_HEX_CHARS[byte=b & 0xF])
+        return result^
 
-
-def hex_decode(s: String) raises HexError -> List[UInt8]:
-    if s.byte_length() % 2 != 0:
-        raise HexError(
-            "hex string length must be even; got {}".format(s.byte_length())
-        )
-    var n = s.byte_length() // 2
-    var result = List[UInt8](capacity=n)
-    var ptr = s.unsafe_ptr()
-    for i in range(n):
-        result.append(
-            (_nibble(ptr[2 * i], 2 * i) << 4)
-            | _nibble(ptr[2 * i + 1], 2 * i + 1)
-        )
-    return result^
+    def decode(self, s: String) raises -> List[UInt8]:
+        if s.byte_length() % 2 != 0:
+            raise HexError(
+                "hex string length must be even; got {}".format(s.byte_length())
+            )
+        var n = s.byte_length() // 2
+        var result = List[UInt8](capacity=n)
+        var ptr = s.unsafe_ptr()
+        for i in range(n):
+            result.append(
+                (_nibble(ptr[2 * i], 2 * i) << 4)
+                | _nibble(ptr[2 * i + 1], 2 * i + 1)
+            )
+        return result^
 
 
 @always_inline

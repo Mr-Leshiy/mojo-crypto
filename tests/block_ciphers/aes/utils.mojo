@@ -1,7 +1,7 @@
 from std.python import Python, PythonObject
 from std.memory import memcpy
 
-from mojo_crypto.containers.encoding import hex_decode
+from mojo_crypto.containers.encoding import Hex
 
 
 @fieldwise_init
@@ -15,19 +15,10 @@ struct AesTestVector[KeySize: Int, BlockSize: Int = 16](Copyable, Movable):
     var file_name: String
 
 
-@always_inline
-def _hex_nibble(b: UInt8) -> UInt8:
-    if b <= 57:
-        return b - 48
-    if b >= 97:
-        return b - 87
-    return b - 55
-
-
 def parse_hex[N: Int](s: String) raises -> InlineArray[UInt8, N]:
     var result = InlineArray[UInt8, N](uninitialized=True)
 
-    var bytes = hex_decode(s)
+    var bytes = Hex().decode(s)
     if len(bytes) != N:
         raise Error("Provided '{}' must have {} size".format(s, N))
     memcpy(dest=result.unsafe_ptr(), src=bytes.unsafe_ptr(), count=N)

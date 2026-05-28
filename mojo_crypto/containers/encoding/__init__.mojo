@@ -1,1 +1,2 @@
-from .hex import HexError, hex_encode, hex_decode
+from .hex import Hex
+from .traits import Encodable, Decodable
