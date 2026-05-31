@@ -64,14 +64,13 @@ def check_cbc_kat[
         assert_equal(ct, v.pt, msg=msg)
 
 
-# AES Known Answer Test (KAT) Vectors
-# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
-# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
-def test_aes_kat() raises:
-    var vectors = load_python_aes_vectors(
-        "tests/block_ciphers/aes/KAT_AES", "ECB"
-    )
-
+def run_checks[
+    check: def[
+        C: BlockCipher & Movable & ImplicitlyDestructible,
+        KeySize: Int,
+        cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    ](PythonObject) raises capturing[_]
+](vectors: PythonObject) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
 
@@ -83,9 +82,9 @@ def test_aes_kat() raises:
             ]:
                 return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
 
-            check_aes_kat[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
-            check_aes_kat[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
-            check_aes_kat[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
+            check[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
+            check[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
+            check[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
 
     @parameter
     def aes_cpu[
@@ -95,10 +94,20 @@ def test_aes_kat() raises:
     ]:
         return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-    check_aes_kat[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
-    check_aes_kat[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
-    check_aes_kat[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
+    check[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
+    check[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
+    check[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
 
+
+# AES Known Answer Test (KAT) Vectors
+# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
+def test_aes_kat() raises:
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/KAT_AES", "ECB"
+    )
+
+    run_checks[check_aes_kat]
 
 # AES-CBC Known Answer Test (KAT) Vectors
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
