@@ -8,8 +8,7 @@ from .aarch64.cipher import cipher as armv8_cipher, decipher as armv8_decipher
 from .aarch64.setup import AesArmv8Backend
 from .x86.cipher import cipher as x86_cipher, decipher as x86_decipher
 from .x86.setup import AesX86Backend
-from .gpu.cipher import cipher as gpu_cipher, decipher as gpu_decipher
-from .gpu.setup import AesGpuBackend
+from .gpu import AesGpuBackend
 from .common import BLOCK_SIZE
 
 
@@ -49,7 +48,7 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
                 data, rebind[AesX86Backend[Self.KeySize]](self._backend)
             )
         elif reflect[Self.Backend]().name() == reflect[AesGpuBackend]().name():
-            _encrypt_gpu[Self.Nr](rebind[AesGpuBackend](self._backend), data)
+            rebind[AesGpuBackend](self._backend).encrypt[Self.Nr](data)
         else:
             _encrypt_cpu[Self.Nr](
                 data, rebind[AesCpuBackend[Self.KeySize]](self._backend).w
@@ -69,7 +68,7 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
                 data, rebind[AesX86Backend[Self.KeySize]](self._backend)
             )
         elif reflect[Self.Backend]().name() == reflect[AesGpuBackend]().name():
-            _decrypt_gpu[Self.Nr](rebind[AesGpuBackend](self._backend), data)
+            rebind[AesGpuBackend](self._backend).decrypt[Self.Nr](data)
         else:
             _decrypt_cpu[Self.Nr](
                 data, rebind[AesCpuBackend[Self.KeySize]](self._backend).w
@@ -130,45 +129,3 @@ def _decrypt_cpu[
         cpu_decipher[Nr=Nr](data[offset : offset + BLOCK_SIZE], w)
 
 
-def _encrypt_gpu[
-    Nr: Int, o: MutOrigin
-](gpu: AesGpuBackend, data: Span[UInt8, o]) raises:
-    BlockSizeError[BLOCK_SIZE].check(len(data))
-    var size = len(data)
-    var num_blocks = size // BLOCK_SIZE
-    comptime kernel = gpu_cipher[Nr]
-
-    var buf = gpu.ctx.enqueue_create_buffer[DType.uint8](size)
-    buf.enqueue_copy_from(data.unsafe_ptr())
-
-    gpu.ctx.enqueue_function[kernel, kernel](
-        buf,
-        gpu.w,
-        gpu.sbox,
-        grid_dim=num_blocks,
-        block_dim=BLOCK_SIZE,
-    )
-
-    buf.enqueue_copy_to(data.unsafe_ptr())
-
-
-def _decrypt_gpu[
-    Nr: Int, o: MutOrigin
-](gpu: AesGpuBackend, data: Span[UInt8, o]) raises:
-    BlockSizeError[BLOCK_SIZE].check(len(data))
-    var size = len(data)
-    var num_blocks = size // BLOCK_SIZE
-    comptime kernel = gpu_decipher[Nr]
-
-    var buf = gpu.ctx.enqueue_create_buffer[DType.uint8](size)
-    buf.enqueue_copy_from(data.unsafe_ptr())
-
-    gpu.ctx.enqueue_function[kernel, kernel](
-        buf,
-        gpu.w,
-        gpu.sbox_inv,
-        grid_dim=num_blocks,
-        block_dim=BLOCK_SIZE,
-    )
-
-    buf.enqueue_copy_to(data.unsafe_ptr())

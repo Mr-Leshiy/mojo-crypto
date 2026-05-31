@@ -1,8 +1,69 @@
-from std.gpu import thread_idx, block_idx, barrier
+from std.gpu.host import DeviceContext, DeviceBuffer
 from std.gpu.memory import AddressSpace
+from std.gpu import thread_idx, block_idx, barrier
 from std.memory import UnsafePointer, stack_allocation
 
-from ..common import Nb, BLOCK_SIZE
+from mojo_crypto.block_ciphers.errors import BlockSizeError
+from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV
+
+
+struct AesGpuBackend(ImplicitlyDestructible, Movable):
+    var ctx: DeviceContext
+    var w: DeviceBuffer[DType.uint32]
+    var sbox: DeviceBuffer[DType.uint32]
+    var sbox_inv: DeviceBuffer[DType.uint8]
+
+    def __init__[
+        WordsSize: Int
+    ](out self, ctx: DeviceContext, w: InlineArray[UInt32, WordsSize]) raises:
+        self.ctx = ctx
+        self.w = ctx.enqueue_create_buffer[DType.uint32](WordsSize)
+        self.w.enqueue_copy_from(w)
+
+        self.sbox = ctx.enqueue_create_buffer[DType.uint32](256)
+        self.sbox.enqueue_copy_from(SBOX.unsafe_ptr())
+
+        self.sbox_inv = ctx.enqueue_create_buffer[DType.uint8](256)
+        self.sbox_inv.enqueue_copy_from(SBOX_INV.unsafe_ptr())
+
+    def encrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+        BlockSizeError[BLOCK_SIZE].check(len(data))
+
+        var size = len(data)
+        var num_blocks = size // BLOCK_SIZE
+        comptime kernel = cipher[Nr]
+
+        var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
+        buf.enqueue_copy_from(data.unsafe_ptr())
+
+        self.ctx.enqueue_function[kernel, kernel](
+            buf,
+            self.w,
+            self.sbox,
+            grid_dim=num_blocks,
+            block_dim=BLOCK_SIZE,
+        )
+        self.ctx.synchronize()
+        buf.enqueue_copy_to(data.unsafe_ptr())
+
+    def decrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+        BlockSizeError[BLOCK_SIZE].check(len(data))
+        var size = len(data)
+        var num_blocks = size // BLOCK_SIZE
+        comptime kernel = decipher[Nr]
+
+        var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
+        buf.enqueue_copy_from(data.unsafe_ptr())
+
+        self.ctx.enqueue_function[kernel, kernel](
+            buf,
+            self.w,
+            self.sbox_inv,
+            grid_dim=num_blocks,
+            block_dim=BLOCK_SIZE,
+        )
+
+        buf.enqueue_copy_to(data.unsafe_ptr())
 
 
 # FIPS 197 §5.1 Cipher()
