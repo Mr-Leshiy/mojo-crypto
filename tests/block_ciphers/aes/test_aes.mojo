@@ -23,7 +23,7 @@ comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
 
 
 def check_aes_kat[
-    C: BlockCipher & ImplicitlyDestructible,
+    C: BlockCipher & Movable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -64,78 +64,8 @@ def check_cbc_kat[
         assert_equal(ct, v.pt, msg=msg)
 
 
-# AES Known Answer Test (KAT) Vectors
-# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
-# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
-def test_aes_kat() raises:
-    var vectors = load_python_aes_vectors(
-        "tests/block_ciphers/aes/KAT_AES", "ECB"
-    )
-
-    comptime if has_accelerator():
-        with DeviceContext() as ctx:
-
-            @parameter
-            def aes_gpu[
-                KeySize: Int
-            ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-                KeySize, AesGpuBackend[KeySize]
-            ]:
-                return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
-
-            check_aes_kat[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
-            check_aes_kat[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
-            check_aes_kat[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
-
-    @parameter
-    def aes_cpu[
-        KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, AesCpuBackend[KeySize]
-    ]:
-        return Aes[KeySize](AesCpuBackend[KeySize](key))
-
-    check_aes_kat[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
-    check_aes_kat[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
-    check_aes_kat[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
-
-
-# AES-CBC Known Answer Test (KAT) Vectors
-# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
-def test_cbc_kat() raises:
-    var vectors = load_python_aes_vectors(
-        "tests/block_ciphers/aes/KAT_AES", "CBC"
-    )
-    comptime if has_accelerator():
-        with DeviceContext() as ctx:
-
-            @parameter
-            def aes_gpu[
-                KeySize: Int
-            ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-                KeySize, AesGpuBackend[KeySize]
-            ]:
-                return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
-
-            check_cbc_kat[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
-            check_cbc_kat[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
-            check_cbc_kat[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
-
-    @parameter
-    def aes_cpu[
-        KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, AesCpuBackend[KeySize]
-    ]:
-        return Aes[KeySize](AesCpuBackend[KeySize](key))
-
-    check_cbc_kat[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
-    check_cbc_kat[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
-    check_cbc_kat[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
-
-
 def check_aes_mct[
-    C: BlockCipher & ImplicitlyDestructible,
+    C: BlockCipher & Movable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -194,13 +124,13 @@ def check_cbc_mct[
             assert_equal(next_block, v.pt, msg=msg)
 
 
-# AES Monte Carlo Test (MCT) Sample Vectors
-# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
-# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
-def test_aes_mct() raises:
-    var vectors = load_python_aes_vectors(
-        "tests/block_ciphers/aes/aesmct", "ECB"
-    )
+def run_checks[
+    check: def[
+        C: BlockCipher & Movable & ImplicitlyDestructible,
+        KeySize: Int,
+        cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    ](PythonObject) raises capturing[_]
+](vectors: PythonObject) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
 
@@ -212,9 +142,9 @@ def test_aes_mct() raises:
             ]:
                 return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
 
-            check_aes_mct[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
-            check_aes_mct[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
-            check_aes_mct[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
+            check[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
+            check[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
+            check[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
 
     @parameter
     def aes_cpu[
@@ -224,9 +154,41 @@ def test_aes_mct() raises:
     ]:
         return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-    check_aes_mct[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
-    check_aes_mct[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
-    check_aes_mct[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
+    check[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
+    check[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
+    check[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
+
+
+# AES Known Answer Test (KAT) Vectors
+# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
+def test_aes_kat() raises:
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/KAT_AES", "ECB"
+    )
+
+    run_checks[check_aes_kat](vectors)
+
+
+# AES-CBC Known Answer Test (KAT) Vectors
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
+def test_cbc_kat() raises:
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/KAT_AES", "CBC"
+    )
+
+    run_checks[check_cbc_kat](vectors)
+
+
+# AES Monte Carlo Test (MCT) Sample Vectors
+# https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers#TDES
+# https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/aesmct.zip
+def test_aes_mct() raises:
+    var vectors = load_python_aes_vectors(
+        "tests/block_ciphers/aes/aesmct", "ECB"
+    )
+
+    run_checks[check_aes_mct](vectors)
 
 
 # AES-CBC Monte Carlo Test (MCT) Sample Vectors
@@ -236,17 +198,7 @@ def test_cbc_mct() raises:
         "tests/block_ciphers/aes/aesmct", "CBC"
     )
 
-    @parameter
-    def aes[
-        KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, Backend[KeySize]
-    ]:
-        return Aes[KeySize](Backend[KeySize](key))
-
-    check_cbc_mct[Aes[16, Backend[16]], 16, aes[16]](vectors)
-    check_cbc_mct[Aes[24, Backend[24]], 24, aes[24]](vectors)
-    check_cbc_mct[Aes[32, Backend[32]], 32, aes[32]](vectors)
+    run_checks[check_cbc_mct](vectors)
 
 
 def main() raises:
