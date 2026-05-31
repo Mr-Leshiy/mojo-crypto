@@ -5,19 +5,25 @@ from std.memory import UnsafePointer, stack_allocation
 
 from mojo_crypto.block_ciphers.errors import BlockSizeError
 from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV
+from .cpu import _key_expansion
 
 
-struct AesGpuBackend(ImplicitlyDestructible, Movable):
+struct AesGpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
+    comptime Nk: Int = Self.KeySize // 4
+    comptime Nr: Int = Self.Nk + 6
+    comptime WordsSize: Int = Nb * (Self.Nr + 1)
+
     var ctx: DeviceContext
     var w: DeviceBuffer[DType.uint32]
     var sbox: DeviceBuffer[DType.uint32]
     var sbox_inv: DeviceBuffer[DType.uint8]
 
-    def __init__[
-        WordsSize: Int
-    ](out self, ctx: DeviceContext, w: InlineArray[UInt32, WordsSize]) raises:
+    def __init__(
+        out self, ctx: DeviceContext, key: InlineArray[UInt8, Self.KeySize]
+    ) raises:
         self.ctx = ctx
-        self.w = ctx.enqueue_create_buffer[DType.uint32](WordsSize)
+        var w = _key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
+        self.w = ctx.enqueue_create_buffer[DType.uint32](Self.WordsSize)
         self.w.enqueue_copy_from(w)
 
         self.sbox = ctx.enqueue_create_buffer[DType.uint32](256)

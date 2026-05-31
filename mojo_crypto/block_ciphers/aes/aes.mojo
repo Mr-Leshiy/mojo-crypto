@@ -41,8 +41,12 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
             rebind[AesX86Backend[Self.KeySize]](self._backend).encrypt[Self.Nr](
                 data
             )
-        elif reflect[Self.Backend]().name() == reflect[AesGpuBackend]().name():
-            rebind[AesGpuBackend](self._backend).encrypt[Self.Nr](data)
+        elif reflect[Self.Backend]().name() == reflect[
+            AesGpuBackend[Self.KeySize]
+        ]().name():
+            rebind[AesGpuBackend[Self.KeySize]](self._backend).encrypt[Self.Nr](
+                data
+            )
         else:
             rebind[AesCpuBackend[Self.KeySize]](self._backend).encrypt[Self.Nr](
                 data
@@ -61,8 +65,12 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
             rebind[AesX86Backend[Self.KeySize]](self._backend).decrypt[Self.Nr](
                 data
             )
-        elif reflect[Self.Backend]().name() == reflect[AesGpuBackend]().name():
-            rebind[AesGpuBackend](self._backend).decrypt[Self.Nr](data)
+        elif reflect[Self.Backend]().name() == reflect[
+            AesGpuBackend[Self.KeySize]
+        ]().name():
+            rebind[AesGpuBackend[Self.KeySize]](self._backend).decrypt[Self.Nr](
+                data
+            )
         else:
             rebind[AesCpuBackend[Self.KeySize]](self._backend).decrypt[Self.Nr](
                 data

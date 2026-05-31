@@ -1,8 +1,15 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
+from std.sys import has_accelerator
+from std.gpu.host import DeviceContext
 
-from mojo_crypto.block_ciphers.aes import Aes, AesCpuBackend, BLOCK_SIZE
+from mojo_crypto.block_ciphers.aes import (
+    Aes,
+    AesCpuBackend,
+    AesGpuBackend,
+    BLOCK_SIZE,
+)
 from mojo_crypto.block_ciphers.traits import BlockCipher
 from mojo_crypto.block_ciphers.modes import CbcMode
 
@@ -65,17 +72,32 @@ def test_aes_kat() raises:
         "tests/block_ciphers/aes/KAT_AES", "ECB"
     )
 
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+
+            @parameter
+            def aes_gpu[
+                KeySize: Int
+            ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+                KeySize, AesGpuBackend[KeySize]
+            ]:
+                return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
+
+            check_aes_kat[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
+            check_aes_kat[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
+            check_aes_kat[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
+
     @parameter
-    def aes[
+    def aes_cpu[
         KeySize: Int
     ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, Backend[KeySize]
+        KeySize, AesCpuBackend[KeySize]
     ]:
-        return Aes[KeySize](Backend[KeySize](key))
+        return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-    check_aes_kat[Aes[16, Backend[16]], 16, aes[16]](vectors)
-    check_aes_kat[Aes[24, Backend[24]], 24, aes[24]](vectors)
-    check_aes_kat[Aes[32, Backend[32]], 32, aes[32]](vectors)
+    check_aes_kat[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
+    check_aes_kat[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
+    check_aes_kat[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
 
 
 # AES-CBC Known Answer Test (KAT) Vectors
@@ -84,18 +106,32 @@ def test_cbc_kat() raises:
     var vectors = load_python_aes_vectors(
         "tests/block_ciphers/aes/KAT_AES", "CBC"
     )
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+
+            @parameter
+            def aes_gpu[
+                KeySize: Int
+            ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
+                KeySize, AesGpuBackend[KeySize]
+            ]:
+                return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
+
+            check_cbc_kat[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
+            check_cbc_kat[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
+            check_cbc_kat[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
 
     @parameter
-    def aes[
+    def aes_cpu[
         KeySize: Int
     ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, Backend[KeySize]
+        KeySize, AesCpuBackend[KeySize]
     ]:
-        return Aes[KeySize](Backend[KeySize](key))
+        return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-    check_cbc_kat[Aes[16, Backend[16]], 16, aes[16]](vectors)
-    check_cbc_kat[Aes[24, Backend[24]], 24, aes[24]](vectors)
-    check_cbc_kat[Aes[32, Backend[32]], 32, aes[32]](vectors)
+    check_cbc_kat[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
+    check_cbc_kat[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
+    check_cbc_kat[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
 
 
 def check_aes_mct[
