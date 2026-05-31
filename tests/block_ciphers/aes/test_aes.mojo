@@ -23,7 +23,7 @@ comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
 
 
 def check_aes_kat[
-    C: BlockCipher & ImplicitlyDestructible,
+    C: BlockCipher & Movable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -107,7 +107,7 @@ def test_aes_kat() raises:
         "tests/block_ciphers/aes/KAT_AES", "ECB"
     )
 
-    run_checks[check_aes_kat]
+    run_checks[check_aes_kat](vectors)
 
 # AES-CBC Known Answer Test (KAT) Vectors
 # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/KAT_AES.zip
