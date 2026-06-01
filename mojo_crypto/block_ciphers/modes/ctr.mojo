@@ -9,7 +9,7 @@ struct CtrMode[Cipher: BlockCipher & Movable & ImplicitlyDestructible](
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
 
     var _cipher: Self.Cipher
-    var _ctr: List[UInt8]
+    var _ctr: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE]
 
     def __init__(
         out self,
@@ -17,9 +17,7 @@ struct CtrMode[Cipher: BlockCipher & Movable & ImplicitlyDestructible](
         ctr: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE],
     ):
         self._cipher = cipher^
-        self._ctr = List[UInt8](capacity=Self.BLOCK_SIZE)
-        for i in range(Self.BLOCK_SIZE):
-            self._ctr.append(ctr[i])
+        self._ctr = ctr
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         self._apply(data)
@@ -30,11 +28,12 @@ struct CtrMode[Cipher: BlockCipher & Movable & ImplicitlyDestructible](
     def _apply[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         var offset = 0
         while offset < len(data):
-            var keystream = self._ctr.copy()
-            self._cipher.encrypt(keystream[:])
-            var end = offset + Self.BLOCK_SIZE
-            if end > len(data):
-                end = len(data)
+            var keystream = self._ctr
+            var ks = Span[UInt8, origin_of(keystream)](
+                ptr=keystream.unsafe_ptr(), length=Self.BLOCK_SIZE
+            )
+            self._cipher.encrypt(ks)
+            var end = min(offset + Self.BLOCK_SIZE, len(data))
             for j in range(end - offset):
                 data[offset + j] ^= keystream[j]
             self._increment_ctr()

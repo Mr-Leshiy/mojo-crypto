@@ -12,4 +12,5 @@ as specified in:
 | Mode | File | SP 800-38A section |
 |------|------|--------------------|
 | CBC (Cipher Block Chaining) | `cbc.mojo` | § 6.2 |
+| CTR (Counter)               | `ctr.mojo` | § 6.5 |
 

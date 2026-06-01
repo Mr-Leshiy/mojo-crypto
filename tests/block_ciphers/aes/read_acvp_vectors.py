@@ -35,8 +35,9 @@ def _parse_aft(group: dict, results: dict[int, dict]) -> list[TestData]:
     for tc in group["tests"]:
         expected = results.get(tc["tcId"], {})
 
-        # Skip CTR encryption vectors: their IV lives in expectedResults, not prompt.
-        # Since CTR encrypt == CTR decrypt, decryption vectors cover the same logic.
+        # CTR encryption vectors carry the IV in expectedResults rather than the
+        # prompt; skip them and rely on the decryption vectors (same keystream
+        # logic, IV available in the prompt).
         if tc.get("iv") is None and expected.get("iv") is not None:
             continue
 
