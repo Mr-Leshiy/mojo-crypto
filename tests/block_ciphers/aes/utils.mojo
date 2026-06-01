@@ -1,19 +1,18 @@
 from std.python import Python, PythonObject
 from std.memory import memcpy
 
+from mojo_crypto.block_ciphers.aes import BLOCK_SIZE
 from mojo_crypto.containers.encoding import Hex
 
 
 @fieldwise_init
-struct AesTestVector[KeySize: Int, BlockSize: Int = 16](Copyable, Movable):
+struct AesTestVector[KeySize: Int](Copyable, Movable):
     var is_encrypt: Bool
     var count: Int
     var key: InlineArray[UInt8, Self.KeySize]
-    var iv: Optional[InlineArray[UInt8, Self.BlockSize]]
-    # TODO: pt and ct should support arbitrary payload sizes to cover multi-block
-    # test vectors (e.g. ACVP CBC payloads of 32, 48 … 160 bytes).
-    var pt: InlineArray[UInt8, Self.BlockSize]
-    var ct: InlineArray[UInt8, Self.BlockSize]
+    var iv: Optional[InlineArray[UInt8, BLOCK_SIZE]]
+    var pt: List[UInt8]
+    var ct: List[UInt8]
     var file_name: String
 
 
@@ -37,27 +36,23 @@ def load_python_acvp_vectors(
 
 
 def parse_acvp_aes[
-    KeySize: Int, BlockSize: Int = 16
-](python_vectors: PythonObject) raises -> List[
-    AesTestVector[KeySize, BlockSize]
-]:
-    var vectors = List[AesTestVector[KeySize, BlockSize]]()
+    KeySize: Int
+](python_vectors: PythonObject) raises -> List[AesTestVector[KeySize]]:
+    var vectors = List[AesTestVector[KeySize]]()
     for v in python_vectors:
         if atol(String(v.key_len)) // 8 != KeySize:
             continue
-        if len(String(v.pt_hex)) != BlockSize * 2:
-            continue
-        var iv = Optional[InlineArray[UInt8, BlockSize]](None)
+        var iv = Optional[InlineArray[UInt8, BLOCK_SIZE]](None)
         if v.iv_hex is not Python.none():
-            iv = parse_hex[BlockSize](String(v.iv_hex))
+            iv = parse_hex[BLOCK_SIZE](String(v.iv_hex))
         vectors.append(
             AesTestVector(
                 is_encrypt=v.is_encrypt.__bool__(),
                 count=atol(String(v.count)),
                 key=parse_hex[KeySize](String(v.key_hex)),
                 iv=iv,
-                pt=parse_hex[BlockSize](String(v.pt_hex)),
-                ct=parse_hex[BlockSize](String(v.ct_hex)),
+                pt=Hex().decode(String(v.pt_hex)),
+                ct=Hex().decode(String(v.ct_hex)),
                 file_name=String(""),
             )
         )

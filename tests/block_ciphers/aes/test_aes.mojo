@@ -33,12 +33,12 @@ def check_aes_eft[
             reflect[C]().name(), v.file_name, v.count
         )
 
-        var pt = v.pt
-        cipher.encrypt(pt)
+        var pt = v.pt.copy()
+        cipher.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
-        var ct = v.ct
-        cipher.decrypt(ct)
+        var ct = v.ct.copy()
+        cipher.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
 
@@ -47,20 +47,20 @@ def check_aes_cbc_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
-    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](vectors):
-        var iv = v.iv.value()
+    for v in parse_acvp_aes[KeySize](vectors):
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
 
-        var pt = v.pt
+        var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
+        var pt = v.pt.copy()
         var cbc_enc = CbcMode[C](cipher_init(v.key), iv)
-        cbc_enc.encrypt(pt)
+        cbc_enc.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
-        var ct = v.ct
+        var ct = v.ct.copy()
         var cbc_dec = CbcMode[C](cipher_init(v.key), iv)
-        cbc_dec.decrypt(ct)
+        cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
 
@@ -74,15 +74,14 @@ def check_aes_mct[
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
     for v in parse_acvp_aes[KeySize](vectors):
-        var initial = v.pt if v.is_encrypt else v.ct
-        var expected = v.ct if v.is_encrypt else v.pt
+        var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
+        var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
         var cipher = cipher_init(v.key)
-        var block = initial
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
-                cipher.encrypt(block)
+                cipher.encrypt(block[:])
             else:
-                cipher.decrypt(block)
+                cipher.decrypt(block[:])
 
         var msg = "[{}], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -97,30 +96,35 @@ def check_aes_cbc_mct[
 ](vectors: PythonObject) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](vectors):
+    for v in parse_acvp_aes[KeySize](vectors):
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
 
+        var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
+        var iv_list = List[UInt8](capacity=BLOCK_SIZE)
+        for i in range(BLOCK_SIZE):
+            iv_list.append(iv[i])
+
         if v.is_encrypt:
-            var block = v.pt
-            var next_block = v.iv.value()
-            var cbc = CbcMode[C](cipher_init(v.key), v.iv.value())
+            var block = v.pt.copy()
+            var next_block = iv_list.copy()
+            var cbc = CbcMode[C](cipher_init(v.key), iv)
             for _ in range(MCT_INNER_ITERATIONS):
-                cbc.encrypt(block)
-                var tmp = block
-                block = next_block
-                next_block = tmp
+                cbc.encrypt(block[:])
+                var tmp = block^
+                block = next_block^
+                next_block = tmp^
             assert_equal(next_block, v.ct, msg=msg)
         else:
-            var block = v.ct
-            var next_block = v.iv.value()
-            var cbc = CbcMode[C](cipher_init(v.key), v.iv.value())
+            var block = v.ct.copy()
+            var next_block = iv_list.copy()
+            var cbc = CbcMode[C](cipher_init(v.key), iv)
             for _ in range(MCT_INNER_ITERATIONS):
-                cbc.decrypt(block)
-                var tmp = block
-                block = next_block
-                next_block = tmp
+                cbc.decrypt(block[:])
+                var tmp = block^
+                block = next_block^
+                next_block = tmp^
             assert_equal(next_block, v.pt, msg=msg)
 
 
