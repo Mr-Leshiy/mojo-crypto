@@ -34,6 +34,17 @@ def _parse_aft(group: dict, results: dict[int, dict]) -> list[TestData]:
 
     for tc in group["tests"]:
         expected = results.get(tc["tcId"], {})
+
+        # Skip CTR encryption vectors: their IV lives in expectedResults, not prompt.
+        # Since CTR encrypt == CTR decrypt, decryption vectors cover the same logic.
+        if tc.get("iv") is None and expected.get("iv") is not None:
+            continue
+
+        # Skip non-byte-aligned payloads (CTR payloadLen field, in bits).
+        payload_len = tc.get("payloadLen")
+        if payload_len is not None and payload_len % 8 != 0:
+            continue
+
         if is_encrypt:
             pt_hex, ct_hex = tc["pt"], expected.get("ct", "")
         else:

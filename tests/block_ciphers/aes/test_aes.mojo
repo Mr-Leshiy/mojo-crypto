@@ -11,7 +11,7 @@ from mojo_crypto.block_ciphers.aes import (
     BLOCK_SIZE,
 )
 from mojo_crypto.block_ciphers.traits import BlockCipher
-from mojo_crypto.block_ciphers.modes import CbcMode
+from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -187,12 +187,42 @@ def test_aes_mct() raises:
     run_checks[check_aes_mct](vectors)
 
 
+def check_aes_ctr_aft[
+    C: BlockCipher & Movable & ImplicitlyDestructible,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+](vectors: PythonObject) raises:
+    for v in parse_acvp_aes[KeySize](vectors):
+        var msg = "[CtrMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
+        var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
+        if v.is_encrypt:
+            var pt = v.pt.copy()
+            var ctr = CtrMode[C](cipher_init(v.key), iv)
+            ctr.encrypt(pt[:])
+            assert_equal(pt, v.ct, msg=msg)
+        else:
+            var ct = v.ct.copy()
+            var ctr = CtrMode[C](cipher_init(v.key), iv)
+            ctr.decrypt(ct[:])
+            assert_equal(ct, v.pt, msg=msg)
+
+
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_aes_cbc_mct() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "MCT"
     )
     run_checks[check_aes_cbc_mct](vectors)
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
+def test_aes_ctr_aft() raises:
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "AFT"
+    )
+    run_checks[check_aes_ctr_aft](vectors)
 
 
 def main() raises:
