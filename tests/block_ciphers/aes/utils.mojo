@@ -25,14 +25,20 @@ def parse_hex[N: Int](s: String) raises -> InlineArray[UInt8, N]:
     return result^
 
 
-def read_avcp_aes[
-    KeySize: Int, BlockSize: Int = 16
-](dir: String, test_type: String) raises -> List[AesTestVector[KeySize, BlockSize]]:
+def load_python_acvp_vectors(
+    dir: String, test_type: String
+) raises -> PythonObject:
     var sys = Python.import_module("sys")
     sys.path.insert(0, PythonObject("tests/block_ciphers/aes"))
     var read_acvp_vectors = Python.import_module("read_acvp_vectors")
-    var python_vectors = read_acvp_vectors.load(dir, read_acvp_vectors.TestType(test_type))
+    return read_acvp_vectors.load(dir, read_acvp_vectors.TestType(test_type))
 
+
+def parse_acvp_aes[
+    KeySize: Int, BlockSize: Int = 16
+](python_vectors: PythonObject) raises -> List[
+    AesTestVector[KeySize, BlockSize]
+]:
     var vectors = List[AesTestVector[KeySize, BlockSize]]()
     for v in python_vectors:
         var iv = Optional[InlineArray[UInt8, BlockSize]](None)
@@ -46,7 +52,7 @@ def read_avcp_aes[
                 iv=iv,
                 pt=parse_hex[BlockSize](String(v.pt_hex)),
                 ct=parse_hex[BlockSize](String(v.ct_hex)),
-                file_name=dir,
+                file_name=String(""),
             )
         )
     return vectors^

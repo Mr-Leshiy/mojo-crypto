@@ -12,7 +12,11 @@ from mojo_crypto.block_ciphers.aes import (
 from mojo_crypto.block_ciphers.traits import BlockCipher
 from mojo_crypto.block_ciphers.modes import CbcMode
 
-from tests.block_ciphers.aes.utils import AesTestVector, read_avcp_aes
+from tests.block_ciphers.aes.utils import (
+    AesTestVector,
+    load_python_acvp_vectors,
+    parse_acvp_aes,
+)
 
 comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
 
@@ -22,7 +26,7 @@ def check_aes_kat[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](dir: String) raises:
-    for v in read_avcp_aes[KeySize](dir, "AFT"):
+    for v in parse_acvp_aes[KeySize](load_python_acvp_vectors(dir, "AFT")):
         var cipher = cipher_init(v.key)
         var msg = "[{}], file_name={}, count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -42,7 +46,9 @@ def check_cbc_kat[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](dir: String) raises:
-    for v in read_avcp_aes[KeySize, C.BLOCK_SIZE](dir, "AFT"):
+    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](
+        load_python_acvp_vectors(dir, "AFT")
+    ):
         var iv = v.iv.value()
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -68,7 +74,7 @@ def check_aes_mct[
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    for v in read_avcp_aes[KeySize](dir, "MCT"):
+    for v in parse_acvp_aes[KeySize](load_python_acvp_vectors(dir, "MCT")):
         var initial = v.pt if v.is_encrypt else v.ct
         var expected = v.ct if v.is_encrypt else v.pt
         var cipher = cipher_init(v.key)
@@ -92,7 +98,9 @@ def check_cbc_mct[
 ](dir: String) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    for v in read_avcp_aes[KeySize, C.BLOCK_SIZE](dir, "MCT"):
+    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](
+        load_python_acvp_vectors(dir, "MCT")
+    ):
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )

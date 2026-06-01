@@ -18,7 +18,6 @@ class TestData:
     iv_hex: str | None
     pt_hex: str
     ct_hex: str
-    test_type: TestType
 
 
 def _result_index(expected: dict) -> dict[int, dict]:
@@ -48,7 +47,6 @@ def _parse_aft(group: dict, results: dict[int, dict]) -> list[TestData]:
             iv_hex=tc.get("iv"),
             pt_hex=pt_hex,
             ct_hex=ct_hex,
-            test_type=TestType.AFT,
         ))
 
     return records
@@ -68,7 +66,6 @@ def _parse_mct(group: dict, results: dict[int, dict]) -> list[TestData]:
             iv_hex=entry.get("iv"),
             pt_hex=entry["pt"],
             ct_hex=entry["ct"],
-            test_type=TestType.MCT,
         )
         for i, entry in enumerate(expected.get("resultsArray", []))
     ]
@@ -82,9 +79,9 @@ def load(dir: str, test_type: TestType) -> list[TestData]:
 
     records: list[TestData] = []
     for group in prompt.get("testGroups", []):
-        if group["testType"] == "AFT":
-            records.extend(_parse_aft(group, results))
-        elif group["testType"] == "MCT":
-            records.extend(_parse_mct(group, results))
-
-    return [v for v in records if v.test_type == test_type]
+        if group["testType"] == test_type.value:
+            if test_type == TestType.AFT:
+                records.extend(_parse_aft(group, results))
+            else:
+                records.extend(_parse_mct(group, results))
+    return records
