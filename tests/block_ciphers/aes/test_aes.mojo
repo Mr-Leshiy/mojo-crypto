@@ -1,4 +1,5 @@
 from std.testing import assert_equal, TestSuite
+from std.python import PythonObject
 from std.reflection import reflect
 from std.sys import has_accelerator
 from std.gpu.host import DeviceContext
@@ -21,12 +22,12 @@ from tests.block_ciphers.aes.utils import (
 comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
 
 
-def check_aes_kat[
+def check_aes_eft[
     C: BlockCipher & Movable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](dir: String) raises:
-    for v in parse_acvp_aes[KeySize](load_python_acvp_vectors(dir, "AFT")):
+](vectors: PythonObject) raises:
+    for v in parse_acvp_aes[KeySize](vectors):
         var cipher = cipher_init(v.key)
         var msg = "[{}], file_name={}, count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -41,14 +42,12 @@ def check_aes_kat[
         assert_equal(ct, v.pt, msg=msg)
 
 
-def check_cbc_kat[
+def check_aes_cbc_eft[
     C: BlockCipher & Movable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](dir: String) raises:
-    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](
-        load_python_acvp_vectors(dir, "AFT")
-    ):
+](vectors: PythonObject) raises:
+    for v in parse_acvp_aes[KeySize](vectors):
         var iv = v.iv.value()
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -69,12 +68,12 @@ def check_aes_mct[
     C: BlockCipher & Movable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](dir: String) raises:
+](vectors: PythonObject) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    for v in parse_acvp_aes[KeySize](load_python_acvp_vectors(dir, "MCT")):
+    for v in parse_acvp_aes[KeySize](vectors):
         var initial = v.pt if v.is_encrypt else v.ct
         var expected = v.ct if v.is_encrypt else v.pt
         var cipher = cipher_init(v.key)
@@ -91,16 +90,14 @@ def check_aes_mct[
         assert_equal(block, expected, msg=msg)
 
 
-def check_cbc_mct[
+def check_aes_cbc_mct[
     C: BlockCipher & Movable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](dir: String) raises:
+](vectors: PythonObject) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](
-        load_python_acvp_vectors(dir, "MCT")
-    ):
+    for v in parse_acvp_aes[KeySize](vectors):
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -132,8 +129,8 @@ def run_checks[
         C: BlockCipher & Movable & ImplicitlyDestructible,
         KeySize: Int,
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-    ](String) raises capturing[_]
-](dir: String) raises:
+    ](PythonObject) raises capturing[_]
+](vectors: PythonObject) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
 
@@ -145,9 +142,9 @@ def run_checks[
             ]:
                 return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
 
-            check[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](dir)
-            check[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](dir)
-            check[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](dir)
+            check[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
+            check[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
+            check[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
 
     @parameter
     def aes_cpu[
@@ -157,29 +154,41 @@ def run_checks[
     ]:
         return Aes[KeySize](AesCpuBackend[KeySize](key))
 
-    check[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](dir)
-    check[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](dir)
-    check[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](dir)
+    check[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
+    check[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
+    check[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_kat() raises:
-    run_checks[check_aes_kat]("tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0")
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "AFT"
+    )
+    run_checks[check_aes_aft](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_cbc_kat() raises:
-    run_checks[check_cbc_kat]("tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0")
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "AFT"
+    )
+    run_checks[check_aes_cbc_aft](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_mct() raises:
-    run_checks[check_aes_mct]("tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0")
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "MCT"
+    )
+    run_checks[check_aes_mct](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_cbc_mct() raises:
-    run_checks[check_cbc_mct]("tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0")
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "MCT"
+    )
+    run_checks[check_aes_cbc_mct](vectors)
 
 
 def main() raises:
