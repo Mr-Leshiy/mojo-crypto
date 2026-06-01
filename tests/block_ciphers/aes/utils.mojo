@@ -41,6 +41,8 @@ def parse_acvp_aes[
 ]:
     var vectors = List[AesTestVector[KeySize, BlockSize]]()
     for v in python_vectors:
+        if atol(String(v.key_len)) // 8 != KeySize:
+            continue
         var iv = Optional[InlineArray[UInt8, BlockSize]](None)
         if v.iv_hex is not Python.none():
             iv = parse_hex[BlockSize](String(v.iv_hex))
