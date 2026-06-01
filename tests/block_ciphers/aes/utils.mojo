@@ -10,6 +10,8 @@ struct AesTestVector[KeySize: Int, BlockSize: Int = 16](Copyable, Movable):
     var count: Int
     var key: InlineArray[UInt8, Self.KeySize]
     var iv: Optional[InlineArray[UInt8, Self.BlockSize]]
+    # TODO: pt and ct should support arbitrary payload sizes to cover multi-block
+    # test vectors (e.g. ACVP CBC payloads of 32, 48 … 160 bytes).
     var pt: InlineArray[UInt8, Self.BlockSize]
     var ct: InlineArray[UInt8, Self.BlockSize]
     var file_name: String
@@ -42,6 +44,8 @@ def parse_acvp_aes[
     var vectors = List[AesTestVector[KeySize, BlockSize]]()
     for v in python_vectors:
         if atol(String(v.key_len)) // 8 != KeySize:
+            continue
+        if len(String(v.pt_hex)) != BlockSize * 2:
             continue
         var iv = Optional[InlineArray[UInt8, BlockSize]](None)
         if v.iv_hex is not Python.none():
