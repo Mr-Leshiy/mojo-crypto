@@ -47,7 +47,7 @@ def check_aes_cbc_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
-    for v in parse_acvp_aes[KeySize](vectors):
+    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](vectors):
         var iv = v.iv.value()
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -97,7 +97,7 @@ def check_aes_cbc_mct[
 ](vectors: PythonObject) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    for v in parse_acvp_aes[KeySize](vectors):
+    for v in parse_acvp_aes[KeySize, C.BLOCK_SIZE](vectors):
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -164,7 +164,7 @@ def test_aes_aft() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "AFT"
     )
-    run_checks[check_aes_aft](vectors)
+    run_checks[check_aes_eft](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
@@ -172,7 +172,7 @@ def test_aes_cbc_aft() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "AFT"
     )
-    run_checks[check_aes_cbc_aft](vectors)
+    run_checks[check_aes_cbc_eft](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
