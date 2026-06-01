@@ -160,7 +160,7 @@ def run_checks[
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_kat() raises:
+def test_aes_aft() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "AFT"
     )
@@ -168,7 +168,7 @@ def test_aes_kat() raises:
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def test_cbc_kat() raises:
+def test_aes_cbc_aft() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "AFT"
     )
@@ -184,7 +184,7 @@ def test_aes_mct() raises:
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def test_cbc_mct() raises:
+def test_aes_cbc_mct() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "MCT"
     )
