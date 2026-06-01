@@ -48,11 +48,11 @@ def check_aes_cbc_eft[
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
     for v in parse_acvp_aes[KeySize](vectors):
-        var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
 
+        var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
         var pt = v.pt.copy()
         var cbc_enc = CbcMode[C](cipher_init(v.key), iv)
         cbc_enc.encrypt(pt[:])
@@ -97,15 +97,14 @@ def check_aes_cbc_mct[
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
     for v in parse_acvp_aes[KeySize](vectors):
-        var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
 
-        var iv_arr = v.iv.value()
+        var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
         var iv_list = List[UInt8](capacity=BLOCK_SIZE)
         for i in range(BLOCK_SIZE):
-            iv_list.append(iv_arr[i])
+            iv_list.append(iv[i])
 
         if v.is_encrypt:
             var block = v.pt.copy()
