@@ -73,7 +73,7 @@ struct AesGpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
             grid_dim=num_blocks,
             block_dim=BLOCK_SIZE,
         )
-
+        self.ctx.synchronize()
         buf.enqueue_copy_to(data.unsafe_ptr())
 
 
