@@ -1,4 +1,4 @@
-from mojo_crypto.block_ciphers.aes import Aes, AesArmv8Backend
+from mojo_crypto.block_ciphers.aes import Aes, AesAarch64
 
 from benchmarks.block_ciphers.aes.common import bench_cipher
 
@@ -10,12 +10,12 @@ def main() raises:
     def aes[
         KeySize: Int
     ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, AesArmv8Backend[KeySize]
+        KeySize, AesAarch64[KeySize]
     ]:
-        return Aes[KeySize, AesArmv8Backend[KeySize]](
-            AesArmv8Backend[KeySize](key)
+        return Aes[KeySize, AesAarch64[KeySize]](
+            AesAarch64[KeySize](key)
         )
 
-    bench_cipher[Aes[16, AesArmv8Backend[16]], 16, aes[16], "aes128"]()
-    bench_cipher[Aes[24, AesArmv8Backend[24]], 24, aes[24], "aes192"]()
-    bench_cipher[Aes[32, AesArmv8Backend[32]], 32, aes[32], "aes256"]()
+    bench_cipher[Aes[16, AesAarch64[16]], 16, aes[16], "aes128"]()
+    bench_cipher[Aes[24, AesAarch64[24]], 24, aes[24], "aes192"]()
+    bench_cipher[Aes[32, AesAarch64[32]], 32, aes[32], "aes256"]()

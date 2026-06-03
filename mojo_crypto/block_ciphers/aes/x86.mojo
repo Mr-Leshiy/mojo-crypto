@@ -15,7 +15,7 @@ from .common import BLOCK_SIZE, SBOX, check_key_size
 # All AES-NI instructions use v2i64 in LLVM IR. Round keys are stored as
 # SIMD[DType.uint64, 2] so no conversion is needed at call sites; the state
 # is bitcast once at load and once at store.
-struct AesX86Backend[KeySize: Int](
+struct AesX86[KeySize: Int](
     BlockCipher, ImplicitlyDestructible, Movable
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE

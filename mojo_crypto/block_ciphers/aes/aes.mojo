@@ -1,23 +1,23 @@
 from mojo_crypto.block_ciphers.traits import BlockCipher
 
-from .cpu import AesCpuBackend
-from .aarch64 import AesArmv8Backend
-from .x86 import AesX86Backend
-from .gpu import AesGpuBackend
+from .cpu import AesCpu
+from .aarch64 import AesAarch64
+from .x86 import AesX86
+from .gpu import AesGpu
 
 
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
 #
 # Backend selects the implementation at compile time:
-#   AesArmv8Backend[KeySize]  — AArch64 AES crypto extension
-#   AesX86Backend[KeySize]    — x86 AES-NI
-#   AesCpuBackend[KeySize]    — portable software fallback
-#   AesGpuBackend             — CUDA GPU backend
+#   AesAarch64[KeySize]  — AArch64 AES crypto extension
+#   AesX86[KeySize]    — x86 AES-NI
+#   AesCpu[KeySize]    — portable software fallback
+#   AesGpu             — CUDA GPU backend
 #
 struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
     BlockCipher, ImplicitlyDestructible, Movable
 ):
-    comptime Nr: Int = AesCpuBackend[Self.KeySize].Nr
+    comptime Nr: Int = AesCpu[Self.KeySize].Nr
     comptime BLOCK_SIZE: Int = 16
 
     var _backend: Self.Backend
@@ -30,32 +30,32 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         comptime if reflect[Self.Backend]().name() == reflect[
-            AesArmv8Backend[Self.KeySize]
+            AesAarch64[Self.KeySize]
         ]().name():
-            rebind[AesArmv8Backend[Self.KeySize]](self._backend).encrypt(data)
+            rebind[AesAarch64[Self.KeySize]](self._backend).encrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
-            AesX86Backend[Self.KeySize]
+            AesX86[Self.KeySize]
         ]().name():
-            rebind[AesX86Backend[Self.KeySize]](self._backend).encrypt(data)
+            rebind[AesX86[Self.KeySize]](self._backend).encrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
-            AesGpuBackend[Self.KeySize]
+            AesGpu[Self.KeySize]
         ]().name():
-            rebind[AesGpuBackend[Self.KeySize]](self._backend).encrypt(data)
+            rebind[AesGpu[Self.KeySize]](self._backend).encrypt(data)
         else:
-            rebind[AesCpuBackend[Self.KeySize]](self._backend).encrypt(data)
+            rebind[AesCpu[Self.KeySize]](self._backend).encrypt(data)
 
     def decrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         comptime if reflect[Self.Backend]().name() == reflect[
-            AesArmv8Backend[Self.KeySize]
+            AesAarch64[Self.KeySize]
         ]().name():
-            rebind[AesArmv8Backend[Self.KeySize]](self._backend).decrypt(data)
+            rebind[AesAarch64[Self.KeySize]](self._backend).decrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
-            AesX86Backend[Self.KeySize]
+            AesX86[Self.KeySize]
         ]().name():
-            rebind[AesX86Backend[Self.KeySize]](self._backend).decrypt(data)
+            rebind[AesX86[Self.KeySize]](self._backend).decrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
-            AesGpuBackend[Self.KeySize]
+            AesGpu[Self.KeySize]
         ]().name():
-            rebind[AesGpuBackend[Self.KeySize]](self._backend).decrypt(data)
+            rebind[AesGpu[Self.KeySize]](self._backend).decrypt(data)
         else:
-            rebind[AesCpuBackend[Self.KeySize]](self._backend).decrypt(data)
+            rebind[AesCpu[Self.KeySize]](self._backend).decrypt(data)

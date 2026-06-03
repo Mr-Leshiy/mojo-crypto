@@ -6,8 +6,8 @@ from std.gpu.host import DeviceContext
 
 from mojo_crypto.block_ciphers.aes import (
     Aes,
-    AesCpuBackend,
-    AesGpuBackend,
+    AesCpu,
+    AesGpu,
     BLOCK_SIZE,
 )
 from mojo_crypto.block_ciphers.traits import BlockCipher
@@ -19,7 +19,7 @@ from tests.block_ciphers.aes.utils import (
     parse_acvp_aes,
 )
 
-comptime Backend[KeySize: Int] = AesCpuBackend[KeySize]
+comptime Backend[KeySize: Int] = AesCpu[KeySize]
 
 
 def check_aes_eft[
@@ -190,25 +190,25 @@ def run_checks[
             def aes_gpu[
                 KeySize: Int
             ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-                KeySize, AesGpuBackend[KeySize]
+                KeySize, AesGpu[KeySize]
             ]:
-                return Aes[KeySize](AesGpuBackend[KeySize](ctx, key))
+                return Aes[KeySize](AesGpu[KeySize](ctx, key))
 
-            check[Aes[16, AesGpuBackend[16]], 16, aes_gpu[16]](vectors)
-            check[Aes[24, AesGpuBackend[24]], 24, aes_gpu[24]](vectors)
-            check[Aes[32, AesGpuBackend[32]], 32, aes_gpu[32]](vectors)
+            check[Aes[16, AesGpu[16]], 16, aes_gpu[16]](vectors)
+            check[Aes[24, AesGpu[24]], 24, aes_gpu[24]](vectors)
+            check[Aes[32, AesGpu[32]], 32, aes_gpu[32]](vectors)
 
     @parameter
     def aes_cpu[
         KeySize: Int
     ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, AesCpuBackend[KeySize]
+        KeySize, AesCpu[KeySize]
     ]:
-        return Aes[KeySize](AesCpuBackend[KeySize](key))
+        return Aes[KeySize](AesCpu[KeySize](key))
 
-    check[Aes[16, AesCpuBackend[16]], 16, aes_cpu[16]](vectors)
-    check[Aes[24, AesCpuBackend[24]], 24, aes_cpu[24]](vectors)
-    check[Aes[32, AesCpuBackend[32]], 32, aes_cpu[32]](vectors)
+    check[Aes[16, AesCpu[16]], 16, aes_cpu[16]](vectors)
+    check[Aes[24, AesCpu[24]], 24, aes_cpu[24]](vectors)
+    check[Aes[32, AesCpu[32]], 32, aes_cpu[32]](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
