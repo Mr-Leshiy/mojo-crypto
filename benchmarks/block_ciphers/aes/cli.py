@@ -19,9 +19,9 @@ def cpu() -> None:
 
 
 @app.command()
-def armv8() -> None:
-    """Benchmark AES-128/192/256 using the ARMv8 Crypto Extension backend."""
-    _bench("armv8")
+def aarch64() -> None:
+    """Benchmark AES-128/192/256 using the Aarch64 Crypto Extension backend."""
+    _bench("aarch64")
 
 
 @app.command()

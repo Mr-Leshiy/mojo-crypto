@@ -4,5 +4,5 @@ trait Decodable:
 
 
 trait Encodable:
-    def encode[o: Origin](self, data: Span[UInt8, o]) -> String:
+    def encode[o: Origin](self, data: Span[UInt8, o]) raises -> String:
         ...

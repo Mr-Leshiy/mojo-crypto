@@ -52,3 +52,10 @@ comptime SBOX_INV: InlineArray[UInt8, 256] = [
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d,
     # fmt: on
 ]
+
+
+@always_inline
+def check_key_size[KeySize: Int]():
+    comptime assert (
+        KeySize == 16 or KeySize == 24 or KeySize == 32
+    ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"

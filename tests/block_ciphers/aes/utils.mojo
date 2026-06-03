@@ -2,7 +2,7 @@ from std.python import Python, PythonObject
 from std.memory import memcpy
 
 from mojo_crypto.block_ciphers.aes import BLOCK_SIZE
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.containers.encoding import HexCpu
 
 
 @fieldwise_init
@@ -19,7 +19,7 @@ struct AesTestVector[KeySize: Int](Copyable, Movable):
 def parse_hex[N: Int](s: String) raises -> InlineArray[UInt8, N]:
     var result = InlineArray[UInt8, N](uninitialized=True)
 
-    var bytes = Hex().decode(s)
+    var bytes = HexCpu().decode(s)
     if len(bytes) != N:
         raise Error("Provided '{}' must have {} size".format(s, N))
     memcpy(dest=result.unsafe_ptr(), src=bytes.unsafe_ptr(), count=N)
@@ -51,8 +51,8 @@ def parse_acvp_aes[
                 count=atol(String(v.count)),
                 key=parse_hex[KeySize](String(v.key_hex)),
                 iv=iv,
-                pt=Hex().decode(String(v.pt_hex)),
-                ct=Hex().decode(String(v.ct_hex)),
+                pt=HexCpu().decode(String(v.pt_hex)),
+                ct=HexCpu().decode(String(v.ct_hex)),
                 file_name=String(""),
             )
         )

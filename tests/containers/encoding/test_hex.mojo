@@ -1,9 +1,11 @@
 from std.testing import assert_equal, assert_true, assert_raises, TestSuite
+from std.gpu.host import DeviceContext
+from std.sys import has_accelerator
 
-from mojo_crypto.containers.encoding import Hex, Encodable, Decodable
+from mojo_crypto.containers.encoding import HexCpu, HexGpu, Encodable, Decodable
 
 
-def check_hex[H: Encodable & Decodable](hex: H) raises:
+def check_valid_hex[H: Encodable & Decodable](hex: H) raises:
     var data: List[UInt8] = [0x00, 0xFF, 0xAB, 0x12]
     assert_equal(hex.encode(Span(data)), "00ffab12")
 
@@ -29,6 +31,8 @@ def check_hex[H: Encodable & Decodable](hex: H) raises:
     decoded = hex.decode(hex.encode(Span(data)))
     assert_true(decoded == data)
 
+
+def check_invalid_hex[H: Encodable & Decodable](hex: H) raises:
     with assert_raises():
         _ = hex.decode("abc")
 
@@ -40,7 +44,12 @@ def check_hex[H: Encodable & Decodable](hex: H) raises:
 
 
 def test_hex() raises:
-    check_hex(Hex())
+    check_valid_hex(HexCpu())
+    check_invalid_hex(HexCpu())
+
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+            check_valid_hex(HexGpu(ctx))
 
 
 def main() raises:

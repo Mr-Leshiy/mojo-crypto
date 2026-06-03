@@ -1,14 +1,6 @@
-import subprocess
-
 import typer
 
+from benchmarks.containers.encoding.hex.cli import app as hex_app
+
 app = typer.Typer(help="Encoding benchmarks.")
-
-
-@app.command()
-def hex() -> None:
-    """Benchmark hex encode/decode at 1 KB, 4 KB, and 16 KB."""
-    subprocess.run(
-        ["mojo", "run", "-O3", "-I", ".", "benchmarks/containers/encoding/hex.mojo"],
-        check=True,
-    )
+app.add_typer(hex_app, name="hex")

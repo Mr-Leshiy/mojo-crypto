@@ -1,8 +1,11 @@
 from mojo_crypto.block_ciphers.errors import BlockSizeError
-from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV
+from mojo_crypto.block_ciphers.traits import BlockCipher
+from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 
 
-struct AesCpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
+struct AesCpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
+    comptime BLOCK_SIZE: Int = BLOCK_SIZE
+
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
     comptime WordsSize: Int = Nb * (Self.Nr + 1)
@@ -10,19 +13,23 @@ struct AesCpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
     var w: InlineArray[UInt32, Self.WordsSize]
 
     def __init__(out self, key: InlineArray[UInt8, Self.KeySize]):
+        check_key_size[Self.KeySize]()
+        comptime assert (
+            Self.KeySize == 16 or Self.KeySize == 24 or Self.KeySize == 32
+        ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
         self.w = _key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
 
-    def encrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            cipher[Nr=Nr](data[offset : offset + BLOCK_SIZE], self.w)
+            cipher[Nr=Self.Nr](data[offset : offset + BLOCK_SIZE], self.w)
 
-    def decrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            decipher[Nr=Nr](data[offset : offset + BLOCK_SIZE], self.w)
+            decipher[Nr=Self.Nr](data[offset : offset + BLOCK_SIZE], self.w)
 
 
 # FIPS 197 §5.1 Cipher()
