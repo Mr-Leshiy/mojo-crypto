@@ -3,9 +3,7 @@ from mojo_crypto.block_ciphers.traits import BlockCipher
 from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 
 
-struct AesCpu[KeySize: Int](
-    BlockCipher, ImplicitlyDestructible, Movable
-):
+struct AesCpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
 
     comptime Nk: Int = Self.KeySize // 4

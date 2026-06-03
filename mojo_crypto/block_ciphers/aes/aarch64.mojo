@@ -10,9 +10,7 @@ from mojo_crypto.block_ciphers.traits import BlockCipher
 from .common import BLOCK_SIZE, SBOX, check_key_size
 
 
-struct AesAarch64[KeySize: Int](
-    BlockCipher, ImplicitlyDestructible, Movable
-):
+struct AesAarch64[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6

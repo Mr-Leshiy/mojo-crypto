@@ -1,6 +1,6 @@
 from std.testing import assert_equal, assert_true, assert_raises, TestSuite
 
-from mojo_crypto.containers.encoding import Hex, Encodable, Decodable
+from mojo_crypto.containers.encoding import HexCpu, Encodable, Decodable
 
 
 def check_hex[H: Encodable & Decodable](hex: H) raises:
@@ -40,7 +40,7 @@ def check_hex[H: Encodable & Decodable](hex: H) raises:
 
 
 def test_hex() raises:
-    check_hex(Hex())
+    check_hex(HexCpu())
 
 
 def main() raises:

@@ -1,24 +1,14 @@
-from .traits import Encodable, Decodable
-
-comptime _HEX_CHARS: StaticString = "0123456789abcdef"
+from .common import HEX_CHARS, HexError
 
 
 @fieldwise_init
-struct HexError(ImplicitlyDestructible, Writable):
-    var message: String
-
-    def write_to(self, mut writer: Some[Writer]):
-        writer.write(self.message)
-
-
-@fieldwise_init
-struct Hex(Decodable, Encodable, ImplicitlyDestructible, Movable):
+struct HexCpu(Decodable, Encodable, ImplicitlyDestructible, Movable):
     def encode[o: Origin](self, data: Span[UInt8, o]) -> String:
         var result = String()
         for i in range(len(data)):
             var b = Int(data[i])
-            result += String(_HEX_CHARS[byte=b >> 4])
-            result += String(_HEX_CHARS[byte=b & 0xF])
+            result += String(HEX_CHARS[byte=b >> 4])
+            result += String(HEX_CHARS[byte=b & 0xF])
         return result^
 
     def decode(self, s: String) raises -> List[UInt8]:
