@@ -1,5 +1,6 @@
 from std.testing import assert_equal, assert_true, assert_raises, TestSuite
 from std.gpu.host import DeviceContext
+from std.sys import has_accelerator
 
 from mojo_crypto.containers.encoding import HexCpu, HexGpu, Encodable, Decodable
 
@@ -46,8 +47,9 @@ def test_hex() raises:
     check_valid_hex(HexCpu())
     check_invalid_hex(HexCpu())
 
-    with DeviceContext() as ctx:
-        check_valid_hex(HexGpu(ctx))
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+            check_valid_hex(HexGpu(ctx))
 
 
 def main() raises:
