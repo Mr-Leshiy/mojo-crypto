@@ -5,16 +5,20 @@
 # Intel AES-NI reference:
 #   https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=aes
 
-from mojo_crypto.block_ciphers.errors import BlockSizeError
 from std.sys.intrinsics import llvm_intrinsic
-from .common import BLOCK_SIZE, SBOX
+
+from mojo_crypto.block_ciphers.errors import BlockSizeError
+from mojo_crypto.block_ciphers.traits import BlockCipher
+from .common import BLOCK_SIZE, SBOX, check_key_size
+
 
 # All AES-NI instructions use v2i64 in LLVM IR. Round keys are stored as
 # SIMD[DType.uint64, 2] so no conversion is needed at call sites; the state
 # is bitcast once at load and once at store.
-
-
-struct AesX86Backend[KeySize: Int](ImplicitlyDestructible, Movable):
+struct AesX86Backend[KeySize: Int](
+    BlockCipher, ImplicitlyDestructible, Movable
+):
+    comptime BLOCK_SIZE: Int = BLOCK_SIZE
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
 
@@ -22,16 +26,18 @@ struct AesX86Backend[KeySize: Int](ImplicitlyDestructible, Movable):
     var dec_rks: InlineArray[SIMD[DType.uint64, 2], Self.Nr + 1]
 
     def __init__(out self, key: InlineArray[UInt8, Self.KeySize]):
+        check_key_size[Self.KeySize]()
+
         self.enc_rks = _expand_enc_rks[Self.Nr, Self.Nk](key)
         self.dec_rks = _dec_from_enc_rks[Self.Nr](self.enc_rks)
 
-    def encrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
             cipher(data[offset : offset + BLOCK_SIZE], self.enc_rks)
 
-    def decrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE

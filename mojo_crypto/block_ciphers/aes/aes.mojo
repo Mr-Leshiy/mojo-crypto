@@ -32,46 +32,30 @@ struct Aes[KeySize: Int, Backend: Movable & ImplicitlyDestructible](
         comptime if reflect[Self.Backend]().name() == reflect[
             AesArmv8Backend[Self.KeySize]
         ]().name():
-            rebind[AesArmv8Backend[Self.KeySize]](self._backend).encrypt[
-                Self.Nr
-            ](data)
+            rebind[AesArmv8Backend[Self.KeySize]](self._backend).encrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
             AesX86Backend[Self.KeySize]
         ]().name():
-            rebind[AesX86Backend[Self.KeySize]](self._backend).encrypt[Self.Nr](
-                data
-            )
+            rebind[AesX86Backend[Self.KeySize]](self._backend).encrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
             AesGpuBackend[Self.KeySize]
         ]().name():
-            rebind[AesGpuBackend[Self.KeySize]](self._backend).encrypt[Self.Nr](
-                data
-            )
+            rebind[AesGpuBackend[Self.KeySize]](self._backend).encrypt(data)
         else:
-            rebind[AesCpuBackend[Self.KeySize]](self._backend).encrypt[Self.Nr](
-                data
-            )
+            rebind[AesCpuBackend[Self.KeySize]](self._backend).encrypt(data)
 
     def decrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         comptime if reflect[Self.Backend]().name() == reflect[
             AesArmv8Backend[Self.KeySize]
         ]().name():
-            rebind[AesArmv8Backend[Self.KeySize]](self._backend).decrypt[
-                Self.Nr
-            ](data)
+            rebind[AesArmv8Backend[Self.KeySize]](self._backend).decrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
             AesX86Backend[Self.KeySize]
         ]().name():
-            rebind[AesX86Backend[Self.KeySize]](self._backend).decrypt[Self.Nr](
-                data
-            )
+            rebind[AesX86Backend[Self.KeySize]](self._backend).decrypt(data)
         elif reflect[Self.Backend]().name() == reflect[
             AesGpuBackend[Self.KeySize]
         ]().name():
-            rebind[AesGpuBackend[Self.KeySize]](self._backend).decrypt[Self.Nr](
-                data
-            )
+            rebind[AesGpuBackend[Self.KeySize]](self._backend).decrypt(data)
         else:
-            rebind[AesCpuBackend[Self.KeySize]](self._backend).decrypt[Self.Nr](
-                data
-            )
+            rebind[AesCpuBackend[Self.KeySize]](self._backend).decrypt(data)

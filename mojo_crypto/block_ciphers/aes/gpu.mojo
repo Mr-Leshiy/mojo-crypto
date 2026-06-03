@@ -3,12 +3,17 @@ from std.gpu.memory import AddressSpace
 from std.gpu import thread_idx, block_idx, barrier
 from std.memory import UnsafePointer, stack_allocation
 
+from mojo_crypto.block_ciphers.traits import BlockCipher
 from mojo_crypto.block_ciphers.errors import BlockSizeError
-from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV
+from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 from .cpu import _key_expansion
 
 
-struct AesGpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
+struct AesGpuBackend[KeySize: Int](
+    BlockCipher, ImplicitlyDestructible, Movable
+):
+    comptime BLOCK_SIZE: Int = BLOCK_SIZE
+
     comptime Nk: Int = Self.KeySize // 4
     comptime Nr: Int = Self.Nk + 6
     comptime WordsSize: Int = Nb * (Self.Nr + 1)
@@ -21,6 +26,8 @@ struct AesGpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
     def __init__(
         out self, ctx: DeviceContext, key: InlineArray[UInt8, Self.KeySize]
     ) raises:
+        check_key_size[Self.KeySize]()
+
         self.ctx = ctx
         var w = _key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
         self.w = ctx.enqueue_create_buffer[DType.uint32](Self.WordsSize)
@@ -32,12 +39,12 @@ struct AesGpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
         self.sbox_inv = ctx.enqueue_create_buffer[DType.uint8](256)
         self.sbox_inv.enqueue_copy_from(SBOX_INV.unsafe_ptr())
 
-    def encrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var size = len(data)
         var num_blocks = size // BLOCK_SIZE
-        comptime kernel = cipher[Nr]
+        comptime kernel = cipher[Self.Nr]
 
         var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
         buf.enqueue_copy_from(data.unsafe_ptr())
@@ -52,11 +59,11 @@ struct AesGpuBackend[KeySize: Int](ImplicitlyDestructible, Movable):
         self.ctx.synchronize()
         buf.enqueue_copy_to(data.unsafe_ptr())
 
-    def decrypt[Nr: Int, o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         var size = len(data)
         var num_blocks = size // BLOCK_SIZE
-        comptime kernel = decipher[Nr]
+        comptime kernel = decipher[Self.Nr]
 
         var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
         buf.enqueue_copy_from(data.unsafe_ptr())
