@@ -30,6 +30,7 @@ def check_valid_hex[H: Encodable & Decodable](hex: H) raises:
     decoded = hex.decode(hex.encode(Span(data)))
     assert_true(decoded == data)
 
+
 def check_invalid_hex[H: Encodable & Decodable](hex: H) raises:
     with assert_raises():
         _ = hex.decode("abc")

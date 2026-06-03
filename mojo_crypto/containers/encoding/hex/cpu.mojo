@@ -3,7 +3,7 @@ from .common import HEX_CHARS, HexError
 
 @fieldwise_init
 struct HexCpu(Decodable, Encodable, ImplicitlyDestructible, Movable):
-    def encode[o: Origin](self, data: Span[UInt8, o]) -> String:
+    def encode[o: Origin](self, data: Span[UInt8, o]) raises -> String:
         var result = String()
         for i in range(len(data)):
             var b = Int(data[i])
