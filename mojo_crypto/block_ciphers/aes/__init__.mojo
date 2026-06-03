@@ -1,4 +1,4 @@
-from .aes import Aes, AesCpu
+from .cpu import AesCpu
 from .aarch64 import AesAarch64
 from .x86 import AesX86
 from .gpu import AesGpu

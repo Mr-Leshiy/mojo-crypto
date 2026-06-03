@@ -5,7 +5,6 @@ from std.sys import has_accelerator
 from std.gpu.host import DeviceContext
 
 from mojo_crypto.block_ciphers.aes import (
-    Aes,
     AesCpu,
     AesGpu,
     BLOCK_SIZE,
@@ -18,8 +17,6 @@ from tests.block_ciphers.aes.utils import (
     load_python_acvp_vectors,
     parse_acvp_aes,
 )
-
-comptime Backend[KeySize: Int] = AesCpu[KeySize]
 
 
 def check_aes_eft[
@@ -189,26 +186,22 @@ def run_checks[
             @parameter
             def aes_gpu[
                 KeySize: Int
-            ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-                KeySize, AesGpu[KeySize]
-            ]:
-                return Aes[KeySize](AesGpu[KeySize](ctx, key))
+            ](key: InlineArray[UInt8, KeySize]) raises -> AesGpu[KeySize]:
+                return AesGpu[KeySize](ctx, key)
 
-            check[Aes[16, AesGpu[16]], 16, aes_gpu[16]](vectors)
-            check[Aes[24, AesGpu[24]], 24, aes_gpu[24]](vectors)
-            check[Aes[32, AesGpu[32]], 32, aes_gpu[32]](vectors)
+            check[AesGpu[16], 16, aes_gpu[16]](vectors)
+            check[AesGpu[24], 24, aes_gpu[24]](vectors)
+            check[AesGpu[32], 32, aes_gpu[32]](vectors)
 
     @parameter
     def aes_cpu[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> Aes[
-        KeySize, AesCpu[KeySize]
-    ]:
-        return Aes[KeySize](AesCpu[KeySize](key))
+    ](key: InlineArray[UInt8, KeySize]) raises -> AesCpu[KeySize]:
+        return AesCpu[KeySize](key)
 
-    check[Aes[16, AesCpu[16]], 16, aes_cpu[16]](vectors)
-    check[Aes[24, AesCpu[24]], 24, aes_cpu[24]](vectors)
-    check[Aes[32, AesCpu[32]], 32, aes_cpu[32]](vectors)
+    check[AesCpu[16], 16, aes_cpu[16]](vectors)
+    check[AesCpu[24], 24, aes_cpu[24]](vectors)
+    check[AesCpu[32], 32, aes_cpu[32]](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
