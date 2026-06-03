@@ -4,10 +4,13 @@ from std.gpu import thread_idx, block_idx
 
 from .common import HEX_CHARS, HexError
 
-comptime _BLOCK_DIM: Int = 256
+struct HexGpu[BLOCK_SIZE: Int = 256](Decodable, Encodable, ImplicitlyDestructible, Movable):
+    """GPU-accelerated hex encoder/decoder.
 
-
-struct HexGpu(Decodable, Encodable, ImplicitlyDestructible, Movable):
+    Parameters:
+        BLOCK_SIZE: Number of threads per GPU thread block. Each thread decodes
+            one byte (two hex characters). Defaults to 256.
+    """
     var ctx: DeviceContext
 
     def __init__(out self, ctx: DeviceContext):
@@ -28,19 +31,19 @@ struct HexGpu(Decodable, Encodable, ImplicitlyDestructible, Movable):
                 "hex string length must be even; got {}".format(s.byte_length())
             )
         var n = s.byte_length() // 2
-        var num_blocks = n // _BLOCK_DIM + 1
+        var num_blocks = n // Self.BLOCK_SIZE + 1
 
         var res_buf = self.ctx.enqueue_create_buffer[DType.uint8](n)
         var hex_s = self.ctx.enqueue_create_buffer[DType.uint8](s.byte_length())
         hex_s.enqueue_copy_from(s.unsafe_ptr())
 
-        comptime kernel = decode
+        comptime kernel = decode[Self.BLOCK_SIZE]
         self.ctx.enqueue_function[kernel, kernel](
             res_buf,
             hex_s,
             n,
             grid_dim=num_blocks,
-            block_dim=_BLOCK_DIM,
+            block_dim=Self.BLOCK_SIZE,
         )
 
         self.ctx.synchronize()
@@ -50,12 +53,12 @@ struct HexGpu(Decodable, Encodable, ImplicitlyDestructible, Movable):
         return result^
 
 
-def decode(
+def decode[BLOCK_SIZE: Int](
     res: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
     hex_s: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
     n: Int,
 ):
-    var i = block_idx.x * _BLOCK_DIM + thread_idx.x
+    var i = block_idx.x * BLOCK_SIZE + thread_idx.x
     if i < n:
         left = _nibble(hex_s[2 * i], 2 * i) << 4
         right = _nibble(hex_s[2 * i + 1], 2 * i + 1)
