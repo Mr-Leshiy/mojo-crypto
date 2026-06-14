@@ -7,10 +7,11 @@ from mojo_crypto.block_ciphers.traits import (
 # https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
 # Section 6.5
 struct CtrMode[
-    Cipher: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible
-](
-    BlockCipherEncryptable, BlockCipherDecryptable, ImplicitlyDestructible
-):
+    Cipher: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible
+](BlockCipherDecryptable, BlockCipherEncryptable, ImplicitlyDestructible):
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
 
     var _cipher: Self.Cipher

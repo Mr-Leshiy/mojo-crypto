@@ -23,7 +23,10 @@ from tests.block_ciphers.aes.utils import (
 
 
 def check_aes_eft[
-    C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -43,7 +46,10 @@ def check_aes_eft[
 
 
 def check_aes_cbc_eft[
-    C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -65,7 +71,10 @@ def check_aes_cbc_eft[
 
 
 def check_aes_mct[
-    C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -90,7 +99,10 @@ def check_aes_mct[
 
 
 def check_aes_cbc_mct[
-    C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -129,7 +141,10 @@ def check_aes_cbc_mct[
 
 
 def check_aes_ctr_mct[
-    C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -155,7 +170,10 @@ def check_aes_ctr_mct[
 
 
 def check_aes_ctr_aft[
-    C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
@@ -178,7 +196,10 @@ def check_aes_ctr_aft[
 
 def run_checks[
     check: def[
-        C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible,
+        C: BlockCipherEncryptable
+        & BlockCipherDecryptable
+        & Movable
+        & ImplicitlyDestructible,
         KeySize: Int,
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
     ](PythonObject) raises capturing[_]
