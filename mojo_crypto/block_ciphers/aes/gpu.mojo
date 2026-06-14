@@ -3,18 +3,26 @@ from std.gpu.memory import AddressSpace
 from std.gpu import thread_idx, block_idx, barrier
 from std.memory import UnsafePointer, stack_allocation
 
-from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.traits import (
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+)
 from mojo_crypto.block_ciphers.errors import BlockSizeError
-from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
+from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 from .cpu import _key_expansion
 
 
-struct AesGpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
+struct AesGpu[KEY_SIZE: Int](
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+    ImplicitlyDestructible,
+    Movable,
+):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
 
-    comptime Nk: Int = Self.KeySize // 4
-    comptime Nr: Int = Self.Nk + 6
-    comptime WordsSize: Int = Nb * (Self.Nr + 1)
+    comptime NK: Int = Self.KEY_SIZE // 4
+    comptime NR: Int = Self.NK + 6
+    comptime WORDS_SIZE: Int = NB * (Self.NR + 1)
 
     var ctx: DeviceContext
     var w: DeviceBuffer[DType.uint32]
@@ -22,13 +30,13 @@ struct AesGpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
     var sbox_inv: DeviceBuffer[DType.uint8]
 
     def __init__(
-        out self, ctx: DeviceContext, key: InlineArray[UInt8, Self.KeySize]
+        out self, ctx: DeviceContext, key: InlineArray[UInt8, Self.KEY_SIZE]
     ) raises:
-        check_key_size[Self.KeySize]()
+        check_key_size[Self.KEY_SIZE]()
 
         self.ctx = ctx
-        var w = _key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
-        self.w = ctx.enqueue_create_buffer[DType.uint32](Self.WordsSize)
+        var w = _key_expansion[WORDS_SIZE=Self.WORDS_SIZE, NK=Self.NK](key)
+        self.w = ctx.enqueue_create_buffer[DType.uint32](Self.WORDS_SIZE)
         self.w.enqueue_copy_from(w)
 
         self.sbox = ctx.enqueue_create_buffer[DType.uint32](256)
@@ -42,7 +50,7 @@ struct AesGpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
 
         var size = len(data)
         var num_blocks = size // BLOCK_SIZE
-        comptime kernel = cipher[Self.Nr]
+        comptime kernel = cipher[Self.NR]
 
         var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
         buf.enqueue_copy_from(data.unsafe_ptr())
@@ -61,7 +69,7 @@ struct AesGpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
         BlockSizeError[BLOCK_SIZE].check(len(data))
         var size = len(data)
         var num_blocks = size // BLOCK_SIZE
-        comptime kernel = decipher[Self.Nr]
+        comptime kernel = decipher[Self.NR]
 
         var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
         buf.enqueue_copy_from(data.unsafe_ptr())
@@ -82,7 +90,7 @@ struct AesGpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
 # All helpers operate directly on the flat InlineArray[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 def cipher[
-    Nr: Int
+    NR: Int
 ](
     in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
     w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
@@ -98,21 +106,21 @@ def cipher[
     state[local_i] = in_out[global_i]
 
     add_round_key(local_i, state, 0, w)
-    for r in range(1, Nr):
+    for r in range(1, NR):
         sub_bytes(local_i, state, sbox)
         shift_rows(local_i, state)
         mix_columns(local_i, state)
         add_round_key(local_i, state, r, w)
     sub_bytes(local_i, state, sbox)
     shift_rows(local_i, state)
-    add_round_key(local_i, state, Nr, w)
+    add_round_key(local_i, state, NR, w)
 
     in_out[global_i] = state[local_i]
 
 
 # FIPS 197 §5.3 InvCipher()
 def decipher[
-    Nr: Int
+    NR: Int
 ](
     in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
     w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
@@ -127,8 +135,8 @@ def decipher[
 
     state[local_i] = in_out[global_i]
 
-    add_round_key(local_i, state, Nr, w)
-    for r in range(Nr - 1, 0, -1):
+    add_round_key(local_i, state, NR, w)
+    for r in range(NR - 1, 0, -1):
         inv_shift_rows(local_i, state)
         inv_sub_bytes(local_i, state, sbox_inv)
         add_round_key(local_i, state, r, w)
@@ -150,8 +158,8 @@ def add_round_key(
     round: Int,
     w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
 ):
-    var w_idx = Nb * round + i // Nb
-    var offset = UInt32(24 - (i % Nb) * 8)
+    var w_idx = NB * round + i // NB
+    var offset = UInt32(24 - (i % NB) * 8)
     state[i] ^= UInt8(w[w_idx] >> offset)
 
 
@@ -189,9 +197,9 @@ def shift_rows(
         Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
     ],
 ):
-    var r = i % Nb
-    var c = i // Nb
-    var tmp = state[r + 4 * ((c + r) % Nb)]
+    var r = i % NB
+    var c = i // NB
+    var tmp = state[r + 4 * ((c + r) % NB)]
     barrier()
     state[i] = tmp
     barrier()
@@ -205,9 +213,9 @@ def inv_shift_rows(
         Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
     ],
 ):
-    var r = i % Nb
-    var c = i // Nb
-    var tmp = state[r + 4 * ((c - r + Nb) % Nb)]
+    var r = i % NB
+    var c = i // NB
+    var tmp = state[r + 4 * ((c - r + NB) % NB)]
     barrier()
     state[i] = tmp
     barrier()
@@ -223,8 +231,8 @@ def mix_columns(
         Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
     ],
 ):
-    var r = i % Nb
-    var c = i // Nb
+    var r = i % NB
+    var c = i // NB
     var s0 = state[4 * c]
     var s1 = state[1 + 4 * c]
     var s2 = state[2 + 4 * c]
@@ -251,8 +259,8 @@ def inv_mix_columns(
         Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
     ],
 ):
-    var r = i % Nb
-    var c = i // Nb
+    var r = i % NB
+    var c = i // NB
     var s0 = state[4 * c]
     var s1 = state[1 + 4 * c]
     var s2 = state[2 + 4 * c]

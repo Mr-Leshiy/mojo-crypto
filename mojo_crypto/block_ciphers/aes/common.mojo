@@ -1,6 +1,6 @@
 # The number of columns comprising the state, where each column is a 32-bit word.
 # For this AES Standard, Nb = 4.
-comptime Nb: Int = 4
+comptime NB: Int = 4
 
 comptime BLOCK_SIZE: Int = 16
 
