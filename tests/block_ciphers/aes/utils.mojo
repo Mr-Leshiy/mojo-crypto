@@ -16,16 +16,6 @@ struct AesTestVector[KeySize: Int](Copyable, Movable):
     var file_name: String
 
 
-def parse_hex[N: Int](s: String) raises -> InlineArray[UInt8, N]:
-    var result = InlineArray[UInt8, N](uninitialized=True)
-
-    var bytes = HexCpu().decode(s)
-    if len(bytes) != N:
-        raise Error("Provided '{}' must have {} size".format(s, N))
-    memcpy(dest=result.unsafe_ptr(), src=bytes.unsafe_ptr(), count=N)
-    return result^
-
-
 def load_python_acvp_vectors(
     dir: String, test_type: String
 ) raises -> PythonObject:
@@ -39,20 +29,21 @@ def parse_acvp_aes[
     KeySize: Int
 ](python_vectors: PythonObject) raises -> List[AesTestVector[KeySize]]:
     var vectors = List[AesTestVector[KeySize]]()
+    hex = HexCpu()
     for v in python_vectors:
         if atol(String(v.key_len)) // 8 != KeySize:
             continue
         var iv = Optional[InlineArray[UInt8, BLOCK_SIZE]](None)
         if v.iv_hex is not Python.none():
-            iv = parse_hex[BLOCK_SIZE](String(v.iv_hex))
+            iv = hex.decode[BLOCK_SIZE](String(v.iv_hex))
         vectors.append(
             AesTestVector(
                 is_encrypt=v.is_encrypt.__bool__(),
                 count=atol(String(v.count)),
-                key=parse_hex[KeySize](String(v.key_hex)),
+                key=hex.decode[KeySize](String(v.key_hex)),
                 iv=iv,
-                pt=HexCpu().decode(String(v.pt_hex)),
-                ct=HexCpu().decode(String(v.ct_hex)),
+                pt=hex.decode(String(v.pt_hex)),
+                ct=hex.decode(String(v.ct_hex)),
                 file_name=String(""),
             )
         )
