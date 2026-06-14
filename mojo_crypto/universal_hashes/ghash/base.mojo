@@ -6,8 +6,6 @@ from .common import (
     BLOCK_SIZE,
     KEY_SIZE,
     TAG_SIZE,
-    block_to_u64x2,
-    u64x2_to_block,
 )
 
 
