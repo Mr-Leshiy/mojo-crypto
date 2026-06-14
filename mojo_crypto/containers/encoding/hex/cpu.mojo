@@ -20,11 +20,26 @@ struct HexCpu(Decodable, Encodable, ImplicitlyDestructible, Movable):
         var result = List[UInt8](capacity=n)
         var ptr = s.unsafe_ptr()
         for i in range(n):
-            result.append(
-                (_nibble(ptr[2 * i], 2 * i) << 4)
-                | _nibble(ptr[2 * i + 1], 2 * i + 1)
-            )
+            result.append(_decode_hex_byte(ptr[2 * i], ptr[2 * i + 1], 2 * i))
         return result^
+
+    def decode[SIZE: Int](self, s: String) raises -> InlineArray[UInt8, SIZE]:
+        if s.byte_length() != SIZE * 2:
+            raise HexError(
+                "expected hex string of length {}; got {}".format(
+                    SIZE * 2, s.byte_length()
+                )
+            )
+        var result = InlineArray[UInt8, SIZE](uninitialized=True)
+        var ptr = s.unsafe_ptr()
+        for i in range(SIZE):
+            result[i] = _decode_hex_byte(ptr[2 * i], ptr[2 * i + 1], 2 * i)
+        return result^
+
+
+@always_inline
+def _decode_hex_byte(hi: UInt8, lo: UInt8, pos: Int) raises HexError -> UInt8:
+    return (_nibble(hi, pos) << 4) | _nibble(lo, pos + 1)
 
 
 @always_inline
