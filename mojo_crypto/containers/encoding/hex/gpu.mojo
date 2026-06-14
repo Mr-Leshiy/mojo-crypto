@@ -77,6 +77,35 @@ struct HexGpu[BLOCK_SIZE: Int = 256](
         out_buf.enqueue_copy_to(result.unsafe_ptr())
         return result^
 
+    def decode[SIZE: Int](self, s: String) raises -> InlineArray[UInt8, SIZE]:
+        """Assumes s is a valid hex string. Invalid characters produce 0 bytes.
+        """
+        if s.byte_length() != SIZE * 2:
+            raise HexError(
+                "expected hex string of length {}; got {}".format(
+                    SIZE * 2, s.byte_length()
+                )
+            )
+        var num_blocks = SIZE // Self.BLOCK_SIZE + 1
+
+        var out_buf = self.ctx.enqueue_create_buffer[DType.uint8](SIZE)
+        var hex_s = self.ctx.enqueue_create_buffer[DType.uint8](s.byte_length())
+        hex_s.enqueue_copy_from(s.unsafe_ptr())
+
+        comptime kernel = _decode_kernel[Self.BLOCK_SIZE]
+        self.ctx.enqueue_function[kernel, kernel](
+            out_buf,
+            hex_s,
+            SIZE,
+            grid_dim=num_blocks,
+            block_dim=Self.BLOCK_SIZE,
+        )
+
+        self.ctx.synchronize()
+        var result = InlineArray[UInt8, SIZE](uninitialized=True)
+        out_buf.enqueue_copy_to(result.unsafe_ptr())
+        return result^
+
 
 # Each thread encodes one input byte into two ASCII hex characters.
 def _encode_kernel[
