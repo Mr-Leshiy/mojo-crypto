@@ -1,35 +1,35 @@
 from mojo_crypto.block_ciphers.errors import BlockSizeError
 from mojo_crypto.block_ciphers.traits import BlockCipher
-from .common import Nb, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
+from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 
 
-struct AesCpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
+struct AesCpu[KEY_SIZE: Int](BlockCipher, ImplicitlyDestructible, Movable):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
 
-    comptime Nk: Int = Self.KeySize // 4
-    comptime Nr: Int = Self.Nk + 6
-    comptime WordsSize: Int = Nb * (Self.Nr + 1)
+    comptime NK: Int = Self.KEY_SIZE // 4
+    comptime NR: Int = Self.NK + 6
+    comptime WORDS_SIZE: Int = NB * (Self.NR + 1)
 
-    var w: InlineArray[UInt32, Self.WordsSize]
+    var w: InlineArray[UInt32, Self.WORDS_SIZE]
 
-    def __init__(out self, key: InlineArray[UInt8, Self.KeySize]):
-        check_key_size[Self.KeySize]()
+    def __init__(out self, key: InlineArray[UInt8, Self.KEY_SIZE]):
+        check_key_size[Self.KEY_SIZE]()
         comptime assert (
-            Self.KeySize == 16 or Self.KeySize == 24 or Self.KeySize == 32
-        ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
-        self.w = _key_expansion[WordsSize=Self.WordsSize, Nk=Self.Nk](key)
+            Self.KEY_SIZE == 16 or Self.KEY_SIZE == 24 or Self.KEY_SIZE == 32
+        ), "KEY_SIZE must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
+        self.w = _key_expansion[WORDS_SIZE=Self.WORDS_SIZE, NK=Self.NK](key)
 
     def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            cipher[Nr=Self.Nr](data[offset : offset + BLOCK_SIZE], self.w)
+            cipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            decipher[Nr=Self.Nr](data[offset : offset + BLOCK_SIZE], self.w)
+            decipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
 
 
 # FIPS 197 §5.1 Cipher()
@@ -37,25 +37,25 @@ struct AesCpu[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
 # All helpers operate directly on the flat InlineArray[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 def cipher[
-    Nr: Int, WordsSize: Int, o: MutOrigin
-](state: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]):
+    NR: Int, WORDS_SIZE: Int, o: MutOrigin
+](state: Span[UInt8, o], w: InlineArray[UInt32, WORDS_SIZE]):
     add_round_key(state, 0, w)
-    for r in range(1, Nr):
+    for r in range(1, NR):
         sub_bytes(state)
         shift_rows(state)
         mix_columns(state)
         add_round_key(state, r, w)
     sub_bytes(state)
     shift_rows(state)
-    add_round_key(state, Nr, w)
+    add_round_key(state, NR, w)
 
 
 # FIPS 197 §5.3 InvCipher()
 def decipher[
-    Nr: Int, WordsSize: Int, o: MutOrigin
-](state: Span[UInt8, o], w: InlineArray[UInt32, WordsSize]):
-    add_round_key(state, Nr, w)
-    for r in range(Nr - 1, 0, -1):
+    NR: Int, WORDS_SIZE: Int, o: MutOrigin
+](state: Span[UInt8, o], w: InlineArray[UInt32, WORDS_SIZE]):
+    add_round_key(state, NR, w)
+    for r in range(NR - 1, 0, -1):
         inv_shift_rows(state)
         inv_sub_bytes(state)
         add_round_key(state, r, w)
@@ -67,10 +67,10 @@ def decipher[
 
 # FIPS 197 §5.1.4 AddRoundKey()
 def add_round_key[
-    WordsSize: Int, o: MutOrigin
-](state: Span[UInt8, o], round: Int, w: InlineArray[UInt32, WordsSize],):
-    for c in range(Nb):
-        var w_idx = Nb * round + c
+    WORDS_SIZE: Int, o: MutOrigin
+](state: Span[UInt8, o], round: Int, w: InlineArray[UInt32, WORDS_SIZE],):
+    for c in range(NB):
+        var w_idx = NB * round + c
         state[4 * c] ^= UInt8(w[w_idx] >> 24)
         state[1 + 4 * c] ^= UInt8(w[w_idx] >> 16)
         state[2 + 4 * c] ^= UInt8(w[w_idx] >> 8)
@@ -92,28 +92,28 @@ def inv_sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
 # FIPS 197 §5.1.2 ShiftRows() — cyclic left shift of row r by r positions
 # Row r in flat layout occupies indices r, r+4, r+8, r+12
 def shift_rows[o: MutOrigin](state: Span[UInt8, o]):
-    for r in range(1, Nb):
-        var tmp = InlineArray[UInt8, Nb](uninitialized=True)
-        for c in range(Nb):
+    for r in range(1, NB):
+        var tmp = InlineArray[UInt8, NB](uninitialized=True)
+        for c in range(NB):
             tmp[c] = state[r + 4 * c]
-        for c in range(Nb):
-            state[r + 4 * c] = tmp[(c + r) % Nb]
+        for c in range(NB):
+            state[r + 4 * c] = tmp[(c + r) % NB]
 
 
 # FIPS 197 §5.3.1 InvShiftRows() — cyclic right shift of row r by r positions
 def inv_shift_rows[o: MutOrigin](state: Span[UInt8, o]):
-    for r in range(1, Nb):
-        var tmp = InlineArray[UInt8, Nb](uninitialized=True)
-        for c in range(Nb):
+    for r in range(1, NB):
+        var tmp = InlineArray[UInt8, NB](uninitialized=True)
+        for c in range(NB):
             tmp[c] = state[r + 4 * c]
-        for c in range(Nb):
-            state[r + 4 * c] = tmp[(c - r + Nb) % Nb]
+        for c in range(NB):
+            state[r + 4 * c] = tmp[(c - r + NB) % NB]
 
 
 # FIPS 197 §5.1.3 MixColumns() — GF(2^8) matrix multiply on each column
 # Column col in flat layout occupies indices 4*col, 1+4*col, 2+4*col, 3+4*col
 def mix_columns[o: MutOrigin](state: Span[UInt8, o]):
-    for col in range(Nb):
+    for col in range(NB):
         var s0 = state[4 * col]
         var s1 = state[1 + 4 * col]
         var s2 = state[2 + 4 * col]
@@ -126,7 +126,7 @@ def mix_columns[o: MutOrigin](state: Span[UInt8, o]):
 
 # FIPS 197 §5.3.3 InvMixColumns() — GF(2^8) inverse matrix multiply on each column
 def inv_mix_columns[o: MutOrigin](state: Span[UInt8, o]):
-    for col in range(Nb):
+    for col in range(NB):
         var s0 = state[4 * col]
         var s1 = state[1 + 4 * col]
         var s2 = state[2 + 4 * col]
@@ -192,23 +192,23 @@ comptime RCON: InlineArray[UInt32, 10] = [
 # FIPS 197 §5.2 KeyExpansion()
 # <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf>
 def _key_expansion[
-    WordsSize: Int, Nk: Int, KeySize: Int
-](key: InlineArray[UInt8, KeySize]) -> InlineArray[UInt32, WordsSize]:
-    var w = InlineArray[UInt32, WordsSize](uninitialized=True)
-    for i in range(Nk):
+    WORDS_SIZE: Int, NK: Int, KEY_SIZE: Int
+](key: InlineArray[UInt8, KEY_SIZE]) -> InlineArray[UInt32, WORDS_SIZE]:
+    var w = InlineArray[UInt32, WORDS_SIZE](uninitialized=True)
+    for i in range(NK):
         w[i] = (
             UInt32(key[4 * i]) << 24
             | UInt32(key[4 * i + 1]) << 16
             | UInt32(key[4 * i + 2]) << 8
             | UInt32(key[4 * i + 3])
         )
-    for i in range(Nk, WordsSize):
+    for i in range(NK, WORDS_SIZE):
         var temp = w[i - 1]
-        if i % Nk == 0:
-            temp = _sub_word(_rot_word(temp)) ^ RCON[i / Nk - 1]
-        elif Nk > 6 and i % Nk == 4:
+        if i % NK == 0:
+            temp = _sub_word(_rot_word(temp)) ^ RCON[i / NK - 1]
+        elif NK > 6 and i % NK == 4:
             temp = _sub_word(temp)
-        w[i] = w[i - Nk] ^ temp
+        w[i] = w[i - NK] ^ temp
     return w
 
 

@@ -10,19 +10,19 @@ from mojo_crypto.block_ciphers.traits import BlockCipher
 from .common import BLOCK_SIZE, SBOX, check_key_size
 
 
-struct AesAarch64[KeySize: Int](BlockCipher, ImplicitlyDestructible, Movable):
+struct AesAarch64[KEY_SIZE: Int](BlockCipher, ImplicitlyDestructible, Movable):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
-    comptime Nk: Int = Self.KeySize // 4
-    comptime Nr: Int = Self.Nk + 6
+    comptime NK: Int = Self.KEY_SIZE // 4
+    comptime NR: Int = Self.NK + 6
 
-    var enc_rks: InlineArray[SIMD[DType.uint8, 16], Self.Nr + 1]
-    var dec_rks: InlineArray[SIMD[DType.uint8, 16], Self.Nr + 1]
+    var enc_rks: InlineArray[SIMD[DType.uint8, 16], Self.NR + 1]
+    var dec_rks: InlineArray[SIMD[DType.uint8, 16], Self.NR + 1]
 
-    def __init__(out self, key: InlineArray[UInt8, Self.KeySize]):
-        check_key_size[Self.KeySize]()
+    def __init__(out self, key: InlineArray[UInt8, Self.KEY_SIZE]):
+        check_key_size[Self.KEY_SIZE]()
 
-        self.enc_rks = _expand_enc_rks[Self.Nr, Self.Nk](key)
-        self.dec_rks = _dec_from_enc_rks[Self.Nr](self.enc_rks)
+        self.enc_rks = _expand_enc_rks[Self.NR, Self.NK](key)
+        self.dec_rks = _dec_from_enc_rks[Self.NR](self.enc_rks)
 
     def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
@@ -80,28 +80,28 @@ def _inv_mix(v: SIMD[DType.uint8, BLOCK_SIZE]) -> SIMD[DType.uint8, BLOCK_SIZE]:
 
 # FIPS 197 §5.1 Cipher() via ARMv8 Crypto Extension.
 def cipher[
-    Nr: Int, o: MutOrigin
-](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], Nr + 1]):
+    NR: Int, o: MutOrigin
+](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
     var s = data.unsafe_ptr().load[width=BLOCK_SIZE]()
-    comptime for r in range(Nr - 1):
+    comptime for r in range(NR - 1):
         s = _aesmc(_aese(s, rks[r]))
-    s = _aese(s, rks[Nr - 1])
-    s ^= rks[Nr]
+    s = _aese(s, rks[NR - 1])
+    s ^= rks[NR]
     data.unsafe_ptr().store(s)
 
 
 # FIPS 197 §5.3 InvCipher() via ARMv8 Crypto Extension (equivalent inverse).
 def decipher[
-    Nr: Int, o: MutOrigin
-](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], Nr + 1]):
+    NR: Int, o: MutOrigin
+](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
     var s = data.unsafe_ptr().load[width=BLOCK_SIZE]()
     s = _aesd(s, rks[0])
     s = _inv_mix(s)
-    comptime for r in range(1, Nr - 1):
+    comptime for r in range(1, NR - 1):
         s = _aesd(s, rks[r])
         s = _inv_mix(s)
-    s = _aesd(s, rks[Nr - 1])
-    s ^= rks[Nr]
+    s = _aesd(s, rks[NR - 1])
+    s ^= rks[NR]
     data.unsafe_ptr().store(s)
 
 
@@ -113,57 +113,57 @@ comptime RCON: InlineArray[UInt8, 10] = [
 ]
 
 
-# Build Nr+1 encrypt round keys directly from the raw key bytes.
+# Build NR+1 encrypt round keys directly from the raw key bytes.
 # Maintains a flat byte buffer kb[] where kb[wi*4 .. wi*4+3] = word wi.
 # The column-major layout (rk[4*c+b] = col c, byte b) matches the byte
 # order in kb[] directly, so each round key is a plain 16-byte load.
 def _expand_enc_rks[
-    Nr: Int, Nk: Int, KeySize: Int
-](key: InlineArray[UInt8, KeySize]) -> InlineArray[
-    SIMD[DType.uint8, 16], Nr + 1
+    NR: Int, NK: Int, KEY_SIZE: Int
+](key: InlineArray[UInt8, KEY_SIZE]) -> InlineArray[
+    SIMD[DType.uint8, 16], NR + 1
 ]:
-    var kb = InlineArray[UInt8, (Nr + 1) * 16](uninitialized=True)
-    for i in range(KeySize):
+    var kb = InlineArray[UInt8, (NR + 1) * 16](uninitialized=True)
+    for i in range(KEY_SIZE):
         kb[i] = key[i]
-    for wi in range(Nk, (Nr + 1) * 4):
+    for wi in range(NK, (NR + 1) * 4):
         var b0 = kb[(wi - 1) * 4]
         var b1 = kb[(wi - 1) * 4 + 1]
         var b2 = kb[(wi - 1) * 4 + 2]
         var b3 = kb[(wi - 1) * 4 + 3]
-        if wi % Nk == 0:
+        if wi % NK == 0:
             # RotWord: [b0,b1,b2,b3] → [b1,b2,b3,b0]; SubWord; XOR Rcon (MSB only).
             var t = UInt8(SBOX[b0])
-            b0 = UInt8(SBOX[b1]) ^ RCON[wi // Nk - 1]
+            b0 = UInt8(SBOX[b1]) ^ RCON[wi // NK - 1]
             b1 = UInt8(SBOX[b2])
             b2 = UInt8(SBOX[b3])
             b3 = t
-        comptime if Nk > 6:
-            if wi % Nk == 4:
+        comptime if NK > 6:
+            if wi % NK == 4:
                 b0 = UInt8(SBOX[b0])
                 b1 = UInt8(SBOX[b1])
                 b2 = UInt8(SBOX[b2])
                 b3 = UInt8(SBOX[b3])
-        kb[wi * 4] = kb[(wi - Nk) * 4] ^ b0
-        kb[wi * 4 + 1] = kb[(wi - Nk) * 4 + 1] ^ b1
-        kb[wi * 4 + 2] = kb[(wi - Nk) * 4 + 2] ^ b2
-        kb[wi * 4 + 3] = kb[(wi - Nk) * 4 + 3] ^ b3
-    var rks = InlineArray[SIMD[DType.uint8, 16], Nr + 1](uninitialized=True)
-    for r in range(Nr + 1):
+        kb[wi * 4] = kb[(wi - NK) * 4] ^ b0
+        kb[wi * 4 + 1] = kb[(wi - NK) * 4 + 1] ^ b1
+        kb[wi * 4 + 2] = kb[(wi - NK) * 4 + 2] ^ b2
+        kb[wi * 4 + 3] = kb[(wi - NK) * 4 + 3] ^ b3
+    var rks = InlineArray[SIMD[DType.uint8, 16], NR + 1](uninitialized=True)
+    for r in range(NR + 1):
         rks[r] = (kb.unsafe_ptr() + r * 16).load[width=16]()
     return rks
 
 
 # Convert encrypt round keys to the equivalent-inverse schedule for decipher().
 # Mirrors expand_round_keys_inv() from cipher.mojo, operating on SIMD keys
-# instead of UInt32 words: dk[0]=ek[Nr], dk[1..Nr-1]=aesimc(ek[Nr-r]), dk[Nr]=ek[0].
+# instead of UInt32 words: dk[0]=ek[NR], dk[1..NR-1]=aesimc(ek[NR-r]), dk[NR]=ek[0].
 def _dec_from_enc_rks[
-    Nr: Int
-](enc_rks: InlineArray[SIMD[DType.uint8, 16], Nr + 1]) -> InlineArray[
-    SIMD[DType.uint8, 16], Nr + 1
+    NR: Int
+](enc_rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]) -> InlineArray[
+    SIMD[DType.uint8, 16], NR + 1
 ]:
-    var rks = InlineArray[SIMD[DType.uint8, 16], Nr + 1](uninitialized=True)
-    rks[0] = enc_rks[Nr]
-    comptime for r in range(1, Nr):
-        rks[r] = _inv_mix(enc_rks[Nr - r])
-    rks[Nr] = enc_rks[0]
+    var rks = InlineArray[SIMD[DType.uint8, 16], NR + 1](uninitialized=True)
+    rks[0] = enc_rks[NR]
+    comptime for r in range(1, NR):
+        rks[r] = _inv_mix(enc_rks[NR - r])
+    rks[NR] = enc_rks[0]
     return rks
