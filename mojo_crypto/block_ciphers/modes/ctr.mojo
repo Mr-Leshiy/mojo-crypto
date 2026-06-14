@@ -1,10 +1,15 @@
-from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.traits import (
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+)
 
 
 # https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
 # Section 6.5
-struct CtrMode[Cipher: BlockCipher & Movable & ImplicitlyDestructible](
-    BlockCipher, ImplicitlyDestructible
+struct CtrMode[
+    Cipher: BlockCipherEncryptable & BlockCipherDecryptable & Movable & ImplicitlyDestructible
+](
+    BlockCipherEncryptable, BlockCipherDecryptable, ImplicitlyDestructible
 ):
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
 

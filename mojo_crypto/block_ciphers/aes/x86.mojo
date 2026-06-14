@@ -8,14 +8,22 @@
 from std.sys.intrinsics import llvm_intrinsic
 
 from mojo_crypto.block_ciphers.errors import BlockSizeError
-from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.traits import (
+    BlockCipherEncryptable,
+    BlockCipherDecryptable,
+)
 from .common import BLOCK_SIZE, SBOX, check_key_size
 
 
 # All AES-NI instructions use v2i64 in LLVM IR. Round keys are stored as
 # SIMD[DType.uint64, 2] so no conversion is needed at call sites; the state
 # is bitcast once at load and once at store.
-struct AesX86[KEY_SIZE: Int](BlockCipher, ImplicitlyDestructible, Movable):
+struct AesX86[KEY_SIZE: Int](
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+    ImplicitlyDestructible,
+    Movable,
+):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
     comptime NK: Int = Self.KEY_SIZE // 4
     comptime NR: Int = Self.NK + 6

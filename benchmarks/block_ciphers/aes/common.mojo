@@ -1,6 +1,9 @@
 from std.benchmark import run
 
-from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.traits import (
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+)
 
 comptime BLOCKS_4K: Int = 4_096
 comptime BLOCKS_8K: Int = 8_192
@@ -8,7 +11,7 @@ comptime BLOCKS_16K: Int = 16_384
 
 
 def bench_cipher[
-    C: BlockCipher & ImplicitlyDestructible,
+    C: BlockCipherEncryptable & BlockCipherDecryptable & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
     prefix: StringLiteral,

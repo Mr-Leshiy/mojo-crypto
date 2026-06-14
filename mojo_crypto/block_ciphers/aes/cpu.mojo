@@ -1,9 +1,18 @@
 from mojo_crypto.block_ciphers.errors import BlockSizeError
-from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.traits import (
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+)
+
 from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 
 
-struct AesCpu[KEY_SIZE: Int](BlockCipher, ImplicitlyDestructible, Movable):
+struct AesCpu[KEY_SIZE: Int](
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+    ImplicitlyDestructible,
+    Movable,
+):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
 
     comptime NK: Int = Self.KEY_SIZE // 4

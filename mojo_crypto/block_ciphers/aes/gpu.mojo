@@ -3,13 +3,21 @@ from std.gpu.memory import AddressSpace
 from std.gpu import thread_idx, block_idx, barrier
 from std.memory import UnsafePointer, stack_allocation
 
-from mojo_crypto.block_ciphers.traits import BlockCipher
+from mojo_crypto.block_ciphers.traits import (
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+)
 from mojo_crypto.block_ciphers.errors import BlockSizeError
 from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 from .cpu import _key_expansion
 
 
-struct AesGpu[KEY_SIZE: Int](BlockCipher, ImplicitlyDestructible, Movable):
+struct AesGpu[KEY_SIZE: Int](
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+    ImplicitlyDestructible,
+    Movable,
+):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
 
     comptime NK: Int = Self.KEY_SIZE // 4
