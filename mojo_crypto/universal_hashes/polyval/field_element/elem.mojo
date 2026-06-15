@@ -43,6 +43,12 @@ struct FieldElement(Equatable, Writable):
         self._v = v
 
     def __add__(self, rhs: Self) -> Self:
+        """
+        Adds two POLYVAL field elements.
+
+        In POLYVAL's field, addition is the equivalent operation to XOR.
+        """
+
         var a: SIMD[DType.uint8, BLOCK_SIZE] = self._v.unsafe_ptr().load[
             width=BLOCK_SIZE
         ]()
