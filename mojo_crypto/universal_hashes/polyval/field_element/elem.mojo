@@ -20,11 +20,19 @@
 # This shift is unnecessary for POLYVAL (it is in fact what distinguishes POLYVAL from GHASH) and
 # has been removed.
 
+from std.sys.info import is_64bit
+
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
+from mojo_crypto.universal_hashes.polyval.field_element.mul64 import (
+    karatsuba_mul64,
+)
+from mojo_crypto.universal_hashes.polyval.field_element.mul32 import (
+    karatsuba_mul32,
+)
 
 
-struct FieldElement(Equatable, Movable, Copyable, Writable):
+struct FieldElement(Copyable, Equatable, Movable, Writable):
     """An element in POLYVAL's field.
 
     This type represents an element of the binary field GF(2^128) modulo the irreducible polynomial
@@ -91,6 +99,20 @@ struct FieldElement(Equatable, Movable, Copyable, Writable):
         out.store(0, lo)
         out.store(1, hi)
         return Self(result^)
+
+    def __mul__(self, rhs: Self) -> Self:
+        """Multiply two POLYVAL field elements mod `x^128 + x^127 + x^126 + x^121 + 1`.
+
+        Dispatches to the 64-bit Karatsuba path on 64-bit platforms and the
+        32-bit path on 32-bit platforms.
+        """
+        comptime if is_64bit():
+            return Self(karatsuba_mul64(self._v, rhs._v).mont_reduce())
+        else:
+            return Self(karatsuba_mul32(self._v, rhs._v).mont_reduce())
+
+    def __imul__(mut self, rhs: Self):
+        self = self * rhs
 
     def write_to(self, mut writer: Some[Writer]):
         var hex = String()
