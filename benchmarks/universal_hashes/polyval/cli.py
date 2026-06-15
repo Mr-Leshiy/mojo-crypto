@@ -1,15 +1,12 @@
-import subprocess
-
 import typer
+
+from benchmarks.utils import run_bench
 
 app = typer.Typer(help="POLYVAL benchmarks.")
 
 
 def _bench(backend: str) -> None:
-    subprocess.run(
-        ["mojo", "run", "-O3", "-I", ".", f"benchmarks/universal_hashes/polyval/{backend}.mojo"],
-        check=True,
-    )
+    run_bench(f"benchmarks/universal_hashes/polyval/{backend}.mojo")
 
 
 @app.command()
