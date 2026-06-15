@@ -4,7 +4,7 @@ from mojo_crypto.universal_hashes.polyval.field_element import FieldElement
 from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
-struct PolyvalCpu(ImplicitlyDestructible, Copyable, Movable, UniversalHash):
+struct PolyvalCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHash):
     """Portable software POLYVAL implementation.
 
     Reference: <https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/backend/soft.rs>

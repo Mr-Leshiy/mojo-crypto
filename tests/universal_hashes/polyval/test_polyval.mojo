@@ -15,12 +15,18 @@ def test_polyval_test_vector() raises:
     var x2 = hex.decode[BLOCK_SIZE]("d1a24ddd2721d006bbe45f20d3c9f362")
 
     var poly = PolyvalCpu(h)
-    poly.update(Span[UInt8, origin_of(x1)](ptr=x1.unsafe_ptr(), length=BLOCK_SIZE))
-    poly.update(Span[UInt8, origin_of(x2)](ptr=x2.unsafe_ptr(), length=BLOCK_SIZE))
+    poly.update(
+        Span[UInt8, origin_of(x1)](ptr=x1.unsafe_ptr(), length=BLOCK_SIZE)
+    )
+    poly.update(
+        Span[UInt8, origin_of(x2)](ptr=x2.unsafe_ptr(), length=BLOCK_SIZE)
+    )
 
     assert_equal(
         FieldElement(poly^.finalize()),
-        FieldElement(hex.decode[BLOCK_SIZE]("f7a3b47b846119fae5b7866cf5e5b77e")),
+        FieldElement(
+            hex.decode[BLOCK_SIZE]("f7a3b47b846119fae5b7866cf5e5b77e")
+        ),
     )
 
 
