@@ -1,15 +1,12 @@
-import subprocess
-
 import typer
+
+from benchmarks.utils import run_bench
 
 app = typer.Typer(help="AES benchmarks.")
 
 
 def _bench(backend: str) -> None:
-    subprocess.run(
-        ["mojo", "run", "-O3", "-I", ".", f"benchmarks/block_ciphers/aes/{backend}.mojo"],
-        check=True,
-    )
+    run_bench(f"benchmarks/block_ciphers/aes/{backend}.mojo")
 
 
 @app.command()

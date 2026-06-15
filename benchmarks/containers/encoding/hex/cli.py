@@ -1,15 +1,12 @@
-import subprocess
-
 import typer
+
+from benchmarks.utils import run_bench
 
 app = typer.Typer(help="Hex encoding benchmarks.")
 
 
 def _bench(backend: str) -> None:
-    subprocess.run(
-        ["mojo", "run", "-O3", "-I", ".", f"benchmarks/containers/encoding/hex/{backend}.mojo"],
-        check=True,
-    )
+    run_bench(f"benchmarks/containers/encoding/hex/{backend}.mojo")
 
 
 @app.command()
