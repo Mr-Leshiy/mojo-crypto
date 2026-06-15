@@ -1,4 +1,4 @@
-trait UniversalHash:
+trait UniversalHashable:
     comptime BLOCK_SIZE: Int
     comptime KEY_SIZE: Int
     comptime TAG_SIZE: Int

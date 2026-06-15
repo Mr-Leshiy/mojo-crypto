@@ -1,10 +1,10 @@
-from mojo_crypto.universal_hashes.traits import UniversalHash
+from mojo_crypto.universal_hashes.traits import UniversalHashable
 from mojo_crypto.universal_hashes.errors import UhashSizeError
 from mojo_crypto.universal_hashes.polyval.field_element import FieldElement
 from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
-struct PolyvalCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHash):
+struct PolyvalCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
     """Portable software POLYVAL implementation.
 
     Reference: <https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/backend/soft.rs>

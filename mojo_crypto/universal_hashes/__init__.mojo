@@ -1,2 +1,2 @@
-from .traits import UniversalHash
+from .traits import UniversalHashable
 from .errors import UhashSizeError
