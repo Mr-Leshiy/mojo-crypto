@@ -2,7 +2,7 @@ from std.memory import memcpy
 from std.testing import assert_equal, TestSuite
 
 from mojo_crypto.containers.encoding import HexCpu
-from mojo_crypto.universal_hashes.ghash.common import FieldElement, BLOCK_SIZE
+from mojo_crypto.universal_hashes.polyval.common import FieldElement, BLOCK_SIZE
 
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element.rs

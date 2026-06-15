@@ -9,7 +9,7 @@ from .common import (
 )
 
 
-struct GHashBase(ImplicitlyDestructible, Movable, UniversalHash):
+struct PolyvalBase(ImplicitlyDestructible, Movable, UniversalHash):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
     comptime KEY_SIZE: Int = KEY_SIZE
     comptime TAG_SIZE: Int = TAG_SIZE
