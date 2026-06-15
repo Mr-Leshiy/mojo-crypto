@@ -1,2 +1,2 @@
-from .hex import HexCpu, HexGpu
+from .hex import Hex, HexGpu
 from .traits import Encodable, Decodable

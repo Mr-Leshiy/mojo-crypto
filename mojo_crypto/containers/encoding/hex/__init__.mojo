@@ -1,2 +1,2 @@
-from .cpu import HexCpu
+from .base import Hex
 from .gpu import HexGpu

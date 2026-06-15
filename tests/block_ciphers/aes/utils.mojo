@@ -2,7 +2,7 @@ from std.python import Python, PythonObject
 from std.memory import memcpy
 
 from mojo_crypto.block_ciphers.aes import BLOCK_SIZE
-from mojo_crypto.containers.encoding import HexCpu
+from mojo_crypto.containers.encoding import Hex
 
 
 @fieldwise_init
@@ -29,7 +29,7 @@ def parse_acvp_aes[
     KeySize: Int
 ](python_vectors: PythonObject) raises -> List[AesTestVector[KeySize]]:
     var vectors = List[AesTestVector[KeySize]]()
-    hex = HexCpu()
+    hex = Hex()
     for v in python_vectors:
         if atol(String(v.key_len)) // 8 != KeySize:
             continue
