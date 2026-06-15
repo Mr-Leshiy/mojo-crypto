@@ -51,6 +51,10 @@ struct FieldElement(Copyable, Equatable, Movable, Writable):
     def __init__(out self, v: InlineArray[UInt8, BLOCK_SIZE]):
         self._v = v
 
+    @staticmethod
+    def zeros() -> Self:
+        return Self(InlineArray[UInt8, BLOCK_SIZE](fill=0))
+
     def __add__(self, rhs: Self) -> Self:
         """
         Adds two POLYVAL field elements.
