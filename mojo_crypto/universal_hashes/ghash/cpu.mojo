@@ -33,4 +33,4 @@ struct GHashCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
             self._y = (self._y + block_fe) * self._h
 
     def finalize(self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-            return self._y.copy().reverse()._v
+        return self._y.copy().reverse()._v
