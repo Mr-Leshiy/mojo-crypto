@@ -32,7 +32,9 @@ from mojo_crypto.universal_hashes.polyval.field_element.mul32 import (
 )
 
 
-struct FieldElement(Copyable, Equatable, Movable, Writable):
+struct FieldElement(
+    Copyable, Equatable, ImplicitlyDestructible, Movable, Writable
+):
     """An element in POLYVAL's field.
 
     This type represents an element of the binary field GF(2^128) modulo the irreducible polynomial
@@ -71,6 +73,21 @@ struct FieldElement(Copyable, Equatable, Movable, Writable):
         var c = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
         c.unsafe_ptr().store(a ^ b)
         return Self(c^)
+
+    def reverse(var self) -> Self:
+        """
+        Reverse this field element at a byte-level of granularity.
+
+        This is useful when implementing GHASH in terms of POLYVAL.
+        """
+        left = 0
+        right = BLOCK_SIZE - 1
+        while left < right:
+            self._v[left], self._v[right] = self._v[right], self._v[left]
+            left += 1
+            right -= 1
+
+        return self^
 
     def mulx(self) -> Self:
         """The `mulX_POLYVAL()` function as defined in [RFC 8452 Appendix A].

@@ -28,14 +28,17 @@ def _bmul32(x: UInt32, y: UInt32) -> UInt32:
     var m1 = m0 << 1
     var m2 = m1 << 1
     var m3 = m2 << 1
+
     var x0 = x & m0
     var x1 = x & m1
     var x2 = x & m2
     var x3 = x & m3
+
     var y0 = y & m0
     var y1 = y & m1
     var y2 = y & m2
     var y3 = y & m3
+
     var z0 = (x0 * y0) ^ (x1 * y3) ^ (x2 * y2) ^ (x3 * y1)
     var z1 = (x0 * y1) ^ (x1 * y0) ^ (x2 * y3) ^ (x3 * y2)
     var z2 = (x0 * y2) ^ (x1 * y1) ^ (x2 * y0) ^ (x3 * y3)
