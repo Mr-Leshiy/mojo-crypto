@@ -13,8 +13,9 @@ test   = """
 mojo run -I . tests/block_ciphers/aes/test_aes.mojo &&
 mojo run -I . tests/containers/encoding/test_hex.mojo &&
 
-mojo run -I . tests/universal_hashes/polyval/test_field_element.mojo &&
-mojo run -I . tests/universal_hashes/polyval/test_polyval.mojo
+mojo run -I . tests/universal_hashes/test_field_element.mojo &&
+mojo run -I . tests/universal_hashes/test_polyval.mojo &&
+mojo run -I . tests/universal_hashes/test_ghash.mojo
 """
 
 bench  = "python -m benchmarks.cli"
