@@ -2,8 +2,8 @@ from std.testing import assert_equal, TestSuite
 
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu
-from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
+from mojo_crypto.universal_hashes.ghash import GHashCpu
+from mojo_crypto.universal_hashes.ghash.common import BLOCK_SIZE
 from mojo_crypto.universal_hashes.polyval.field_element import FieldElement
 
 
@@ -33,10 +33,10 @@ def check_ghash_test_vector[
 # <https://tools.ietf.org/html/rfc8452#appendix-A>
 def test_ghash_test_vector() raises:
     @parameter
-    def polyval_cpu(h: InlineArray[UInt8, BLOCK_SIZE]) -> PolyvalCpu:
-        return PolyvalCpu(h)
+    def ghash_cpu(h: InlineArray[UInt8, BLOCK_SIZE]) -> GHashCpu:
+        return GHashCpu(h)
 
-    check_ghash_test_vector[PolyvalCpu, polyval_cpu]()
+    check_ghash_test_vector[GHashCpu, ghash_cpu]()
 
 
 def main() raises:
