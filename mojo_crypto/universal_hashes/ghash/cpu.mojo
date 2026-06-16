@@ -1,5 +1,6 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from mojo_crypto.universal_hashes.errors import UhashSizeError
+from mojo_crypto.universal_hashes.polyval import PolyvalCpu
 from mojo_crypto.universal_hashes.polyval.field_element import FieldElement
 from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
@@ -14,21 +15,14 @@ struct GHashCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
     comptime KEY_SIZE: Int = KEY_SIZE
     comptime TAG_SIZE: Int = TAG_SIZE
 
-    var _h: FieldElement
-    var _y: FieldElement
+    var _v: PolyvalCpu
 
     def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
-        self._h = FieldElement(h)
-        self._y = FieldElement.zeros()
+        var h_poly = FieldElement(h).reverse().mulx()
+        self._v = PolyvalCpu(h_poly._v^)
 
     def update[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
-        UhashSizeError[BLOCK_SIZE].check(len(data))
-        for i in range(len(data) // BLOCK_SIZE):
-            var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-            block.unsafe_ptr().store(
-                (data.unsafe_ptr() + i * BLOCK_SIZE).load[width=BLOCK_SIZE]()
-            )
-            self._y = (self._y + FieldElement(block)) * self._h
+        self._v.update(data)
 
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-        return self._y._v
+    def finalize(self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+        return self._v.finalize()

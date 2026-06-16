@@ -8,7 +8,6 @@ trait UniversalHashable:
     def update[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         ...
 
-    # Consume the accumulator and return the TAG_SIZE-byte result.
-    # Takes var self so the hash cannot be reused after finalization.
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+    # Return the TAG_SIZE-byte result.
+    def finalize(self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         ...

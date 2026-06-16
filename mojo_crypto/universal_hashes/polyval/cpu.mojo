@@ -30,5 +30,5 @@ struct PolyvalCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
             )
             self._y = (self._y + FieldElement(block)) * self._h
 
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
