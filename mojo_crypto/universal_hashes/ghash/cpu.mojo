@@ -15,14 +15,22 @@ struct GHashCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
     comptime KEY_SIZE: Int = KEY_SIZE
     comptime TAG_SIZE: Int = TAG_SIZE
 
-    var _v: PolyvalCpu
+    var _h: FieldElement
+    var _y: FieldElement
 
     def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
-        var h_poly = FieldElement(h).reverse().mulx()
-        self._v = PolyvalCpu(h_poly._v^)
+        self._h = FieldElement(h).reverse().mulx()
+        self._y = FieldElement.zeros()
 
     def update[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
-        self._v.update(data)
+        UhashSizeError[BLOCK_SIZE].check(len(data))
+        for i in range(len(data) // BLOCK_SIZE):
+            block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
+            block.unsafe_ptr().store(
+                (data.unsafe_ptr() + i * BLOCK_SIZE).load[width=BLOCK_SIZE]()
+            )
+            block_fe = FieldElement(block).reverse()
+            self._y = (self._y + block_fe) * self._h
 
     def finalize(self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-        return self._v.finalize()
+            return self._y.copy().reverse()._v

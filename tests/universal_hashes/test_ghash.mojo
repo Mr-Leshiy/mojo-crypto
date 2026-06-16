@@ -24,7 +24,7 @@ def check_ghash_test_vector[
     assert_equal(
         FieldElement(rebind[InlineArray[UInt8, BLOCK_SIZE]](poly^.finalize())),
         FieldElement(
-            hex.decode[BLOCK_SIZE]("f7a3b47b846119fae5b7866cf5e5b77e")
+            hex.decode[BLOCK_SIZE]("bd9b3997046731fb96251b91f9c99d7a")
         ),
     )
 
