@@ -74,53 +74,6 @@ struct FieldElement(
         c.unsafe_ptr().store(a ^ b)
         return Self(c^)
 
-    def reverse(var self) -> Self:
-        """
-        Reverse this field element at a byte-level of granularity.
-
-        This is useful when implementing GHASH in terms of POLYVAL.
-        """
-        left = 0
-        right = BLOCK_SIZE - 1
-        while left < right:
-            self._v[left], self._v[right] = self._v[right], self._v[left]
-            left += 1
-            right -= 1
-
-        return self^
-
-    def mulx(self) -> Self:
-        """The `mulX_POLYVAL()` function as defined in [RFC 8452 Appendix A].
-
-        Performs a doubling (multiply by x) over GF(2^128).
-        Useful for implementing GHASH in terms of POLYVAL.
-
-        [RFC 8452 Appendix A]: https://tools.ietf.org/html/rfc8452#appendix-A
-        """
-        # Interpret the 16-byte element as a 128-bit little-endian integer
-        # split across two 64-bit halves: lo = bytes[0..8], hi = bytes[8..16].
-        var ptr = self._v.unsafe_ptr().bitcast[UInt64]()
-        var lo = ptr.load(0)
-        var hi = ptr.load(1)
-
-        var v_hi = hi >> 63  # save the high bit (0 or 1) before shifting
-
-        # Shift the 128-bit value left by 1 (multiply by x)
-        hi = (hi << 1) | (lo >> 63)
-        lo = lo << 1
-
-        # Reduce mod x^128 + x^127 + x^126 + x^121 + 1:
-        # if the high bit was set, XOR with 1 (bit 0) and bits 121, 126, 127.
-        # Bits 121/126/127 all live in `hi` at positions 57/62/63 (offset by 64).
-        lo ^= v_hi
-        hi ^= (v_hi << 57) | (v_hi << 62) | (v_hi << 63)
-
-        var result = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        var out = result.unsafe_ptr().bitcast[UInt64]()
-        out.store(0, lo)
-        out.store(1, hi)
-        return Self(result^)
-
     def __mul__(self, rhs: Self) -> Self:
         """Multiply two POLYVAL field elements mod `x^128 + x^127 + x^126 + x^121 + 1`.
 

@@ -4,14 +4,12 @@ from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from mojo_crypto.universal_hashes.polyval import PolyvalCpu
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
-from mojo_crypto.universal_hashes.polyval.field_element import FieldElement
 
 
 def check_polyval_test_vector[
     T: UniversalHashable & Movable & ImplicitlyDestructible,
     poly_init: def(InlineArray[UInt8, BLOCK_SIZE]) capturing[_] -> T,
 ]() raises:
-    comptime assert T.TAG_SIZE == BLOCK_SIZE, "TAG_SIZE must equal BLOCK_SIZE"
     hex = Hex()
     var h = hex.decode[BLOCK_SIZE]("25629347589242761d31f826ba4b757b")
     var x1 = hex.decode[BLOCK_SIZE]("4f4f95668c83dfb6401762bb2d01a262")
@@ -22,10 +20,8 @@ def check_polyval_test_vector[
     poly.update(x2)
 
     assert_equal(
-        FieldElement(rebind[InlineArray[UInt8, BLOCK_SIZE]](poly^.finalize())),
-        FieldElement(
-            hex.decode[BLOCK_SIZE]("f7a3b47b846119fae5b7866cf5e5b77e")
-        ),
+        poly^.finalize(),
+        hex.decode[T.TAG_SIZE]("f7a3b47b846119fae5b7866cf5e5b77e"),
     )
 
 
