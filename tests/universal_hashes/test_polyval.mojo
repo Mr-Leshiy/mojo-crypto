@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu
+from mojo_crypto.universal_hashes.polyval import PolyvalCpu, PolyvalAarch64
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
 
@@ -31,6 +31,12 @@ def test_polyval_test_vector() raises:
     @parameter
     def polyval_cpu(h: InlineArray[UInt8, BLOCK_SIZE]) -> PolyvalCpu:
         return PolyvalCpu(h)
+
+    @parameter
+    def polyval_aarch64(h: InlineArray[UInt8, BLOCK_SIZE]) -> PolyvalAarch64:
+        return PolyvalAarch64(h)
+
+    check_polyval_test_vector[PolyvalAarch64, polyval_aarch64]()
 
     check_polyval_test_vector[PolyvalCpu, polyval_cpu]()
 

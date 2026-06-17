@@ -2,7 +2,9 @@ from .field_element import FieldElement
 
 
 @fieldwise_init
-struct ExpandedKey(Copyable, Equatable, ImplicitlyDestructible, Movable, Writable):
+struct ExpandedKey(
+    Copyable, Equatable, ImplicitlyDestructible, Movable, Writable
+):
     """
     Precomputed key material for POLYVAL using R/F algorithm
 
@@ -15,6 +17,8 @@ struct ExpandedKey(Copyable, Equatable, ImplicitlyDestructible, Movable, Writabl
     var d1: FieldElement
     # H^2
     var h2: FieldElement
+    # D^2
+    var d2: FieldElement
     # H^3
     var h3: FieldElement
     # D^3
@@ -30,6 +34,7 @@ struct ExpandedKey(Copyable, Equatable, ImplicitlyDestructible, Movable, Writabl
             h1=FieldElement.zeros(),
             d1=FieldElement.zeros(),
             h2=FieldElement.zeros(),
+            d2=FieldElement.zeros(),
             h3=FieldElement.zeros(),
             d3=FieldElement.zeros(),
             h4=FieldElement.zeros(),
