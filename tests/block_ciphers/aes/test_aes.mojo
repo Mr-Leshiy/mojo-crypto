@@ -230,8 +230,6 @@ def run_checks[
     check[AesCpu[24], 24, aes_cpu[24]](vectors)
     check[AesCpu[32], 32, aes_cpu[32]](vectors)
 
-    assert_equal(CompilationTarget.has_neon(), True)
-
     comptime if CompilationTarget.has_neon():
         assert_equal(False, True)
         @parameter
@@ -244,7 +242,6 @@ def run_checks[
         check[AesAarch64[24], 24, aes_aarch64[24]](vectors)
         check[AesAarch64[32], 32, aes_aarch64[32]](vectors)
 
-    assert_equal(CompilationTarget.is_x86(), True)
     comptime if CompilationTarget.is_x86():
         assert_equal(False, True)
         @parameter
