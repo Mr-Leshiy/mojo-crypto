@@ -1,6 +1,7 @@
 from std.testing import assert_equal, TestSuite
 from std.sys.info import CompilationTarget
 
+from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from mojo_crypto.universal_hashes.ghash import GHashCpu, GHashAarch64
@@ -30,7 +31,7 @@ def check_ghash_test_vector[
 def test_ghash_test_vector() raises:
     check_ghash_test_vector[GHashCpu]()
 
-    comptime if CompilationTarget.has_neon():
+    comptime if target_triple_contains_any(["aarch64", "arm64"]):
         check_ghash_test_vector[GHashAarch64]()
 
 

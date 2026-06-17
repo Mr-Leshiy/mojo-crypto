@@ -4,7 +4,7 @@ from std.reflection import reflect
 from std.sys import has_accelerator
 from std.gpu.host import DeviceContext
 
-from mojo_crypto.utils import target_triple_contains_any, target_triple
+from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.block_ciphers.aes import (
     AesCpu,
     AesAarch64,
@@ -302,5 +302,4 @@ def test_aes_ctr_mct() raises:
 
 
 def main() raises:
-    print(target_triple())
     TestSuite.discover_tests[__functions_in_module()]().run()
