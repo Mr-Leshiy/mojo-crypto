@@ -231,7 +231,7 @@ def run_checks[
     check[AesCpu[32], 32, aes_cpu[32]](vectors)
 
     comptime if CompilationTarget.has_neon():
-
+        assert_equal(False, True)
         @parameter
         def aes_aarch64[
             KeySize: Int
@@ -243,7 +243,7 @@ def run_checks[
         check[AesAarch64[32], 32, aes_aarch64[32]](vectors)
 
     comptime if CompilationTarget.is_x86():
-
+        assert_equal(False, True)
         @parameter
         def aes_x86[
             KeySize: Int
