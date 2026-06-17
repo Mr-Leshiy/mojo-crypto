@@ -25,9 +25,40 @@ jobs:
       - name: Assert no uncommitted formatting changes
         run: git diff --exit-code
 
-  test:
-    name: Test suite
+  bench-build:
+    name: Benchmark build check
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: latest
+          cache: true
+
+      - name: Compile benchmarks (no run)
+        run: pixi run bench-build
+
+  test:
+    name: Test suite (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu-latest -> x86-64 (exercises the AES-NI backend),
+        # ubuntu-24.04-arm -> aarch64 (exercises the AES+PMULL backends).
+        # Both are free GitHub-hosted runners for public repositories.
+        # `features` is passed as MOJO_TEST_FEATURES to enable the crypto
+        # instructions; --target-features replaces the feature set, so the
+        # aarch64 value must keep +neon (otherwise has_neon() turns false and the
+        # aarch64 backend tests are skipped).
+        include:
+          - runner: ubuntu-latest
+            features: "--target-features=+aes"
+          - runner: ubuntu-24.04-arm
+            features: "--target-features=+neon,+aes"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,4 +71,6 @@ jobs:
 
       - name: Run tests
         run: pixi run test
+        env:
+          MOJO_TEST_FEATURES: ${{ matrix.features }}
 
