@@ -3,6 +3,10 @@ trait UniversalHashable:
     comptime KEY_SIZE: Int
     comptime TAG_SIZE: Int
 
+    def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
+        """Initialize the hash from a KEY_SIZE-byte key."""
+        ...
+
     def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
         """Absorb a single BLOCK_SIZE block."""
         ...

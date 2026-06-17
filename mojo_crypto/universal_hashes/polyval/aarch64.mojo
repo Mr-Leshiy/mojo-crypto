@@ -59,8 +59,10 @@ struct PolyvalAarch64(
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
 
+
 # x^63 + x^62 + x^57 = 0xC200000000000000
 comptime P1: UInt64 = 0xC200_0000_0000_0000
+
 
 def expand_key(h: InlineArray[UInt8, KEY_SIZE]) -> ExpandedKey:
     h1 = _load_bytes(h)

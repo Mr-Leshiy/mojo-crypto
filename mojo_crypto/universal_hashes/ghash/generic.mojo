@@ -1,24 +1,31 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.polyval.field_element import FieldElement
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu
-from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
-struct GHashCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
+struct GHashGeneric[
+    P: Copyable & ImplicitlyDestructible & Movable & UniversalHashable
+](Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
     """
     **GHASH**: universal hash over GF(2^128) used by AES-GCM.
 
-    GHASH is a universal hash function used for message authentication in the AES-GCM authenticated encryption cipher.
+    GHASH is a universal hash function used for message authentication in the
+    AES-GCM authenticated encryption cipher.
+
+    GHASH is the big-endian counterpart of POLYVAL: every input/output block is
+    byte-reversed and the key is run through `mulx` (RFC 8452 Appendix A). This
+    struct is parameterized by the underlying POLYVAL backend `P` (e.g.
+    `PolyvalCpu`, `PolyvalAarch64`), so the field arithmetic is shared.
     """
 
-    comptime BLOCK_SIZE: Int = BLOCK_SIZE
-    comptime KEY_SIZE: Int = KEY_SIZE
-    comptime TAG_SIZE: Int = TAG_SIZE
+    # GHASH's block/key/tag sizes are exactly the underlying POLYVAL's, so
+    # arrays threaded through `_poly` unify without a size mismatch.
+    comptime BLOCK_SIZE: Int = Self.P.BLOCK_SIZE
+    comptime KEY_SIZE: Int = Self.P.KEY_SIZE
+    comptime TAG_SIZE: Int = Self.P.TAG_SIZE
 
-    var _poly: PolyvalCpu
+    var _poly: Self.P
 
     def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
-        self._poly = PolyvalCpu(mulx(reverse(h)))
+        self._poly = Self.P(mulx(reverse(h)))
 
     def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
         self._poly.update_block(reverse(block))
