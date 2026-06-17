@@ -56,6 +56,7 @@ struct PolyvalX86(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
 
+
 def expand_key(h: InlineArray[UInt8, KEY_SIZE]) -> ExpandedKey:
     h1 = _load_bytes(h)
     d1 = _compute_d(h1)
