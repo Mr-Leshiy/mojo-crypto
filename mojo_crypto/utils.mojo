@@ -21,9 +21,7 @@ def target_triple() -> StaticString:
     ]()
 
 
-def target_triple_contains_any(
-    needles: List[StaticString]
-) -> Bool:
+def target_triple_contains_any(needles: List[StaticString]) -> Bool:
     """Whether the current target triple contains any of the given substrings.
 
     Takes an `InlineArray` so the whole check can be folded at compile time,
