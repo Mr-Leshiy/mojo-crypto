@@ -6,18 +6,15 @@ from .expanded_key import ExpandedKey
 from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE, P1
 
 
-struct PolyvalAarch64(
-    Copyable, ImplicitlyDestructible, Movable, UniversalHashable
-):
+struct PolyvalX86(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
     """
-    ARMv8 NEON + PMULL optimized POLYVAL implementation using R/F Algorithm
-
+    VPCLMULQDQ optimized POLYVAL implementation using R/F Algorithm
     Adapted from the implementation in the Apache 2.0 + MIT-licensed HPCrypt library
     Copyright (c) 2024 HPCrypt Contributors
 
-    This implementation uses the R/F (Reduction/Field) algorithm:
-    - 4 PMULL per block for R and F terms
-    - PMULL-based reduction (1 PMULL) instead of scalar shifts
+    Uses the R/F algorithm from "Efficient GHASH Implementation Using CLMUL":
+    - 4 CLMULs per block for multiplication (R and F terms)
+    - 1 CLMUL for reduction (Lemma 3)
     - 4-block aggregated processing with single reduction
 
     Key equations:
@@ -26,10 +23,10 @@ struct PolyvalAarch64(
     - F = M0×D0 ⊕ M1×H0
     - Result = R ⊕ F1 ⊕ (x^64×F0) ⊕ (P1×F0)
 
-    POLYVAL operates in GF(2^128) with polynomial x^128 + x^127 + x^126 + x^121 + 1
-    Unlike GHASH, POLYVAL uses little-endian byte ordering (no byte swap needed).
+     POLYVAL operates in GF(2^128) with polynomial x^128 + x^127 + x^126 + x^121 + 1
+     Unlike GHASH, POLYVAL uses little-endian byte ordering (no byte swap needed).
 
-    <https://eprint.iacr.org/2025/2171.pdf>
+     <https://eprint.iacr.org/2025/2171.pdf>
     """
 
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
@@ -58,7 +55,6 @@ struct PolyvalAarch64(
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
-
 
 def expand_key(h: InlineArray[UInt8, KEY_SIZE]) -> ExpandedKey:
     h1 = _load_bytes(h)
@@ -104,12 +100,12 @@ def _compute_d(h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     """
     Compute D = swap(H) ⊕ (H0 × P1) for the R/F algorithm.
 
-    vextq_u64(h, h, 1) swaps the two lanes: [H0:H1] → [H1:H0].
-    vmull_p64(H0, P1) is the PMULL of the low lane against the reduction constant.
+    The lane swap turns [H0:H1] into [H1:H0]; _pclmul64(H0, P1) is the
+    carry-less product of the low lane against the reduction constant.
     """
 
     h_swap = SIMD[DType.uint64, 2](h[1], h[0])
-    t = _pmull64(h[0], P1)
+    t = _pclmul64(h[0], P1)
     return h_swap ^ t
 
 
@@ -119,7 +115,7 @@ def _gf128_mul_rf(
     h: SIMD[DType.uint64, 2],
     d: SIMD[DType.uint64, 2],
 ) -> SIMD[DType.uint64, 2]:
-    """Complete R/F multiplication with reduction (5 PMULLs total)."""
+    """Complete R/F multiplication with reduction (5 PCLMULQDQs total)."""
 
     rf = _rf_mul_unreduced(m, h, d)
     return _reduce_rf(rf[0], rf[1])
@@ -132,14 +128,14 @@ def _rf_mul_unreduced(
     d: SIMD[DType.uint64, 2],
 ) -> Tuple[SIMD[DType.uint64, 2], SIMD[DType.uint64, 2]]:
     """
-    R/F multiplication: compute R and F terms without reduction (4 PMULLs).
+    R/F multiplication: compute R and F terms without reduction (4 PCLMULQDQs).
 
     R = M0×D1 ⊕ M1×H1
     F = M0×D0 ⊕ M1×H0
     """
 
-    r = _pmull64(m[0], d[1]) ^ _pmull64(m[1], h[1])
-    f = _pmull64(m[0], d[0]) ^ _pmull64(m[1], h[0])
+    r = _pclmul64(m[0], d[1]) ^ _pclmul64(m[1], h[1])
+    f = _pclmul64(m[0], d[0]) ^ _pclmul64(m[1], h[0])
     return (r, f)
 
 
@@ -148,25 +144,30 @@ def _reduce_rf(
     r: SIMD[DType.uint64, 2], f: SIMD[DType.uint64, 2]
 ) -> SIMD[DType.uint64, 2]:
     """
-    Reduction using Lemma 3: Result = R ⊕ F1 ⊕ (x^64×F0) ⊕ (P1×F0)  (1 PMULL).
+    Reduction using Lemma 3: Result = R ⊕ F1 ⊕ (x^64×F0) ⊕ (P1×F0)  (1 PCLMULQDQ).
 
     F1 is the high lane of f; x^64×F0 shifts F0 into the high lane.
     """
 
     f1_vec = SIMD[DType.uint64, 2](f[1], 0)
     f0_shifted = SIMD[DType.uint64, 2](0, f[0])
-    return r ^ f1_vec ^ f0_shifted ^ _pmull64(f[0], P1)
+    return r ^ f1_vec ^ f0_shifted ^ _pclmul64(f[0], P1)
 
 
 @always_inline
-def _pmull64(a: UInt64, b: UInt64) -> SIMD[DType.uint64, 2]:
+def _pclmul64(a: UInt64, b: UInt64) -> SIMD[DType.uint64, 2]:
     """
-    64×64 → 128-bit polynomial multiply (PMULL).
+    64×64 → 128-bit carry-less multiply (PCLMULQDQ).
 
-    llvm.aarch64.neon.pmull64: (i64, i64) -> <16 x i8>  (IntrinsicsAArch64.td)
+    llvm.x86.pclmulqdq: (<2 x i64>, <2 x i64>, i8 imm) -> <2 x i64>  (IntrinsicsX86.td)
+    The i8 immediate selects which 64-bit half of each operand is multiplied
+    (bit 0 picks the half of arg0, bit 4 the half of arg1). Placing a and b in
+    lane 0 of each operand and passing 0x00 selects low×low — matching the
+    scalar (i64, i64) interface of AArch64's _pmull64.
     """
 
-    var result = llvm_intrinsic[
-        "llvm.aarch64.neon.pmull64", SIMD[DType.uint8, 16]
-    ](a, b)
-    return UnsafePointer(to=result).bitcast[UInt64]().load[width=2]()
+    va = SIMD[DType.uint64, 2](a, 0)
+    vb = SIMD[DType.uint64, 2](b, 0)
+    return llvm_intrinsic["llvm.x86.pclmulqdq", SIMD[DType.uint64, 2]](
+        va, vb, Int8(0x00)
+    )

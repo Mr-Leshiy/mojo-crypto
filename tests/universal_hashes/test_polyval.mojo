@@ -4,7 +4,7 @@ from std.sys.info import CompilationTarget
 from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu, PolyvalAarch64
+from mojo_crypto.universal_hashes.polyval import PolyvalCpu, PolyvalAarch64, PolyvalX86
 
 
 def check_polyval_test_vector[
@@ -33,6 +33,8 @@ def test_polyval_test_vector() raises:
     comptime if target_triple_contains_any(["aarch64", "arm64"]):
         check_polyval_test_vector[PolyvalAarch64]()
 
+    comptime if target_triple_contains_any(["x86_64"]):
+        check_polyval_test_vector[PolyvalX86]()
 
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
