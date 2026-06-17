@@ -37,8 +37,10 @@ mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features
 mojo build --emit=asm --target-accelerator=sm_80 -I . benchmarks/block_ciphers/aes/gpu.mojo -o $out/aes_gpu &&
 mojo build --emit=asm -I . benchmarks/universal_hashes/ghash/cpu.mojo -o $out/ghash_cpu &&
 mojo build --emit=asm --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/universal_hashes/ghash/aarch64.mojo -o $out/ghash_aarch64 &&
+mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features=+pclmul,+sse2 -I . benchmarks/universal_hashes/ghash/x86.mojo -o $out/ghash_x86 &&
 mojo build --emit=asm -I . benchmarks/universal_hashes/polyval/cpu.mojo -o $out/polyval_cpu &&
 mojo build --emit=asm --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/universal_hashes/polyval/aarch64.mojo -o $out/polyval_aarch64 &&
+mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features=+pclmul,+sse2 -I . benchmarks/universal_hashes/polyval/x86.mojo -o $out/polyval_x86 &&
 mojo build --emit=asm -I . benchmarks/containers/encoding/hex/cpu.mojo -o $out/hex_cpu &&
 mojo build --emit=asm --target-accelerator=sm_80 -I . benchmarks/containers/encoding/hex/gpu.mojo -o $out/hex_gpu &&
 rm -rf $out

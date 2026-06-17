@@ -18,3 +18,9 @@ def cpu() -> None:
 def aarch64() -> None:
     """Benchmark GHASH using the portable Aarch64 backend."""
     _bench("aarch64")
+
+
+@app.command()
+def x86() -> None:
+    """Benchmark GHASH using the x86 PCLMULQDQ backend."""
+    _bench("x86")
