@@ -9,6 +9,11 @@ struct ExpandedKey(
     Precomputed key material for POLYVAL using R/F algorithm
 
     Stores H and D values for each power, where D = swap(H) ⊕ (H0 × P1)
+
+    Only h1/d1 are needed for single-block processing (update_block). The
+    higher powers h2/d2 .. h4/d4 are precomputed for 4-block aggregated
+    processing (update_par_blocks), which multiplies each of the 4 blocks by a
+    different power of H and reduces once — added later.
     """
 
     # H^1 packed as [h1_hi : h1_lo]

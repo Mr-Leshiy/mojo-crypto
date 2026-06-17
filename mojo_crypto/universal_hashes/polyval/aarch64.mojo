@@ -44,7 +44,17 @@ struct PolyvalAarch64(
         self._y = FieldElement.zeros()
 
     def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
-        pass
+        """Absorb one block into the accumulator: y = (y ⊕ block) × H."""
+        data = _load_bytes(block)
+        y = _load_bytes(self._y._v)
+        h1 = _load_bytes(self._h.h1._v)
+        d1 = _load_bytes(self._h.d1._v)
+
+        # XOR with accumulator
+        acc = y ^ data
+
+        # Multiply by H using R/F algorithm
+        self._y = FieldElement(_store_bytes(_gf128_mul_rf(acc, h1, d1)))
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
@@ -99,6 +109,7 @@ def _compute_d(h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     vextq_u64(h, h, 1) swaps the two lanes: [H0:H1] → [H1:H0].
     vmull_p64(H0, P1) is the PMULL of the low lane against the reduction constant.
     """
+
     h_swap = SIMD[DType.uint64, 2](h[1], h[0])
     t = _pmull64(h[0], P1)
     return h_swap ^ t
@@ -111,6 +122,7 @@ def _gf128_mul_rf(
     d: SIMD[DType.uint64, 2],
 ) -> SIMD[DType.uint64, 2]:
     """Complete R/F multiplication with reduction (5 PMULLs total)."""
+
     rf = _rf_mul_unreduced(m, h, d)
     return _reduce_rf(rf[0], rf[1])
 
@@ -127,6 +139,7 @@ def _rf_mul_unreduced(
     R = M0×D1 ⊕ M1×H1
     F = M0×D0 ⊕ M1×H0
     """
+
     r = _pmull64(m[0], d[1]) ^ _pmull64(m[1], h[1])
     f = _pmull64(m[0], d[0]) ^ _pmull64(m[1], h[0])
     return (r, f)
@@ -141,6 +154,7 @@ def _reduce_rf(
 
     F1 is the high lane of f; x^64×F0 shifts F0 into the high lane.
     """
+
     f1_vec = SIMD[DType.uint64, 2](f[1], 0)
     f0_shifted = SIMD[DType.uint64, 2](0, f[0])
     return r ^ f1_vec ^ f0_shifted ^ _pmull64(f[0], P1)
@@ -153,6 +167,7 @@ def _pmull64(a: UInt64, b: UInt64) -> SIMD[DType.uint64, 2]:
 
     llvm.aarch64.neon.pmull64: (i64, i64) -> <16 x i8>  (IntrinsicsAArch64.td)
     """
+
     var result = llvm_intrinsic[
         "llvm.aarch64.neon.pmull64", SIMD[DType.uint8, 16]
     ](a, b)
