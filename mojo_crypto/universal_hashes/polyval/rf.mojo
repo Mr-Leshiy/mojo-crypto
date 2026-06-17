@@ -70,9 +70,7 @@ struct PolyvalRf[P: Pmull](
         acc = y ^ data
 
         # Multiply by H using R/F algorithm
-        self._y = FieldElement(
-            store_bytes(gf128_mul_rf[Self.P](acc, h1, d1))
-        )
+        self._y = FieldElement(store_bytes(gf128_mul_rf[Self.P](acc, h1, d1)))
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
@@ -165,9 +163,7 @@ def store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
 
 
 @always_inline
-def compute_d[
-    P: Pmull
-](h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
+def compute_d[P: Pmull](h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     """
     Compute D = swap(H) ⊕ (H0 × P1) for the R/F algorithm.
 
