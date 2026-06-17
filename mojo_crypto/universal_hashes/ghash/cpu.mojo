@@ -5,7 +5,8 @@ from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
 struct GHashCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
-    """**GHASH**: universal hash over GF(2^128) used by AES-GCM.
+    """
+    **GHASH**: universal hash over GF(2^128) used by AES-GCM.
 
     GHASH is a universal hash function used for message authentication in the AES-GCM authenticated encryption cipher.
     """
@@ -44,7 +45,8 @@ def reverse[
 def mulx[
     SIZE: Int
 ](var v: InlineArray[UInt8, SIZE]) -> InlineArray[UInt8, SIZE]:
-    """The `mulX_POLYVAL()` function as defined in [RFC 8452 Appendix A].
+    """
+    The `mulX_POLYVAL()` function as defined in [RFC 8452 Appendix A].
 
     Performs a doubling (multiply by x) over GF(2^128).
     Useful for implementing GHASH in terms of POLYVAL.

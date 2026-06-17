@@ -8,11 +8,13 @@ trait UniversalHashable:
         ...
 
     def update[o: Origin](mut self, data: Span[UInt8, o]) raises:
-        """Absorb whole BLOCK_SIZE-aligned input.
+        """
+        Absorb whole BLOCK_SIZE-aligned input.
 
         Raises UhashSizeError if len(data) is not a multiple of BLOCK_SIZE —
         padding is the caller's job.
         """
+
         UhashSizeError[Self.BLOCK_SIZE].check(len(data))
         for i in range(len(data) // Self.BLOCK_SIZE):
             var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
@@ -24,13 +26,15 @@ trait UniversalHashable:
             self.update_block(block)
 
     def update_padded[o: Origin](mut self, data: Span[UInt8, o]) raises:
-        """Absorb input of any length, zero-padding the final partial block if needed.
+        """
+        Absorb input of any length, zero-padding the final partial block if needed.
 
         Full blocks are passed directly to update_block; if the input length is
         not a multiple of BLOCK_SIZE the remaining bytes are copied into a
         zero-filled block before being absorbed. Frequently used by AEAD modes
         whose MACs are based on universal hashing (e.g. AES-GCM, AES-GCM-SIV).
         """
+
         tail_len = len(data) % Self.BLOCK_SIZE
         n_full = len(data) - tail_len
         self.update(data[:n_full])
