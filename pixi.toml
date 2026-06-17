@@ -12,13 +12,7 @@ fmt    = "mojo format ."
 # $MOJO_TEST_FEATURES lets CI enable the crypto instructions used by the hardware
 # backends, so the tests exercise the native backend on each runner. We set it
 # explicitly because `mojo run`'s host-feature autodetection is unreliable in some
-# environments (e.g. restricted CI containers), which would otherwise fail
-# instruction selection for PMULL. Note that --target-features *replaces* the
-# feature set, so the aarch64 value must keep +neon (otherwise CompilationTarget
-# .has_neon() turns false and the aarch64 backend tests are skipped); the values
-# used in CI are "--target-features=+neon,+aes" (aarch64) and
-# "--target-features=+aes" (x86, AES-NI). When unset (local runs) the variable
-# expands to nothing and mojo falls back to host-feature autodetection.
+# environments (e.g. restricted CI containers)
 test   = """
 mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/containers/encoding/test_hex.mojo &&
@@ -32,14 +26,7 @@ bench  = "python -m benchmarks.cli"
 bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
 
 # Compile-only checks for the benchmarks: verify they build without running them
-# (running requires a GPU / specific host CPU). `mojo build --emit=asm` runs the
-# full backend codegen — so it catches e.g. missing PMULL/AES-NI feature gates —
-# but skips the final link, so no C compiler is needed. Output goes to a throwaway
-# temp dir that is removed afterwards (the GPU benches emit a sidecar .ptx next to
-# the -o path, so /dev/null can't be used for those). The arch-specific benches
-# are cross-compiled for both CPU targets (so either an x86 or aarch64 runner
-# checks them all) and the GPU benches are AOT-compiled for an NVIDIA target via
-# --target-accelerator (no physical GPU needed).
+# (running requires a GPU / specific host CPU).
 bench-build = { depends-on = ["bench-build-mojo", "bench-build-rust"] }
 
 bench-build-mojo = """
