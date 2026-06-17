@@ -1,4 +1,4 @@
-from std.benchmark import run
+from std.benchmark import run, keep
 
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
@@ -14,13 +14,19 @@ def bench_uhash[
 
     @parameter
     def bench[N: Int, suffix: StringLiteral]() raises:
-        var data = InlineArray[UInt8, N](fill=0)
+        # Heap-allocate the input so it isn't a stack constant. `keep` then
+        # forces the optimizer to treat the buffer as opaque and to observe the
+        # tag — without this the all-zero input is constant-folded and the whole
+        # hash is dead-code-eliminated, producing meaningless (~1e-17 s) timings.
+        var data = List[UInt8](length=N, fill=0)
 
         @parameter
         def do_hash() raises:
+            keep(data.unsafe_ptr())
             var hash = H(key)
-            hash.update(data)
-            _ = hash^.finalize()
+            hash.update(Span(data))
+            var tag = hash^.finalize()
+            keep(tag.unsafe_ptr())
 
         run[do_hash]().print(prefix + "_" + suffix)
 
