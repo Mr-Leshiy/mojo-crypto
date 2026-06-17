@@ -2,15 +2,14 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 from std.sys import has_accelerator
-from std.sys.info import CompilationTarget
 from std.gpu.host import DeviceContext
 
+from mojo_crypto.utils import target_triple_contains_any, target_triple
 from mojo_crypto.block_ciphers.aes import (
     AesCpu,
     AesAarch64,
     AesX86,
     AesGpu,
-    BLOCK_SIZE,
 )
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
@@ -117,8 +116,8 @@ def check_aes_cbc_mct[
         )
 
         var iv = rebind[InlineArray[UInt8, C.BLOCK_SIZE]](v.iv.value())
-        var iv_list = List[UInt8](capacity=BLOCK_SIZE)
-        for i in range(BLOCK_SIZE):
+        var iv_list = List[UInt8](capacity=C.BLOCK_SIZE)
+        for i in range(C.BLOCK_SIZE):
             iv_list.append(iv[i])
 
         if v.is_encrypt:
@@ -230,8 +229,8 @@ def run_checks[
     check[AesCpu[24], 24, aes_cpu[24]](vectors)
     check[AesCpu[32], 32, aes_cpu[32]](vectors)
 
-    comptime if CompilationTarget.has_neon():
-        assert_equal(False, True)
+    comptime if target_triple_contains_any(["aarch64", "arm64"]):
+
         @parameter
         def aes_aarch64[
             KeySize: Int
@@ -242,8 +241,8 @@ def run_checks[
         check[AesAarch64[24], 24, aes_aarch64[24]](vectors)
         check[AesAarch64[32], 32, aes_aarch64[32]](vectors)
 
-    comptime if CompilationTarget.is_x86():
-        assert_equal(False, True)
+    comptime if target_triple_contains_any(["x86_64"]):
+
         @parameter
         def aes_x86[
             KeySize: Int
@@ -303,4 +302,5 @@ def test_aes_ctr_mct() raises:
 
 
 def main() raises:
+    print(target_triple())
     TestSuite.discover_tests[__functions_in_module()]().run()
