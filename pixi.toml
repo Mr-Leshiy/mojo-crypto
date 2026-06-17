@@ -9,13 +9,20 @@ license = "MIT OR Apache-2.0"
 [tasks]
 fmt    = "mojo format ."
 
+# --target-features=+aes enables the AES/PMULL crypto instructions used by the
+# hardware backends (AES-NI on x86, AES+PMULL on aarch64). It is appended to the
+# host features, so the tests exercise the native backend on each runner. We set
+# it explicitly because `mojo run`'s host-feature autodetection is unreliable in
+# some environments (e.g. restricted CI containers), which would otherwise fail
+# instruction selection for PMULL. All target CPUs we run on (x86-64 and aarch64
+# GitHub runners, Apple Silicon) have these instructions.
 test   = """
-mojo run -I . tests/block_ciphers/aes/test_aes.mojo &&
-mojo run -I . tests/containers/encoding/test_hex.mojo &&
+mojo run --target-features=+aes -I . tests/block_ciphers/aes/test_aes.mojo &&
+mojo run --target-features=+aes -I . tests/containers/encoding/test_hex.mojo &&
 
-mojo run -I . tests/universal_hashes/test_field_element.mojo &&
-mojo run -I . tests/universal_hashes/test_polyval.mojo &&
-mojo run -I . tests/universal_hashes/test_ghash.mojo
+mojo run --target-features=+aes -I . tests/universal_hashes/test_field_element.mojo &&
+mojo run --target-features=+aes -I . tests/universal_hashes/test_polyval.mojo &&
+mojo run --target-features=+aes -I . tests/universal_hashes/test_ghash.mojo
 """
 
 bench  = "python -m benchmarks.cli"

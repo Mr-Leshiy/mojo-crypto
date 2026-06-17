@@ -42,8 +42,15 @@ jobs:
         run: pixi run bench-build
 
   test:
-    name: Test suite
-    runs-on: ubuntu-latest
+    name: Test suite (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu-latest -> x86-64 (exercises the AES-NI backend),
+        # ubuntu-24.04-arm -> aarch64 (exercises the AES+PMULL backends).
+        # Both are free GitHub-hosted runners for public repositories.
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
