@@ -13,3 +13,8 @@ def _bench(backend: str) -> None:
 def cpu() -> None:
     """Benchmark GHASH using the portable CPU backend."""
     _bench("cpu")
+
+@app.command()
+def aarch64() -> None:
+    """Benchmark GHASH using the portable Aarch64 backend."""
+    _bench("aarch64")

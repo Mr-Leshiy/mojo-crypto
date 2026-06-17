@@ -14,8 +14,7 @@ def cpu() -> None:
     """Benchmark POLYVAL using the portable CPU backend."""
     _bench("cpu")
 
-
 @app.command()
 def aarch64() -> None:
-    """Benchmark POLYVAL using the ARMv8 NEON + PMULL backend."""
+    """Benchmark POLYVAL using the Aarch64 backend."""
     _bench("aarch64")
