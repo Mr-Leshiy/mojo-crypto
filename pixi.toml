@@ -9,20 +9,23 @@ license = "MIT OR Apache-2.0"
 [tasks]
 fmt    = "mojo format ."
 
-# --target-features=+aes enables the AES/PMULL crypto instructions used by the
-# hardware backends (AES-NI on x86, AES+PMULL on aarch64). It is appended to the
-# host features, so the tests exercise the native backend on each runner. We set
-# it explicitly because `mojo run`'s host-feature autodetection is unreliable in
-# some environments (e.g. restricted CI containers), which would otherwise fail
-# instruction selection for PMULL. All target CPUs we run on (x86-64 and aarch64
-# GitHub runners, Apple Silicon) have these instructions.
+# $MOJO_TEST_FEATURES lets CI enable the crypto instructions used by the hardware
+# backends, so the tests exercise the native backend on each runner. We set it
+# explicitly because `mojo run`'s host-feature autodetection is unreliable in some
+# environments (e.g. restricted CI containers), which would otherwise fail
+# instruction selection for PMULL. Note that --target-features *replaces* the
+# feature set, so the aarch64 value must keep +neon (otherwise CompilationTarget
+# .has_neon() turns false and the aarch64 backend tests are skipped); the values
+# used in CI are "--target-features=+neon,+aes" (aarch64) and
+# "--target-features=+aes" (x86, AES-NI). When unset (local runs) the variable
+# expands to nothing and mojo falls back to host-feature autodetection.
 test   = """
-mojo run --target-features=+aes -I . tests/block_ciphers/aes/test_aes.mojo &&
-mojo run --target-features=+aes -I . tests/containers/encoding/test_hex.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/containers/encoding/test_hex.mojo &&
 
-mojo run --target-features=+aes -I . tests/universal_hashes/test_field_element.mojo &&
-mojo run --target-features=+aes -I . tests/universal_hashes/test_polyval.mojo &&
-mojo run --target-features=+aes -I . tests/universal_hashes/test_ghash.mojo
+mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_field_element.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_polyval.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_ghash.mojo
 """
 
 bench  = "python -m benchmarks.cli"
