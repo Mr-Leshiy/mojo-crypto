@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu 
+from mojo_crypto.universal_hashes.polyval import PolyvalCpu
 
 
 def check_polyval_test_vector[
