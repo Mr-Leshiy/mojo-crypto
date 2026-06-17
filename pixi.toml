@@ -21,6 +21,26 @@ mojo run -I . tests/universal_hashes/test_ghash.mojo
 bench  = "python -m benchmarks.cli"
 bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
 
+# Compile-only checks for the benchmarks: verify they build without running them
+# (running requires a GPU / specific host CPU). `mojo build --emit=asm` runs the
+# full backend codegen — so it catches e.g. missing PMULL/AES-NI feature gates —
+# but skips the final link, so no C compiler or executable is produced. The
+# arch-specific benches are cross-compiled for both targets so either runner
+# (x86 or aarch64) checks them all. GPU benches are excluded (they need a GPU).
+bench-build = { depends-on = ["bench-build-mojo", "bench-build-rust"] }
+
+bench-build-mojo = """
+mojo build  -I . benchmarks/block_ciphers/aes/cpu.mojo &&
+mojo build --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/block_ciphers/aes/aarch64.mojo &&
+mojo build --target-triple=x86_64-unknown-linux-gnu --target-features=+aes,+sse2 -I . benchmarks/block_ciphers/aes/x86.mojo &&
+mojo build -I . benchmarks/universal_hashes/ghash/cpu.mojo &&
+mojo build --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/universal_hashes/ghash/aarch64.mojo &&
+mojo build -I . benchmarks/universal_hashes/polyval/cpu.mojo &&
+mojo build --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/universal_hashes/polyval/aarch64.mojo
+"""
+
+bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.toml"
+
 [dependencies]
 mojo = ">=1.0.0b1,<2"
 rust = ">=1.80.0,<2"

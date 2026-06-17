@@ -25,6 +25,22 @@ jobs:
       - name: Assert no uncommitted formatting changes
         run: git diff --exit-code
 
+  bench-build:
+    name: Benchmark build check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: latest
+          cache: true
+
+      - name: Compile benchmarks (no run)
+        run: pixi run bench-build
+
   test:
     name: Test suite
     runs-on: ubuntu-latest
