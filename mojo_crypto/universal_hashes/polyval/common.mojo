@@ -10,7 +10,7 @@ comptime P1: UInt64 = 0xC200_0000_0000_0000
 
 @fieldwise_init
 struct ExpandedKey[
-    pmul64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
+    pmull64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
 ](Copyable, Equatable, ImplicitlyDestructible, Movable, Writable):
     """
     Precomputed key material for POLYVAL using R/F algorithm
@@ -42,16 +42,16 @@ struct ExpandedKey[
 
     def __init__(out self, h: InlineArray[UInt8, KEY_SIZE]):
         h1 = load_bytes(h)
-        d1 = compute_d[Self.pmul64](h1)
+        d1 = compute_d[Self.pmull64](h1)
 
-        h2 = gf128_mul_rf[Self.pmul64](h1, h1, d1)
-        d2 = compute_d[Self.pmul64](h2)
+        h2 = gf128_mul_rf[Self.pmull64](h1, h1, d1)
+        d2 = compute_d[Self.pmull64](h2)
 
-        h3 = gf128_mul_rf[Self.pmul64](h2, h1, d1)
-        d3 = compute_d[Self.pmul64](h3)
+        h3 = gf128_mul_rf[Self.pmull64](h2, h1, d1)
+        d3 = compute_d[Self.pmull64](h3)
 
-        h4 = gf128_mul_rf[Self.pmul64](h2, h2, d2)
-        d4 = compute_d[Self.pmul64](h4)
+        h4 = gf128_mul_rf[Self.pmull64](h2, h2, d2)
+        d4 = compute_d[Self.pmull64](h4)
 
         self.h1 = FieldElement(store_bytes(h1))
         self.d1 = FieldElement(store_bytes(d1))
@@ -92,23 +92,23 @@ def store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
 
 @always_inline
 def compute_d[
-    pmul64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
+    pmull64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
 ](h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     """
     Compute D = swap(H) ⊕ (H0 × P1) for the R/F algorithm.
 
-    The lane swap turns [H0:H1] into [H1:H0]; pmul64(H0, P1) is the
+    The lane swap turns [H0:H1] into [H1:H0]; pmull64(H0, P1) is the
     carry-less product of the low lane against the reduction constant.
     """
 
     h_swap = SIMD[DType.uint64, 2](h[1], h[0])
-    t = pmul64(h[0], P1)
+    t = pmull64(h[0], P1)
     return h_swap ^ t
 
 
 @always_inline
 def gf128_mul_rf[
-    pmul64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
+    pmull64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
 ](
     m: SIMD[DType.uint64, 2],
     h: SIMD[DType.uint64, 2],
@@ -116,13 +116,13 @@ def gf128_mul_rf[
 ) -> SIMD[DType.uint64, 2]:
     """Complete R/F multiplication with reduction (5 PCLMULQDQs total)."""
 
-    rf = rf_mul_unreduced[pmul64](m, h, d)
-    return reduce_rf[pmul64](rf[0], rf[1])
+    rf = rf_mul_unreduced[pmull64](m, h, d)
+    return reduce_rf[pmull64](rf[0], rf[1])
 
 
 @always_inline
 def rf_mul_unreduced[
-    pmul64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
+    pmull64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
 ](
     m: SIMD[DType.uint64, 2],
     h: SIMD[DType.uint64, 2],
@@ -135,14 +135,14 @@ def rf_mul_unreduced[
     F = M0×D0 ⊕ M1×H0
     """
 
-    r = pmul64(m[0], d[1]) ^ pmul64(m[1], h[1])
-    f = pmul64(m[0], d[0]) ^ pmul64(m[1], h[0])
+    r = pmull64(m[0], d[1]) ^ pmull64(m[1], h[1])
+    f = pmull64(m[0], d[0]) ^ pmull64(m[1], h[0])
     return (r, f)
 
 
 @always_inline
 def reduce_rf[
-    pmul64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
+    pmull64: def(a: UInt64, b: UInt64) capturing[_] -> SIMD[DType.uint64, 2]
 ](r: SIMD[DType.uint64, 2], f: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     """
     Reduction using Lemma 3: Result = R ⊕ F1 ⊕ (x^64×F0) ⊕ (P1×F0)  (1 PCLMULQDQ).
@@ -152,4 +152,4 @@ def reduce_rf[
 
     f1_vec = SIMD[DType.uint64, 2](f[1], 0)
     f0_shifted = SIMD[DType.uint64, 2](0, f[0])
-    return r ^ f1_vec ^ f0_shifted ^ pmul64(f[0], P1)
+    return r ^ f1_vec ^ f0_shifted ^ pmull64(f[0], P1)
