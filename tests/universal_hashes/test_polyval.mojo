@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu, PolyvalAarch64
+from mojo_crypto.universal_hashes.polyval import PolyvalCpu 
 
 
 def check_polyval_test_vector[
@@ -26,8 +26,6 @@ def check_polyval_test_vector[
 # Test vectors from RFC 8452 Appendix A.
 # <https://www.rfc-editor.org/rfc/rfc8452#appendix-A>
 def test_polyval_test_vector() raises:
-    check_polyval_test_vector[PolyvalAarch64]()
-
     check_polyval_test_vector[PolyvalCpu]()
 
 

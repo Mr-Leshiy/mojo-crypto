@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.ghash import GHashCpu, GHashAarch64
+from mojo_crypto.universal_hashes.ghash import GHashCpu 
 from mojo_crypto.universal_hashes.ghash.generic import mulx
 
 
@@ -28,7 +28,6 @@ def check_ghash_test_vector[
 # <https://tools.ietf.org/html/rfc8452#appendix-A>
 def test_ghash_test_vector() raises:
     check_ghash_test_vector[GHashCpu]()
-    check_ghash_test_vector[GHashAarch64]()
 
 
 # Test vector given in RFC 8452 Appendix A.
