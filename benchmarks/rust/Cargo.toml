@@ -1,3 +1,3 @@
 [workspace]
-members = ["aes"]
+members = ["aes", "universal_hashes"]
 resolver = "2"

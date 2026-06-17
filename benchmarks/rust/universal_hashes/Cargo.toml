@@ -1,0 +1,16 @@
+[package]
+name = "b-universal-hashes"
+version = "0.1.0"
+edition = "2021"
+
+[[bench]]
+name = "bench"
+path = "bench.rs"
+harness = false
+
+[dependencies]
+polyval = "0.6"
+ghash = "0.5"
+
+[dev-dependencies]
+criterion = { version = "0.5" }

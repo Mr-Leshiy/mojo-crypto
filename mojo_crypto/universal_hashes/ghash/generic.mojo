@@ -40,13 +40,9 @@ def reverse[
     """
     Reverse this field element at a byte-level of granularity.
     """
-    left = 0
-    right = SIZE - 1
-    while left < right:
-        v[left], v[right] = v[right], v[left]
-        left += 1
-        right -= 1
-    return v^
+    var out = InlineArray[UInt8, SIZE](uninitialized=True)
+    out.unsafe_ptr().store(v.unsafe_ptr().load[width=SIZE]().reversed())
+    return out^
 
 
 def mulx[
