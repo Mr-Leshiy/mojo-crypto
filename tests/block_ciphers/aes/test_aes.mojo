@@ -15,7 +15,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
-from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
+from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode, GcmMode
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -32,9 +32,11 @@ def check_aes_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+        checked_at_least_once = True
 
         cipher = cipher_init(to_inline_array[KeySize](v.key))
         msg = "[{}], file_name={}, count={}".format(
@@ -48,6 +50,7 @@ def check_aes_eft[
         ct = v.ct.copy()
         cipher.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
+    assert checked_at_least_once
 
 
 def check_aes_cbc_eft[
@@ -58,9 +61,11 @@ def check_aes_cbc_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+        checked_at_least_once = True
         msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -77,6 +82,7 @@ def check_aes_cbc_eft[
         cbc_dec = CbcMode[C](cipher_init(key), iv)
         cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
+    assert checked_at_least_once
 
 
 def check_aes_mct[
@@ -91,9 +97,11 @@ def check_aes_mct[
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+        checked_at_least_once = True
         key = to_inline_array[KeySize](v.key)
         block = v.pt.copy() if v.is_encrypt else v.ct.copy()
         expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
@@ -109,6 +117,7 @@ def check_aes_mct[
             reflect[C]().name(), v.file_name, v.count
         )
         assert_equal(block, expected, msg=msg)
+    assert checked_at_least_once
 
 
 def check_aes_cbc_mct[
@@ -121,9 +130,11 @@ def check_aes_cbc_mct[
 ](vectors: PythonObject) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+        checked_at_least_once = True
         msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -151,6 +162,7 @@ def check_aes_cbc_mct[
                 block = next_block^
                 next_block = tmp^
             assert_equal(next_block, v.pt, msg=msg)
+    assert checked_at_least_once
 
 
 def check_aes_ctr_mct[
@@ -166,10 +178,11 @@ def check_aes_ctr_mct[
     # 1000 blocks (counter increments by 1 per block, matching ICB_j = ICB_0+j).
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
-
+        checked_at_least_once = True
         msg = "[CtrMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -185,6 +198,7 @@ def check_aes_ctr_mct[
             else:
                 ctr.decrypt(block[:])
         assert_equal(block, expected, msg=msg)
+    assert checked_at_least_once
 
 
 def check_aes_ctr_aft[
@@ -195,9 +209,11 @@ def check_aes_ctr_aft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+        checked_at_least_once = True
         msg = "[CtrMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -213,9 +229,12 @@ def check_aes_ctr_aft[
             ctr = CtrMode[C](cipher_init(key), iv)
             ctr.decrypt(ct[:])
             assert_equal(ct, v.pt, msg=msg)
+    assert checked_at_least_once
 
 
 def check_aes_gcm_aft[
+    NONCE_SIZE: Int,
+    TAG_SIZE: Int,
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Movable
@@ -224,9 +243,40 @@ def check_aes_gcm_aft[
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
     for v in parse_acvp_aes(vectors):
-        msg = "[GcmMode[{}]], file_name={} count={}".format(
-            reflect[C]().name(), v.file_name, v.count
+        # This instantiation only handles vectors matching its sizes; the GCM
+        # set mixes several (key, nonce, tag) byte-length combinations.
+        if (
+            len(v.key) != KeySize
+            or len(v.iv) != NONCE_SIZE
+            or len(v.tag) != TAG_SIZE
+        ):
+            continue
+        msg = "[GcmMode[{}], nonce={}, tag={}], file_name={} count={}".format(
+            reflect[C]().name(), NONCE_SIZE, TAG_SIZE, v.file_name, v.count
         )
+        key = to_inline_array[KeySize](v.key)
+        nonce = to_inline_array[NONCE_SIZE](v.iv)
+        tag = to_inline_array[TAG_SIZE](v.tag)
+        if v.is_encrypt:
+            data = v.pt.copy()
+            gcm = GcmMode[C, NONCE_SIZE, TAG_SIZE](cipher_init(key), nonce)
+            actual_tag = gcm.encrypt(v.aad[:], data[:])
+            assert_equal(data, v.ct, msg=msg)
+            assert_equal(actual_tag, tag, msg=msg)
+        else:
+            data = v.ct.copy()
+            gcm = GcmMode[C, NONCE_SIZE, TAG_SIZE](cipher_init(key), nonce)
+            if v.test_passed:
+                gcm.decrypt(v.aad[:], data[:], tag)
+                assert_equal(data, v.pt, msg=msg)
+            else:
+                # Tampered tag: authentication must fail, so decrypt must raise.
+                raised = False
+                try:
+                    gcm.decrypt(v.aad[:], data[:], tag)
+                except:
+                    raised = True
+                assert_equal(raised, True, msg=msg)
 
 
 def run_checks[
@@ -334,7 +384,10 @@ def test_aes_gcm_aft() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-1.0", "AFT"
     )
-    run_checks[check_aes_gcm_aft](vectors)
+    # The ACVP-AES-GCM-1.0 set uses two (nonce, tag) byte-size combinations.
+    # `_` unbinds the remaining params (C, KeySize, cipher_init) for run_checks.
+    run_checks[check_aes_gcm_aft[12, 16, _, _, _]](vectors)
+    run_checks[check_aes_gcm_aft[15, 4, _, _, _]](vectors)
 
 
 def main() raises:
