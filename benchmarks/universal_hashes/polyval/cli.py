@@ -18,3 +18,9 @@ def cpu() -> None:
 def aarch64() -> None:
     """Benchmark POLYVAL using the Aarch64 backend."""
     _bench("aarch64")
+
+
+@app.command()
+def x86() -> None:
+    """Benchmark POLYVAL using the x86 PCLMULQDQ backend."""
+    _bench("x86")
