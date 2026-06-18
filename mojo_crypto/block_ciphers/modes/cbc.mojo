@@ -5,14 +5,17 @@ from mojo_crypto.block_ciphers.traits import (
 from mojo_crypto.block_ciphers.errors import BlockSizeError
 
 
-# https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
-# Section 6.2
 struct CbcMode[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Movable
     & ImplicitlyDestructible
 ](BlockCipherDecryptable, BlockCipherEncryptable, ImplicitlyDestructible):
+    """
+    https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
+    Section 6.2
+    """
+
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
 
     var _cipher: Self.Cipher
