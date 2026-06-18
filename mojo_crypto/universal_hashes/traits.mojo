@@ -32,7 +32,7 @@ trait UniversalHashable:
             )
             self.update_block(block)
 
-    def update_padded[o: Origin](mut self, data: Span[UInt8, o]):
+    def update_padded[o: Origin](mut self, data: Span[UInt8, o]) raises:
         """
         Absorb input of any length, zero-padding the final partial block if needed.
 
