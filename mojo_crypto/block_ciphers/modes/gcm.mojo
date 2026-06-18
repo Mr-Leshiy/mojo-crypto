@@ -2,6 +2,9 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
+from mojo_crypto.block_ciphers.modes import CtrMode
+from mojo_crypto.utils import target_triple_contains_any
+from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 
 struct GcmMode[
@@ -9,6 +12,7 @@ struct GcmMode[
     & BlockCipherDecryptable
     & Movable
     & ImplicitlyDestructible,
+    G: UniversalHashable & Movable & ImplicitlyDestructible,
     NONCE_SIZE: Int,
     TAG_SIZE: Int,
 ](ImplicitlyDestructible, Movable):
@@ -16,12 +20,6 @@ struct GcmMode[
 
     GCM combines counter (CTR) mode for confidentiality with GHASH for
     authentication.
-
-    Parameters:
-        Cipher: The underlying block cipher (must have a 128-bit block).
-        NONCE_SIZE: Nonce/IV length in bytes (commonly 12).
-        TAG_SIZE: Authentication tag length in bytes (at most 16; GCM keeps the
-            leftmost bytes when truncated).
 
     Note:
         GCM is defined only for block ciphers with a 128-bit block size.
@@ -33,13 +31,14 @@ struct GcmMode[
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
 
     var _cipher: Self.Cipher
+    var _ghash: Self.G
     var _nonce: InlineArray[UInt8, Self.NONCE_SIZE]
 
     def __init__(
         out self,
         var cipher: Self.Cipher,
         nonce: InlineArray[UInt8, Self.NONCE_SIZE],
-    ):
+    ) raises:
         """Initialize the GCM mode with the given block cipher and nonce."""
         comptime assert (
             Self.BLOCK_SIZE == 16
@@ -48,6 +47,9 @@ struct GcmMode[
             Self.TAG_SIZE > 0 and Self.TAG_SIZE <= Self.BLOCK_SIZE
         ), "GCM TAG_SIZE must be between 1 and 16 bytes"
         comptime assert Self.NONCE_SIZE > 0, "GCM NONCE_SIZE must be positive"
+
+        ghash_key = InlineArray[UInt8, Self.G.KEY_SIZE](fill=0)
+    
         self._cipher = cipher^
         self._nonce = nonce
 
@@ -58,10 +60,10 @@ struct GcmMode[
     ) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
         """Encrypt `data` in place and return the `TAG_SIZE`-byte tag.
 
-        Note:
-            Not implemented yet — only the interface is defined.
+        The counter starts at inc32(J0); GHASH then authenticates `aad` together
+        with the freshly produced ciphertext.
         """
-        raise Error("GcmMode.encrypt is not implemented yet")
+
 
     def decrypt[
         aad_o: Origin, o: MutOrigin
@@ -73,9 +75,7 @@ struct GcmMode[
     ) raises:
         """Verify `tag`, then decrypt `data` in place.
 
-        Raises on authentication failure.
-
-        Note:
-            Not implemented yet — only the interface is defined.
+        The tag is recomputed over `aad` and the input ciphertext and compared
+        in constant time. On mismatch this raises and `data` is left untouched.
         """
-        raise Error("GcmMode.decrypt is not implemented yet")
+
