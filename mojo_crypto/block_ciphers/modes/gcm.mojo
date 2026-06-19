@@ -44,13 +44,7 @@ struct GcmMode[
         nonce: InlineArray[UInt8, Self.NONCE_SIZE],
     ) raises:
         """Initialize the GCM mode with the given block cipher and nonce."""
-        comptime assert (
-            Self.BLOCK_SIZE == 16
-        ), "GCM is defined only for 128-bit (16-byte) block ciphers"
-        comptime assert (
-            Self.TAG_SIZE > 0 and Self.TAG_SIZE <= Self.BLOCK_SIZE
-        ), "GCM TAG_SIZE must be between 1 and 16 bytes"
-        comptime assert Self.NONCE_SIZE > 0, "GCM NONCE_SIZE must be positive"
+        Self._assert_valid_params()
 
         ghash_key = InlineArray[UInt8, Self.G.KEY_SIZE](fill=0)
 
@@ -59,6 +53,20 @@ struct GcmMode[
         self._ghash = Self.G(ghash_key)
         self._cipher = cipher^
         self._nonce = nonce
+
+    @staticmethod
+    def _assert_valid_params():
+        comptime assert (
+            Self.BLOCK_SIZE == 16
+        ), "GCM is defined only for 128-bit (16-byte) block ciphers"
+        comptime assert (
+            Self.TAG_SIZE > 0 and Self.TAG_SIZE <= Self.BLOCK_SIZE
+        ), "GCM TAG_SIZE must be between 1 and 16 bytes"
+        comptime assert Self.NONCE_SIZE > 0, "GCM NONCE_SIZE must be positive"
+        comptime assert (
+            Self.G.BLOCK_SIZE == Self.BLOCK_SIZE
+            and Self.G.TAG_SIZE == Self.BLOCK_SIZE
+        ), "GCM requires a GHASH whose block/tag size match the cipher block"
 
     def encrypt[
         aad_o: Origin, o: MutOrigin
@@ -107,10 +115,7 @@ struct GcmMode[
         Returns the counter positioned at inc32(J0) (ready to encrypt data) and
         the tag mask E(J0), used to mask the final GHASH output.
         """
-        comptime assert (
-            Self.G.BLOCK_SIZE == Self.BLOCK_SIZE
-            and Self.G.TAG_SIZE == Self.BLOCK_SIZE
-        ), "GCM requires a GHASH whose block/tag size match the cipher block"
+        Self._assert_valid_params()
 
         j0 = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
 
@@ -152,3 +157,58 @@ struct GcmMode[
         ctr.encrypt(tag_mask)
 
         return (ctr^, tag_mask)
+
+    def _compute_tag[
+        aad_o: Origin, data_o: Origin
+    ](
+        self,
+        mask: InlineArray[UInt8, Self.BLOCK_SIZE],
+        aad: Span[UInt8, aad_o],
+        data: Span[UInt8, data_o],
+    ) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+        """
+        Authenticate the ciphertext `data` and associated data `aad`.
+
+        GHASH absorbs `aad` and `data` (each zero-padded to a block boundary),
+        then a final block holding their bit-lengths; the result is masked with
+        `mask` (= E(J0)) and the leading TAG_SIZE bytes are returned (GCM permits
+        a truncated tag).
+        """
+        Self._assert_valid_params()
+
+        var ghash = self._ghash.copy()
+        ghash.update_padded(aad)
+        ghash.update_padded(data)
+
+        # Final block: [len(aad)]_64 || [len(data)]_64, both big-endian bit
+        # counts. byte_swap converts the native little-endian u64 to big-endian
+        # before the store; alignment=1 because the InlineArray[UInt8] base may
+        # be unaligned.
+        var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
+        var aad_bits = UInt64(len(aad)) * 8
+        var data_bits = UInt64(len(data)) * 8
+        length_block.unsafe_ptr().bitcast[UInt64]().store[alignment=1](
+            byte_swap(aad_bits)
+        )
+        (length_block.unsafe_ptr() + 8).bitcast[UInt64]().store[alignment=1](
+            byte_swap(data_bits)
+        )
+        ghash.update_block(length_block)
+
+        var full_tag = rebind[InlineArray[UInt8, Self.BLOCK_SIZE]](
+            ghash^.finalize()
+        )
+        # full_tag ^= mask, one SIMD lane per byte. alignment=1 because the
+        # InlineArray[UInt8] bases are not guaranteed to be 16-byte aligned.
+        var t = full_tag.unsafe_ptr().load[width=Self.BLOCK_SIZE, alignment=1]()
+        var m = mask.unsafe_ptr().load[width=Self.BLOCK_SIZE, alignment=1]()
+        full_tag.unsafe_ptr().store[alignment=1](t ^ m)
+
+        # GCM permits a truncated tag: return the leading TAG_SIZE bytes.
+        var tag = InlineArray[UInt8, Self.TAG_SIZE](uninitialized=True)
+        memcpy(
+            dest=tag.unsafe_ptr(),
+            src=full_tag.unsafe_ptr(),
+            count=Self.TAG_SIZE,
+        )
+        return tag^
