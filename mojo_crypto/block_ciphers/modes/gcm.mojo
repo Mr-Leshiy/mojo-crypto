@@ -73,13 +73,17 @@ struct GcmMode[
     ](
         mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
     ) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
-        """Encrypt `data` in place and return the `TAG_SIZE`-byte tag.
+        """
+        Encrypt `data` in place and return the `TAG_SIZE`-byte tag.
 
         The counter starts at inc32(J0); GHASH then authenticates `aad` together
         with the freshly produced ciphertext.
         """
-        _, _ = self._init_ctr()
-        return InlineArray[UInt8, Self.TAG_SIZE](fill=0)
+        var keystream = self._init_ctr()
+
+        keystream[0].encrypt(data)
+
+        return self._compute_tag(keystream[1], aad, data)
 
     def decrypt[
         aad_o: Origin, o: MutOrigin
@@ -89,7 +93,8 @@ struct GcmMode[
         data: Span[UInt8, o],
         tag: InlineArray[UInt8, Self.TAG_SIZE],
     ) raises:
-        """Verify `tag`, then decrypt `data` in place.
+        """
+        Verify `tag`, then decrypt `data` in place.
 
         The tag is recomputed over `aad` and the input ciphertext and compared
         in constant time. On mismatch this raises and `data` is left untouched.
@@ -115,6 +120,7 @@ struct GcmMode[
         Returns the counter positioned at inc32(J0) (ready to encrypt data) and
         the tag mask E(J0), used to mask the final GHASH output.
         """
+
         Self._assert_valid_params()
 
         j0 = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
@@ -138,7 +144,6 @@ struct GcmMode[
 
             # Final block: 64 zero bits followed by the IV bit-length (big-endian).
             var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
-            comptime nonce_bits: UInt64 = UInt64(Self.NONCE_SIZE) * 8
             # Write nonce_bits as 8 big-endian bytes into the last 8 bytes of the
             # block: byte_swap turns the native little-endian u64 into big-endian,
             # then store it as a u64 over those bytes. alignment=1 because the
@@ -174,6 +179,7 @@ struct GcmMode[
         `mask` (= E(J0)) and the leading TAG_SIZE bytes are returned (GCM permits
         a truncated tag).
         """
+
         Self._assert_valid_params()
 
         var ghash = self._ghash.copy()
