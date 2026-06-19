@@ -85,7 +85,7 @@ struct GcmSiv[
         ), "GCM-SIV requires a full 16-byte tag (no truncation)"
 
     def encrypt[
-        TAG_SIZE: Int = Self.TAG_SIZE, aad_o: Origin, o: MutOrigin
+        TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
     ](
         mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
     ) raises -> InlineArray[UInt8, TAG_SIZE]:
@@ -101,7 +101,7 @@ struct GcmSiv[
         raise Error("GcmSiv.encrypt: not implemented")
 
     def decrypt[
-        TAG_SIZE: Int = Self.TAG_SIZE, aad_o: Origin, o: MutOrigin
+        TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
     ](
         mut self,
         aad: Span[UInt8, aad_o],

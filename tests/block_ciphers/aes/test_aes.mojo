@@ -253,7 +253,7 @@ def check_aes_gcm_siv_aft[
 ](vectors: PythonObject) raises:
     # GCM-SIV (RFC 8452) fixes the nonce at 96 bits and the tag at 128 bits.
     comptime NONCE_SIZE = 12
-    comptime TAG_SIZE = 16
+    comptime TAG_SIZE = GcmSiv.TAG_SIZE
 
     for v in parse_acvp_aes(vectors):
         # GCM-SIV only defines 128- and 256-bit keys; vectors that don't match
@@ -287,11 +287,11 @@ def check_aes_gcm_siv_aft[
             data = cipher_body.copy()
             gcm_siv = GcmSiv[C, PolyvalCpu](cipher_init(key), nonce)
             if v.test_passed:
-                gcm_siv.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
+                gcm_siv.decrypt(v.aad[:], data[:], tag)
                 assert_equal(data, v.pt, msg=msg)
             else:
                 with assert_raises():
-                    gcm_siv.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
+                    gcm_siv.decrypt(v.aad[:], data[:], tag)
 
 
 def run_checks[
