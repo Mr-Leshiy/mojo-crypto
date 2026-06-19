@@ -99,7 +99,23 @@ struct GcmMode[
         The tag is recomputed over `aad` and the input ciphertext and compared
         in constant time. On mismatch this raises and `data` is left untouched.
         """
-        pass
+        var keystream = self._init_ctr()
+
+        # Authenticate the input ciphertext *before* decrypting so `data` is left
+        # untouched if verification fails.
+        var expected_tag = self._compute_tag(keystream[1], aad, data)
+
+        # Constant-time comparison: XOR all bytes at once and OR-reduce, so the
+        # running time does not depend on where the first mismatch occurs.
+        # alignment=1 because the InlineArray[UInt8] bases may be unaligned.
+        var e = expected_tag.unsafe_ptr().load[
+            width=Self.TAG_SIZE, alignment=1
+        ]()
+        var t = tag.unsafe_ptr().load[width=Self.TAG_SIZE, alignment=1]()
+        if (e ^ t).reduce_or() != 0:
+            raise Error("GCM authentication failed")
+
+        keystream[0].decrypt(data)
 
     def _init_ctr(
         self,
