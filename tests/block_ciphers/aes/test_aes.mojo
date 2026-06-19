@@ -1,4 +1,4 @@
-from std.testing import assert_equal, assert_true, assert_raises, TestSuite
+from std.testing import assert_equal, assert_raises, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 from std.sys import has_accelerator
@@ -240,6 +240,7 @@ def check_aes_gcm_aft[
             else:
                 with assert_raises():
                     gcm.decrypt(v.aad[:], data[:], tag)
+
 
 def run_checks[
     check: def[
