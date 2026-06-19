@@ -28,6 +28,7 @@ from tests.block_ciphers.aes.utils import (
 def check_aes_eft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
+    & Copyable
     & Movable
     & ImplicitlyDestructible,
     KeySize: Int,
@@ -60,6 +61,7 @@ def check_aes_eft[
 def check_aes_cbc_eft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
+    & Copyable
     & Movable
     & ImplicitlyDestructible,
     KeySize: Int,
@@ -95,6 +97,7 @@ def check_aes_cbc_eft[
 def check_aes_mct[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
+    & Copyable
     & Movable
     & ImplicitlyDestructible,
     KeySize: Int,
@@ -133,6 +136,7 @@ def check_aes_mct[
 def check_aes_cbc_mct[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
+    & Copyable
     & Movable
     & ImplicitlyDestructible,
     KeySize: Int,
@@ -181,6 +185,7 @@ def check_aes_cbc_mct[
 def check_aes_ctr_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
+    & Copyable
     & Movable
     & ImplicitlyDestructible,
     KeySize: Int,
@@ -219,6 +224,7 @@ def check_aes_gcm_aft[
     TAG_SIZE: Int,
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
+    & Copyable
     & Movable
     & ImplicitlyDestructible,
     KeySize: Int,
@@ -270,6 +276,7 @@ def run_checks[
     check: def[
         C: BlockCipherEncryptable
         & BlockCipherDecryptable
+        & Copyable
         & Movable
         & ImplicitlyDestructible,
         KeySize: Int,
@@ -364,6 +371,7 @@ def test_aes_ctr_aft() raises:
     )
     run_checks[check_aes_ctr_aft](vectors)
 
+
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-1.0
 # AES-GCM only defines AFT groups (no MCT).
 def test_aes_gcm_aft() raises:
@@ -374,6 +382,7 @@ def test_aes_gcm_aft() raises:
     # `_` unbinds the remaining params (C, KeySize, cipher_init) for run_checks.
     run_checks[check_aes_gcm_aft[12, 16, _, _, _]](vectors)
     # run_checks[check_aes_gcm_aft[15, 4, _, _, _]](vectors)
+
 
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

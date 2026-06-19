@@ -8,9 +8,16 @@ from mojo_crypto.block_ciphers.errors import BlockSizeError
 struct CbcMode[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
+    & Copyable
     & Movable
     & ImplicitlyDestructible
-](BlockCipherDecryptable, BlockCipherEncryptable, ImplicitlyDestructible):
+](
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+    Copyable,
+    ImplicitlyDestructible,
+    Movable,
+):
     """
     https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
     Section 6.2

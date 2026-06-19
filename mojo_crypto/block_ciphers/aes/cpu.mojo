@@ -10,6 +10,7 @@ from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
 struct AesCpu[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
+    Copyable,
     ImplicitlyDestructible,
     Movable,
 ):
