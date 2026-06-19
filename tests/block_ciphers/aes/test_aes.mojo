@@ -6,6 +6,7 @@ from std.gpu.host import DeviceContext
 
 from mojo_crypto.utils import target_triple_contains_any, to_inline_array
 from mojo_crypto.universal_hashes.ghash import GHashCpu
+from mojo_crypto.universal_hashes.polyval import PolyvalCpu
 from mojo_crypto.block_ciphers.aes import (
     AesCpu,
     AesAarch64,
@@ -19,6 +20,7 @@ from mojo_crypto.block_ciphers.traits import (
 from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
 from mojo_crypto.aead import AuthenticationError
 from mojo_crypto.aead.gcm import Gcm
+from mojo_crypto.aead.gcm_siv import GcmSiv
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -240,6 +242,58 @@ def check_aes_gcm_aft[
                     gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
 
 
+def check_aes_gcm_siv_aft[
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Copyable
+    & Movable
+    & ImplicitlyDestructible,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+](vectors: PythonObject) raises:
+    # GCM-SIV (RFC 8452) fixes the nonce at 96 bits and the tag at 128 bits.
+    comptime NONCE_SIZE = 12
+    comptime TAG_SIZE = 16
+
+    for v in parse_acvp_aes(vectors):
+        # GCM-SIV only defines 128- and 256-bit keys; vectors that don't match
+        # this instantiation's sizes are handled by another instantiation.
+        if (
+            len(v.key) != KeySize
+            or len(v.iv) != NONCE_SIZE
+            or len(v.ct) < TAG_SIZE
+        ):
+            continue
+
+        # GCM-SIV ACVP vectors have no separate tag field: the ciphertext is
+        # ciphertext||tag (RFC 8452), so split the trailing TAG_SIZE bytes of
+        # `v.ct` back out into the ciphertext body and the tag.
+        cipher_len = len(v.ct) - TAG_SIZE
+        cipher_body = List[UInt8](v.ct[:cipher_len])
+
+        msg = "[GcmSiv[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
+        key = to_inline_array[KeySize](v.key)
+        nonce = to_inline_array[NONCE_SIZE](v.iv)
+        tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
+        if v.is_encrypt:
+            data = v.pt.copy()
+            gcm_siv = GcmSiv[C, PolyvalCpu](cipher_init(key), nonce)
+            actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
+            assert_equal(data, cipher_body, msg=msg)
+            assert_equal(actual_tag, tag, msg=msg)
+        else:
+            data = cipher_body.copy()
+            gcm_siv = GcmSiv[C, PolyvalCpu](cipher_init(key), nonce)
+            if v.test_passed:
+                gcm_siv.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
+                assert_equal(data, v.pt, msg=msg)
+            else:
+                with assert_raises():
+                    gcm_siv.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
+
+
 def run_checks[
     check: def[
         C: BlockCipherEncryptable
@@ -350,6 +404,17 @@ def test_aes_gcm_aft() raises:
     # `_` unbinds the remaining params (C, KeySize, cipher_init) for run_checks.
     run_checks[check_aes_gcm_aft[12, 16, _, _, _]](vectors)
     run_checks[check_aes_gcm_aft[15, 4, _, _, _]](vectors)
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-SIV-1.0
+# AES-GCM-SIV only defines AFT groups (no MCT). The 16-byte tag is appended to
+# the ciphertext (ct = ciphertext||tag); check_aes_gcm_siv_aft splits it back
+# off, since these vectors have no separate tag field.
+def test_aes_gcm_siv_aft() raises:
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-SIV-1.0", "AFT"
+    )
+    run_checks[check_aes_gcm_siv_aft](vectors)
 
 
 def main() raises:

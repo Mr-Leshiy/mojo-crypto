@@ -71,7 +71,10 @@ struct GcmSiv[
         comptime assert (
             Self.G.BLOCK_SIZE == Self.BLOCK_SIZE
             and Self.G.TAG_SIZE == Self.BLOCK_SIZE
-        ), "GCM-SIV requires a POLYVAL whose block/tag size match the cipher block"
+        ), (
+            "GCM-SIV requires a POLYVAL whose block/tag size match the cipher"
+            " block"
+        )
 
     @staticmethod
     def _assert_tag_size[TAG_SIZE: Int]():
