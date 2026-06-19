@@ -364,6 +364,16 @@ def test_aes_ctr_aft() raises:
     )
     run_checks[check_aes_ctr_aft](vectors)
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-1.0
+# AES-GCM only defines AFT groups (no MCT).
+def test_aes_gcm_aft() raises:
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-1.0", "AFT"
+    )
+    # The ACVP-AES-GCM-1.0 set uses two (nonce, tag) byte-size combinations.
+    # `_` unbinds the remaining params (C, KeySize, cipher_init) for run_checks.
+    run_checks[check_aes_gcm_aft[12, 16, _, _, _]](vectors)
+    # run_checks[check_aes_gcm_aft[15, 4, _, _, _]](vectors)
 
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
