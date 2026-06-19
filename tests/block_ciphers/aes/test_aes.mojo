@@ -1,4 +1,4 @@
-from std.testing import assert_equal, TestSuite
+from std.testing import assert_equal, assert_true, assert_raises, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 from std.sys import has_accelerator
@@ -53,7 +53,7 @@ def check_aes_eft[
         cipher.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
-    assert_equal(checked_at_least_once, True)
+    assert_true(checked_at_least_once)
 
 
 def check_aes_cbc_eft[
@@ -88,7 +88,7 @@ def check_aes_cbc_eft[
         cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
-    assert_equal(checked_at_least_once, True)
+    assert_true(checked_at_least_once)
 
 
 def check_aes_mct[
@@ -126,7 +126,7 @@ def check_aes_mct[
         )
         assert_equal(block, expected, msg=msg)
 
-    assert_equal(checked_at_least_once, True)
+    assert_true(checked_at_least_once)
 
 
 def check_aes_cbc_mct[
@@ -174,7 +174,7 @@ def check_aes_cbc_mct[
                 next_block = tmp^
             assert_equal(next_block, v.pt, msg=msg)
 
-    assert_equal(checked_at_least_once, True)
+    assert_true(checked_at_least_once)
 
 
 def check_aes_ctr_aft[
@@ -210,7 +210,56 @@ def check_aes_ctr_aft[
             ctr.decrypt(ct[:])
             assert_equal(ct, v.pt, msg=msg)
 
-    assert_equal(checked_at_least_once, True)
+    assert_true(checked_at_least_once)
+
+def check_aes_gcm_aft[
+    NONCE_SIZE: Int,
+    TAG_SIZE: Int,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Movable
+    & ImplicitlyDestructible,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+](vectors: PythonObject) raises:
+    checked_at_least_once = False
+    for v in parse_acvp_aes(vectors):
+        # This instantiation only handles vectors matching its sizes; the GCM
+        # set mixes several (key, nonce, tag) byte-length combinations.
+        if (
+            len(v.key) != KeySize
+            or len(v.iv) != NONCE_SIZE
+            or len(v.tag) != TAG_SIZE
+        ):
+            continue
+
+        checked_at_least_once = True
+
+        msg = "[GcmMode[{}], nonce={}, tag={}], file_name={} count={}".format(
+            reflect[C].name(), NONCE_SIZE, TAG_SIZE, v.file_name, v.count
+        )
+        key = to_inline_array[KeySize](v.key)
+        nonce = to_inline_array[NONCE_SIZE](v.iv)
+        tag = to_inline_array[TAG_SIZE](v.tag)
+        if v.is_encrypt:
+            data = v.pt.copy()
+            gcm = GcmMode[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
+                cipher_init(key), nonce
+            )
+            actual_tag = gcm.encrypt(v.aad[:], data[:])
+            assert_equal(data, v.ct, msg=msg)
+            assert_equal(actual_tag, tag, msg=msg)
+        else:
+            data = v.ct.copy()
+            gcm = GcmMode[C, GHashCpu, NONCE_SIZE, TAG_SIZE](cipher_init(key), nonce)
+            if v.test_passed:
+                gcm.decrypt(v.aad[:], data[:], tag)
+                assert_equal(data, v.pt, msg=msg)
+            else:
+                with assert_raises():
+                    gcm.decrypt(v.aad[:], data[:], tag)
+                
+    assert_true(checked_at_least_once)
 
 
 def run_checks[
