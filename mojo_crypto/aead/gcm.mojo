@@ -1,7 +1,7 @@
 from std.bit import byte_swap
 from std.memory import memcpy
 
-from mojo_crypto.aead.traits import Aead
+from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
@@ -19,8 +19,13 @@ struct Gcm[
     & ImplicitlyDestructible,
     G: UniversalHashable & Copyable & Movable & ImplicitlyDestructible,
     NONCE_SIZE: Int,
-    TAG_SIZE: Int,
-](Aead, Copyable, ImplicitlyDestructible, Movable):
+](
+    AeadDecryptable,
+    AeadEncryptable,
+    Copyable,
+    ImplicitlyDestructible,
+    Movable,
+):
     """
     Galois/Counter Mode (GCM) authenticated encryption.
 
@@ -57,65 +62,50 @@ struct Gcm[
         self._nonce = nonce
 
     @staticmethod
-    def _assert_tag_size[tag_size: Int]():
-        """
-        Pin the generic `Aead` tag length to this instance's `TAG_SIZE`.
-
-        `Aead.encrypt`/`decrypt` are generic over `tag_size`, but GCM produces a
-        tag of exactly `TAG_SIZE` bytes, so any other value is rejected at
-        compile time.
-        """
-        comptime assert (
-            tag_size == Self.TAG_SIZE
-        ), "Gcm tag_size must equal the instance's TAG_SIZE"
-
-    @staticmethod
     def _assert_valid_params():
         comptime assert (
             Self.BLOCK_SIZE == 16
         ), "GCM is defined only for 128-bit (16-byte) block ciphers"
-        comptime assert (
-            Self.TAG_SIZE > 0 and Self.TAG_SIZE <= Self.BLOCK_SIZE
-        ), "GCM TAG_SIZE must be between 1 and 16 bytes"
         comptime assert Self.NONCE_SIZE > 0, "GCM NONCE_SIZE must be positive"
         comptime assert (
             Self.G.BLOCK_SIZE == Self.BLOCK_SIZE
             and Self.G.TAG_SIZE == Self.BLOCK_SIZE
         ), "GCM requires a GHASH whose block/tag size match the cipher block"
 
+    @staticmethod
+    def _assert_tag_size[TAG_SIZE: Int]():
+        comptime assert (
+            TAG_SIZE > 0 and TAG_SIZE <= Self.BLOCK_SIZE
+        ), "GCM TAG_SIZE must be between 1 and 16 bytes"
+
     def encrypt[
-        tag_size: Int = Self.TAG_SIZE, *, aad_o: Origin, o: MutOrigin
+        TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
     ](
         mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> InlineArray[UInt8, tag_size]:
+    ) raises -> InlineArray[UInt8, TAG_SIZE]:
         """
         Encrypt `data` in place and return the `TAG_SIZE`-byte tag.
 
         The counter starts at inc32(J0); GHASH then authenticates `aad` together
         with the freshly produced ciphertext.
-
-        `tag_size` satisfies the generic `Aead.encrypt` signature but is pinned
-        to this instance's `TAG_SIZE`; it defaults to `TAG_SIZE` so callers need
-        not spell it out.
         """
-
-        Self._assert_tag_size[tag_size]()
+        
+        Self._assert_tag_size[TAG_SIZE]()
 
         var keystream = self._init_ctr()
 
         keystream[0].encrypt(data)
 
-        return rebind[InlineArray[UInt8, tag_size]](
-            self._compute_tag(keystream[1], aad, data)
-        )
+        return self._compute_tag[TAG_SIZE](keystream[1], aad, data)
+        
 
     def decrypt[
-        tag_size: Int = Self.TAG_SIZE, *, aad_o: Origin, o: MutOrigin
+        TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
     ](
         mut self,
         aad: Span[UInt8, aad_o],
         data: Span[UInt8, o],
-        tag: InlineArray[UInt8, tag_size],
+        tag: InlineArray[UInt8, TAG_SIZE],
     ) raises:
         """
         Verify `tag`, then decrypt `data` in place.
@@ -127,13 +117,13 @@ struct Gcm[
         to this instance's `TAG_SIZE`; it is inferred from `tag`.
         """
 
-        Self._assert_tag_size[tag_size]()
+        Self._assert_tag_size[TAG_SIZE]()
 
         var keystream = self._init_ctr()
 
         # Authenticate the input ciphertext *before* decrypting so `data` is left
         # untouched if verification fails.
-        var expected_tag = self._compute_tag(keystream[1], aad, data)
+        var expected_tag = self._compute_tag[TAG_SIZE](keystream[1], aad, data)
 
         # Constant-time comparison: XOR all bytes at once and OR-reduce, so the
         # running time does not depend on where the first mismatch occurs.
@@ -148,9 +138,9 @@ struct Gcm[
         #
         # alignment=1 because the InlineArray[UInt8] bases may be unaligned.
         var e = expected_tag.unsafe_ptr().load[
-            width=Self.TAG_SIZE, alignment=1
+            width=TAG_SIZE, alignment=1
         ]()
-        var t = tag.unsafe_ptr().load[width=Self.TAG_SIZE, alignment=1]()
+        var t = tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
         if (e ^ t).reduce_or() != 0:
             raise AuthenticationError()
 
@@ -219,13 +209,14 @@ struct Gcm[
         return (ctr^, tag_mask)
 
     def _compute_tag[
+        TAG_SIZE: Int,
         aad_o: Origin, data_o: Origin
     ](
         self,
         mask: InlineArray[UInt8, Self.BLOCK_SIZE],
         aad: Span[UInt8, aad_o],
         data: Span[UInt8, data_o],
-    ) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+    ) raises -> InlineArray[UInt8, TAG_SIZE]:
         """
         Authenticate the ciphertext `data` and associated data `aad`.
 
@@ -266,10 +257,10 @@ struct Gcm[
         full_tag.unsafe_ptr().store[alignment=1](t ^ m)
 
         # GCM permits a truncated tag: return the leading TAG_SIZE bytes.
-        var tag = InlineArray[UInt8, Self.TAG_SIZE](uninitialized=True)
+        var tag = InlineArray[UInt8, TAG_SIZE](uninitialized=True)
         memcpy(
             dest=tag.unsafe_ptr(),
             src=full_tag.unsafe_ptr(),
-            count=Self.TAG_SIZE,
+            count=TAG_SIZE,
         )
         return tag^

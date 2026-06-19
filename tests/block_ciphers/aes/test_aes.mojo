@@ -225,23 +225,23 @@ def check_aes_gcm_aft[
         tag = to_inline_array[TAG_SIZE](v.tag)
         if v.is_encrypt:
             data = v.pt.copy()
-            gcm = Gcm[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
+            gcm = Gcm[C, GHashCpu, NONCE_SIZE](
                 cipher_init(key), nonce
             )
-            actual_tag = gcm.encrypt(v.aad[:], data[:])
+            actual_tag = gcm.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, v.ct, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
             data = v.ct.copy()
-            gcm = Gcm[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
+            gcm = Gcm[C, GHashCpu, NONCE_SIZE](
                 cipher_init(key), nonce
             )
             if v.test_passed:
-                gcm.decrypt(v.aad[:], data[:], tag)
+                gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
                 assert_equal(data, v.pt, msg=msg)
             else:
                 with assert_raises():
-                    gcm.decrypt(v.aad[:], data[:], tag)
+                    gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
 
 
 def run_checks[

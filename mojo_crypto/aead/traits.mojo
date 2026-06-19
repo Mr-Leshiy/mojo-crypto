@@ -1,12 +1,9 @@
-trait Aead:
-    """Authenticated Encryption with Associated Data.
+trait AeadEncryptable:
+    """
+    Encryption of an AEAD scheme.
 
-    An AEAD scheme provides confidentiality for `data` and integrity for both
-    `data` and the associated data `aad`, producing a `tag_size`-byte tag.
-
-    The tag length is a parameter of `encrypt`/`decrypt` rather than an
-    associated constant of the trait: a concrete scheme is free to fix it to a
-    single value (see `Gcm`, which pins `tag_size` to its own `TAG_SIZE`).
+    Provides confidentiality for `data` and integrity for both `data` and the
+    associated data `aad`, producing a `tag_size`-byte tag.
     """
 
     def encrypt[
@@ -16,6 +13,15 @@ trait Aead:
     ) raises -> InlineArray[UInt8, tag_size]:
         """Encrypt `data` in place and return the `tag_size`-byte tag."""
         ...
+
+
+trait AeadDecryptable:
+    """
+    Decryption of an AEAD scheme.
+
+    Verifies a `tag_size`-byte tag over `aad` and the ciphertext `data`, then
+    decrypts `data` in place.
+    """
 
     def decrypt[
         tag_size: Int, aad_o: Origin, o: MutOrigin
