@@ -5,7 +5,6 @@ from std.sys import has_accelerator
 from std.gpu.host import DeviceContext
 
 from mojo_crypto.utils import target_triple_contains_any, to_inline_array
-from mojo_crypto.universal_hashes.ghash import GHashCpu
 from mojo_crypto.block_ciphers.aes import (
     AesCpu,
     AesAarch64,
@@ -16,7 +15,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
-from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode, GcmMode
+from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -33,26 +32,23 @@ def check_aes_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
-    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
-        checked_at_least_once = True
-
-        cipher = cipher_init(to_inline_array[KeySize](v.key))
-        msg = "[{}], file_name={}, count={}".format(
-            reflect[C].name(), v.file_name, v.count
+        var msg = "[{}], file_name={}, count={}".format(
+            reflect[C]().name(), v.file_name, v.count
         )
 
-        pt = v.pt.copy()
+        var cipher = cipher_init(to_inline_array[KeySize](v.key))
+
+        var pt = v.pt.copy()
         cipher.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
-        ct = v.ct.copy()
+        var ct = v.ct.copy()
         cipher.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
-    assert checked_at_least_once
 
 
 def check_aes_cbc_eft[
@@ -63,30 +59,26 @@ def check_aes_cbc_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
-    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
-        checked_at_least_once = True
-
-        msg = "[CbcMode[{}]], file_name={} count={}".format(
-            reflect[C].name(), v.file_name, v.count
+        var msg = "[CbcMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
         )
+        
+        var key = to_inline_array[KeySize](v.key)
+        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+        var pt = v.pt.copy()
 
-        key = to_inline_array[KeySize](v.key)
-        iv = to_inline_array[C.BLOCK_SIZE](v.iv)
-
-        pt = v.pt.copy()
-        cbc_enc = CbcMode[C](cipher_init(key), iv)
+        var cbc_enc = CbcMode[C](cipher_init(key), iv)
         cbc_enc.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
-        ct = v.ct.copy()
-        cbc_dec = CbcMode[C](cipher_init(key), iv)
+        var ct = v.ct.copy()
+        var cbc_dec = CbcMode[C](cipher_init(key), iv)
         cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
-    assert checked_at_least_once
 
 
 def check_aes_mct[
@@ -101,29 +93,25 @@ def check_aes_mct[
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
-        checked_at_least_once = True
+        var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
+        var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
+        var key = to_inline_array[KeySize](v.key)
 
-        key = to_inline_array[KeySize](v.key)
-        block = v.pt.copy() if v.is_encrypt else v.ct.copy()
-        expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
-
-        cipher = cipher_init(key)
+        var cipher = cipher_init(key)
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
                 cipher.encrypt(block[:])
             else:
                 cipher.decrypt(block[:])
 
-        msg = "[{}], file_name={} count={}".format(
-            reflect[C].name(), v.file_name, v.count
+        var msg = "[{}], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
         )
         assert_equal(block, expected, msg=msg)
-    assert checked_at_least_once
 
 
 def check_aes_cbc_mct[
@@ -136,41 +124,37 @@ def check_aes_cbc_mct[
 ](vectors: PythonObject) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
-        checked_at_least_once = True
-
-        msg = "[CbcMode[{}]], file_name={} count={}".format(
-            reflect[C].name(), v.file_name, v.count
+        var msg = "[CbcMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
         )
-
-        key = to_inline_array[KeySize](v.key)
-        iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+        
+        var key = to_inline_array[KeySize](v.key)
+        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
 
         if v.is_encrypt:
-            block = v.pt.copy()
-            next_block = v.iv.copy()
-            cbc = CbcMode[C](cipher_init(key), iv)
+            var block = v.pt.copy()
+            var next_block = v.iv.copy()
+            var cbc = CbcMode[C](cipher_init(key), iv)
             for _ in range(MCT_INNER_ITERATIONS):
                 cbc.encrypt(block[:])
-                tmp = block^
+                var tmp = block^
                 block = next_block^
                 next_block = tmp^
             assert_equal(next_block, v.ct, msg=msg)
         else:
-            block = v.ct.copy()
-            next_block = v.iv.copy()
-            cbc = CbcMode[C](cipher_init(key), iv)
+            var block = v.ct.copy()
+            var next_block = v.iv.copy()
+            var cbc = CbcMode[C](cipher_init(key), iv)
             for _ in range(MCT_INNER_ITERATIONS):
                 cbc.decrypt(block[:])
-                tmp = block^
+                var tmp = block^
                 block = next_block^
                 next_block = tmp^
             assert_equal(next_block, v.pt, msg=msg)
-    assert checked_at_least_once
 
 
 def check_aes_ctr_mct[
@@ -186,29 +170,26 @@ def check_aes_ctr_mct[
     # 1000 blocks (counter increments by 1 per block, matching ICB_j = ICB_0+j).
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
-        checked_at_least_once = True
-
-        msg = "[CtrMode[{}]], file_name={} count={}".format(
-            reflect[C].name(), v.file_name, v.count
+        var msg = "[CtrMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
         )
-        key = to_inline_array[KeySize](v.key)
-        iv = to_inline_array[C.BLOCK_SIZE](v.iv)
-        block = v.pt.copy() if v.is_encrypt else v.ct.copy()
-        expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
 
-        ctr = CtrMode[C](cipher_init(key), iv)
+        var key = to_inline_array[KeySize](v.key)
+        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+        var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
+        var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
+
+        var ctr = CtrMode[C](cipher_init(key), iv)
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
                 ctr.encrypt(block[:])
             else:
                 ctr.decrypt(block[:])
         assert_equal(block, expected, msg=msg)
-    assert checked_at_least_once
 
 
 def check_aes_ctr_aft[
@@ -219,29 +200,28 @@ def check_aes_ctr_aft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
-    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
-        checked_at_least_once = True
-
-        msg = "[CtrMode[{}]], file_name={} count={}".format(
-            reflect[C].name(), v.file_name, v.count
+        var msg = "[CtrMode[{}]], file_name={} count={}".format(
+            reflect[C]().name(), v.file_name, v.count
         )
-        key = to_inline_array[KeySize](v.key)
-        iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+
+        var key = to_inline_array[KeySize](v.key)
+        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+
         if v.is_encrypt:
-            pt = v.pt.copy()
-            ctr = CtrMode[C](cipher_init(key), iv)
+            var pt = v.pt.copy()
+            var ctr = CtrMode[C](cipher_init(key), iv)
             ctr.encrypt(pt[:])
             assert_equal(pt, v.ct, msg=msg)
         else:
-            ct = v.ct.copy()
-            ctr = CtrMode[C](cipher_init(key), iv)
+            var ct = v.ct.copy()
+            var ctr = CtrMode[C](cipher_init(key), iv)
             ctr.decrypt(ct[:])
             assert_equal(ct, v.pt, msg=msg)
-    assert checked_at_least_once
+
 
 def run_checks[
     check: def[
@@ -334,11 +314,18 @@ def test_aes_cbc_mct() raises:
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
-# AES-CTR only defines AFT groups (no MCT).
 def test_aes_ctr_aft() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "AFT"
     )
+    run_checks[check_aes_ctr_aft](vectors)
+
+
+def test_aes_ctr_mct() raises:
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "MCT"
+    )
+    run_checks[check_aes_ctr_mct](vectors)
 
 
 def main() raises:

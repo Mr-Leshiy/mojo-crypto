@@ -55,7 +55,7 @@ struct AesGpu[KEY_SIZE: Int](
         var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
         buf.enqueue_copy_from(data.unsafe_ptr())
 
-        self.ctx.enqueue_function[kernel](
+        self.ctx.enqueue_function[kernel, kernel](
             buf,
             self.w,
             self.sbox,
@@ -74,7 +74,7 @@ struct AesGpu[KEY_SIZE: Int](
         var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
         buf.enqueue_copy_from(data.unsafe_ptr())
 
-        self.ctx.enqueue_function[kernel](
+        self.ctx.enqueue_function[kernel, kernel](
             buf,
             self.w,
             self.sbox_inv,
