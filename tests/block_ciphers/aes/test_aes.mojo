@@ -5,7 +5,7 @@ from std.sys import has_accelerator
 from std.gpu.host import DeviceContext
 
 from mojo_crypto.utils import target_triple_contains_any, to_inline_array
-from mojo_crypto.universal_hashes import GHashCpu
+from mojo_crypto.universal_hashes.ghash import GHashCpu
 from mojo_crypto.block_ciphers.aes import (
     AesCpu,
     AesAarch64,
