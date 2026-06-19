@@ -32,9 +32,12 @@ def check_aes_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+
+        checked_at_least_once = True
 
         var msg = "[{}], file_name={}, count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -50,6 +53,8 @@ def check_aes_eft[
         cipher.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
+    assert checked_at_least_once
+
 
 def check_aes_cbc_eft[
     C: BlockCipherEncryptable
@@ -59,14 +64,17 @@ def check_aes_cbc_eft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
+        checked_at_least_once = True
+
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
-        
+
         var key = to_inline_array[KeySize](v.key)
         var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
         var pt = v.pt.copy()
@@ -79,6 +87,8 @@ def check_aes_cbc_eft[
         var cbc_dec = CbcMode[C](cipher_init(key), iv)
         cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
+
+    assert checked_at_least_once
 
 
 def check_aes_mct[
@@ -93,9 +103,12 @@ def check_aes_mct[
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+
+        checked_at_least_once = True
 
         var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
         var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
@@ -113,6 +126,8 @@ def check_aes_mct[
         )
         assert_equal(block, expected, msg=msg)
 
+    assert checked_at_least_once
+
 
 def check_aes_cbc_mct[
     C: BlockCipherEncryptable
@@ -124,14 +139,17 @@ def check_aes_cbc_mct[
 ](vectors: PythonObject) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
 
+        checked_at_least_once = True
+
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
-        
+
         var key = to_inline_array[KeySize](v.key)
         var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
 
@@ -156,6 +174,8 @@ def check_aes_cbc_mct[
                 next_block = tmp^
             assert_equal(next_block, v.pt, msg=msg)
 
+    assert checked_at_least_once
+
 
 def check_aes_ctr_mct[
     C: BlockCipherEncryptable
@@ -170,9 +190,12 @@ def check_aes_ctr_mct[
     # 1000 blocks (counter increments by 1 per block, matching ICB_j = ICB_0+j).
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+
+        checked_at_least_once = True
 
         var msg = "[CtrMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -191,6 +214,8 @@ def check_aes_ctr_mct[
                 ctr.decrypt(block[:])
         assert_equal(block, expected, msg=msg)
 
+    assert checked_at_least_once
+
 
 def check_aes_ctr_aft[
     C: BlockCipherEncryptable
@@ -200,9 +225,12 @@ def check_aes_ctr_aft[
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: PythonObject) raises:
+    checked_at_least_once = False
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+
+        checked_at_least_once = True
 
         var msg = "[CtrMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -221,6 +249,8 @@ def check_aes_ctr_aft[
             var ctr = CtrMode[C](cipher_init(key), iv)
             ctr.decrypt(ct[:])
             assert_equal(ct, v.pt, msg=msg)
+
+    assert checked_at_least_once
 
 
 def run_checks[
