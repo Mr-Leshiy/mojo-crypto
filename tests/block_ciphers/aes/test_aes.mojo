@@ -176,6 +176,7 @@ def check_aes_cbc_mct[
 
     assert_equal(checked_at_least_once, True)
 
+
 def check_aes_ctr_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
