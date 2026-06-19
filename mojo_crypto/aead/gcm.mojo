@@ -1,16 +1,17 @@
 from std.bit import byte_swap
 from std.memory import memcpy
 
+from mojo_crypto.aead.traits import Aead
+from mojo_crypto.aead.errors import AuthenticationError
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
 from mojo_crypto.block_ciphers.modes import CtrMode
-from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 
-struct GcmMode[
+struct Gcm[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
@@ -19,8 +20,9 @@ struct GcmMode[
     G: UniversalHashable & Copyable & Movable & ImplicitlyDestructible,
     NONCE_SIZE: Int,
     TAG_SIZE: Int,
-](Copyable, ImplicitlyDestructible, Movable):
-    """Galois/Counter Mode (GCM) authenticated encryption.
+](Aead, Copyable, ImplicitlyDestructible, Movable):
+    """
+    Galois/Counter Mode (GCM) authenticated encryption.
 
     GCM combines counter (CTR) mode for confidentiality with GHASH for
     authentication.
@@ -122,7 +124,7 @@ struct GcmMode[
         ]()
         var t = tag.unsafe_ptr().load[width=Self.TAG_SIZE, alignment=1]()
         if (e ^ t).reduce_or() != 0:
-            raise Error("GCM authentication failed")
+            raise AuthenticationError()
 
         keystream[0].decrypt(data)
 

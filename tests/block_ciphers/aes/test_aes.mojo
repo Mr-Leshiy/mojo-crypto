@@ -16,7 +16,9 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
-from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode, GcmMode
+from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
+from mojo_crypto.aead import AuthenticationError
+from mojo_crypto.aead.gcm import Gcm
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -215,7 +217,7 @@ def check_aes_gcm_aft[
         ):
             continue
 
-        msg = "[GcmMode[{}], nonce={}, tag={}], file_name={} count={}".format(
+        msg = "[Gcm[{}], nonce={}, tag={}], file_name={} count={}".format(
             reflect[C]().name(), NONCE_SIZE, TAG_SIZE, v.file_name, v.count
         )
         key = to_inline_array[KeySize](v.key)
@@ -223,7 +225,7 @@ def check_aes_gcm_aft[
         tag = to_inline_array[TAG_SIZE](v.tag)
         if v.is_encrypt:
             data = v.pt.copy()
-            gcm = GcmMode[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
+            gcm = Gcm[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
                 cipher_init(key), nonce
             )
             actual_tag = gcm.encrypt(v.aad[:], data[:])
@@ -231,7 +233,7 @@ def check_aes_gcm_aft[
             assert_equal(actual_tag, tag, msg=msg)
         else:
             data = v.ct.copy()
-            gcm = GcmMode[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
+            gcm = Gcm[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
                 cipher_init(key), nonce
             )
             if v.test_passed:
