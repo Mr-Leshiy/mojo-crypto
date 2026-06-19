@@ -195,7 +195,6 @@ def check_aes_ctr_mct[
         if len(v.key) != KeySize:
             continue
 
-        checked_at_least_once = True
 
         var msg = "[CtrMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
