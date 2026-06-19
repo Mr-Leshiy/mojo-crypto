@@ -37,6 +37,8 @@ def check_aes_eft[
         if len(v.key) != KeySize:
             continue
 
+        checked_at_least_once = True
+
         var msg = "[{}], file_name={}, count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -66,6 +68,8 @@ def check_aes_cbc_eft[
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+        
+        checked_at_least_once = True
 
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -103,6 +107,8 @@ def check_aes_mct[
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+        
+        checked_at_least_once = True
 
         var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
         var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
@@ -138,6 +144,8 @@ def check_aes_cbc_mct[
         if len(v.key) != KeySize:
             continue
 
+        checked_at_least_once = True
+        
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -187,6 +195,7 @@ def check_aes_ctr_mct[
         if len(v.key) != KeySize:
             continue
 
+        checked_at_least_once = True
 
         var msg = "[CtrMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
@@ -220,6 +229,8 @@ def check_aes_ctr_aft[
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
+
+        checked_at_least_once = True
 
         var msg = "[CtrMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
