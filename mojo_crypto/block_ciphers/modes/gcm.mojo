@@ -49,7 +49,10 @@ struct GcmMode[
         comptime assert Self.NONCE_SIZE > 0, "GCM NONCE_SIZE must be positive"
 
         ghash_key = InlineArray[UInt8, Self.G.KEY_SIZE](fill=0)
-    
+
+        cipher.encrypt(ghash_key)
+
+        self._ghash = Self.G(ghash_key)
         self._cipher = cipher^
         self._nonce = nonce
 
@@ -63,7 +66,7 @@ struct GcmMode[
         The counter starts at inc32(J0); GHASH then authenticates `aad` together
         with the freshly produced ciphertext.
         """
-
+        return InlineArray[UInt8, Self.TAG_SIZE](fill=0)
 
     def decrypt[
         aad_o: Origin, o: MutOrigin
@@ -78,4 +81,4 @@ struct GcmMode[
         The tag is recomputed over `aad` and the input ciphertext and compared
         in constant time. On mismatch this raises and `data` is left untouched.
         """
-
+        pass
