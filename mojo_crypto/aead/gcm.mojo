@@ -57,6 +57,19 @@ struct Gcm[
         self._nonce = nonce
 
     @staticmethod
+    def _assert_tag_size[tag_size: Int]():
+        """
+        Pin the generic `Aead` tag length to this instance's `TAG_SIZE`.
+
+        `Aead.encrypt`/`decrypt` are generic over `tag_size`, but GCM produces a
+        tag of exactly `TAG_SIZE` bytes, so any other value is rejected at
+        compile time.
+        """
+        comptime assert (
+            tag_size == Self.TAG_SIZE
+        ), "Gcm tag_size must equal the instance's TAG_SIZE"
+
+    @staticmethod
     def _assert_valid_params():
         comptime assert (
             Self.BLOCK_SIZE == 16
@@ -71,36 +84,51 @@ struct Gcm[
         ), "GCM requires a GHASH whose block/tag size match the cipher block"
 
     def encrypt[
-        aad_o: Origin, o: MutOrigin
+        tag_size: Int = Self.TAG_SIZE, *, aad_o: Origin, o: MutOrigin
     ](
         mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+    ) raises -> InlineArray[UInt8, tag_size]:
         """
         Encrypt `data` in place and return the `TAG_SIZE`-byte tag.
 
         The counter starts at inc32(J0); GHASH then authenticates `aad` together
         with the freshly produced ciphertext.
+
+        `tag_size` satisfies the generic `Aead.encrypt` signature but is pinned
+        to this instance's `TAG_SIZE`; it defaults to `TAG_SIZE` so callers need
+        not spell it out.
         """
+
+        Self._assert_tag_size[tag_size]()
+
         var keystream = self._init_ctr()
 
         keystream[0].encrypt(data)
 
-        return self._compute_tag(keystream[1], aad, data)
+        return rebind[InlineArray[UInt8, tag_size]](
+            self._compute_tag(keystream[1], aad, data)
+        )
 
     def decrypt[
-        aad_o: Origin, o: MutOrigin
+        tag_size: Int = Self.TAG_SIZE, *, aad_o: Origin, o: MutOrigin
     ](
         mut self,
         aad: Span[UInt8, aad_o],
         data: Span[UInt8, o],
-        tag: InlineArray[UInt8, Self.TAG_SIZE],
+        tag: InlineArray[UInt8, tag_size],
     ) raises:
         """
         Verify `tag`, then decrypt `data` in place.
 
         The tag is recomputed over `aad` and the input ciphertext and compared
         in constant time. On mismatch this raises and `data` is left untouched.
+
+        `tag_size` satisfies the generic `Aead.decrypt` signature but is pinned
+        to this instance's `TAG_SIZE`; it is inferred from `tag`.
         """
+
+        Self._assert_tag_size[tag_size]()
+
         var keystream = self._init_ctr()
 
         # Authenticate the input ciphertext *before* decrypting so `data` is left
