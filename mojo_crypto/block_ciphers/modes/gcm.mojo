@@ -107,6 +107,15 @@ struct GcmMode[
 
         # Constant-time comparison: XOR all bytes at once and OR-reduce, so the
         # running time does not depend on where the first mismatch occurs.
+        #
+        # A short-circuiting `!=` would leak, via timing, how many leading bytes
+        # matched. For a secret-vs-attacker-supplied tag that enables a forgery
+        # attack:
+        #   - Attacker submits a guessed tag, measures how long the reject takes.
+        #   - Longer time => more leading bytes were correct.
+        #   - Brute-force one byte at a time (256 tries each) instead of 2^128,
+        #     making tag forgery feasible.
+        #
         # alignment=1 because the InlineArray[UInt8] bases may be unaligned.
         var e = expected_tag.unsafe_ptr().load[
             width=Self.TAG_SIZE, alignment=1
