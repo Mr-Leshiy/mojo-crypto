@@ -266,6 +266,30 @@ def run_checks[
             check[AesGpu[24], 24, aes_gpu[24]](vectors)
             check[AesGpu[32], 32, aes_gpu[32]](vectors)
 
+    comptime if target_triple_contains_any(["aarch64", "arm64"]):
+
+        @parameter
+        def aes_aarch64[
+            KeySize: Int
+        ](key: InlineArray[UInt8, KeySize]) raises -> AesAarch64[KeySize]:
+            return AesAarch64[KeySize](key)
+
+        check[AesAarch64[16], 16, aes_aarch64[16]](vectors)
+        check[AesAarch64[24], 24, aes_aarch64[24]](vectors)
+        check[AesAarch64[32], 32, aes_aarch64[32]](vectors)
+
+    comptime if target_triple_contains_any(["x86_64"]):
+
+        @parameter
+        def aes_x86[
+            KeySize: Int
+        ](key: InlineArray[UInt8, KeySize]) raises -> AesX86[KeySize]:
+            return AesX86[KeySize](key)
+
+        check[AesX86[16], 16, aes_x86[16]](vectors)
+        check[AesX86[24], 24, aes_x86[24]](vectors)
+        check[AesX86[32], 32, aes_x86[32]](vectors)
+
     @parameter
     def aes_cpu[
         KeySize: Int
