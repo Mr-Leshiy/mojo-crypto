@@ -18,6 +18,10 @@ class TestData:
     iv_hex: str | None
     pt_hex: str
     ct_hex: str
+    # AEAD-only fields (e.g. GCM); left as defaults for the other modes.
+    aad_hex: str | None = None
+    tag_hex: str | None = None
+    test_passed: bool = True
 
 
 def _result_index(expected: dict) -> dict[int, dict]:
@@ -51,6 +55,10 @@ def _parse_aft(group: dict, results: dict[int, dict]) -> list[TestData]:
         else:
             ct_hex, pt_hex = tc["ct"], expected.get("pt", "")
 
+        # GCM carries the tag in the prompt on decrypt and in expectedResults on
+        # encrypt; authentication failures are flagged via testPassed=false.
+        tag_hex = expected.get("tag") if is_encrypt else tc.get("tag")
+
         records.append(TestData(
             is_encrypt=is_encrypt,
             key_len=group["keyLen"],
@@ -59,6 +67,9 @@ def _parse_aft(group: dict, results: dict[int, dict]) -> list[TestData]:
             iv_hex=tc.get("iv"),
             pt_hex=pt_hex,
             ct_hex=ct_hex,
+            aad_hex=tc.get("aad"),
+            tag_hex=tag_hex,
+            test_passed=expected.get("testPassed", True),
         ))
 
     return records

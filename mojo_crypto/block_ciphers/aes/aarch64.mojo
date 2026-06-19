@@ -16,6 +16,7 @@ from .common import BLOCK_SIZE, SBOX, check_key_size
 struct AesAarch64[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
+    Copyable,
     ImplicitlyDestructible,
     Movable,
 ):

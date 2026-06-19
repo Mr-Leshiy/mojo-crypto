@@ -1,3 +1,6 @@
+from std.memory import memcpy
+
+
 trait UniversalHashable:
     comptime BLOCK_SIZE: Int
     comptime KEY_SIZE: Int
@@ -20,8 +23,8 @@ trait UniversalHashable:
         """
 
         UhashSizeError[Self.BLOCK_SIZE].check(len(data))
+        block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
         for i in range(len(data) // Self.BLOCK_SIZE):
-            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             block.unsafe_ptr().store(
                 (data.unsafe_ptr() + i * Self.BLOCK_SIZE).load[
                     width=Self.BLOCK_SIZE
@@ -43,9 +46,12 @@ trait UniversalHashable:
         n_full = len(data) - tail_len
         self.update(data[:n_full])
         if tail_len > 0:
-            var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
-            for i in range(tail_len):
-                padded[i] = data[n_full + i]
+            padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
+            memcpy(
+                dest=padded.unsafe_ptr(),
+                src=data.unsafe_ptr() + n_full,
+                count=tail_len,
+            )
             self.update_block(padded)
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:

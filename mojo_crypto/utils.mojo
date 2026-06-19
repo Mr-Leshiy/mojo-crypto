@@ -1,4 +1,21 @@
 from std.sys.info import _current_target
+from std.memory import memcpy
+
+
+def to_inline_array[
+    size: Int
+](data: List[UInt8]) raises -> InlineArray[UInt8, size]:
+    """Copy a `size`-length List into a fixed-size InlineArray.
+
+    Raises if `len(data) != size`.
+    """
+    if len(data) != size:
+        raise Error(
+            "expected list of length {}; got {}".format(size, len(data))
+        )
+    var arr = InlineArray[UInt8, size](uninitialized=True)
+    memcpy(dest=arr.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
+    return arr^
 
 
 def target_triple() -> StaticString:

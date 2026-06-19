@@ -15,6 +15,7 @@ from .cpu import _key_expansion
 struct AesGpu[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
+    Copyable,
     ImplicitlyDestructible,
     Movable,
 ):
