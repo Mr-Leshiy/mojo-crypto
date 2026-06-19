@@ -51,7 +51,7 @@ def check_aes_eft[
         cipher.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
-    assert(checked_at_least_once)
+    assert_equal(checked_at_least_once, True)
 
 
 def check_aes_cbc_eft[
@@ -84,7 +84,7 @@ def check_aes_cbc_eft[
         cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
-    assert(checked_at_least_once)
+    assert_equal(checked_at_least_once, True)
 
 
 def check_aes_mct[
@@ -120,7 +120,7 @@ def check_aes_mct[
         )
         assert_equal(block, expected, msg=msg)
 
-    assert(checked_at_least_once)
+    assert_equal(checked_at_least_once, True)
 
 
 def check_aes_cbc_mct[
@@ -166,7 +166,7 @@ def check_aes_cbc_mct[
                 next_block = tmp^
             assert_equal(next_block, v.pt, msg=msg)
 
-    assert(checked_at_least_once)
+    assert_equal(checked_at_least_once, True)
 
 
 def check_aes_ctr_mct[
@@ -205,7 +205,7 @@ def check_aes_ctr_mct[
                 ctr.decrypt(block[:])
         assert_equal(block, expected, msg=msg)
 
-    assert(checked_at_least_once)
+    assert_equal(checked_at_least_once, True)
 
 
 def check_aes_ctr_aft[
@@ -239,7 +239,7 @@ def check_aes_ctr_aft[
             ctr.decrypt(ct[:])
             assert_equal(ct, v.pt, msg=msg)
 
-    assert(checked_at_least_once)
+    assert_equal(checked_at_least_once, True)
 
 
 def run_checks[
