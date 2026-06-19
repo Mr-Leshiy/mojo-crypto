@@ -89,7 +89,7 @@ struct Gcm[
         The counter starts at inc32(J0); GHASH then authenticates `aad` together
         with the freshly produced ciphertext.
         """
-        
+
         Self._assert_tag_size[TAG_SIZE]()
 
         var keystream = self._init_ctr()
@@ -97,7 +97,6 @@ struct Gcm[
         keystream[0].encrypt(data)
 
         return self._compute_tag[TAG_SIZE](keystream[1], aad, data)
-        
 
     def decrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
@@ -137,9 +136,7 @@ struct Gcm[
         #     making tag forgery feasible.
         #
         # alignment=1 because the InlineArray[UInt8] bases may be unaligned.
-        var e = expected_tag.unsafe_ptr().load[
-            width=TAG_SIZE, alignment=1
-        ]()
+        var e = expected_tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
         var t = tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
         if (e ^ t).reduce_or() != 0:
             raise AuthenticationError()
@@ -209,8 +206,7 @@ struct Gcm[
         return (ctr^, tag_mask)
 
     def _compute_tag[
-        TAG_SIZE: Int,
-        aad_o: Origin, data_o: Origin
+        TAG_SIZE: Int, aad_o: Origin, data_o: Origin
     ](
         self,
         mask: InlineArray[UInt8, Self.BLOCK_SIZE],
