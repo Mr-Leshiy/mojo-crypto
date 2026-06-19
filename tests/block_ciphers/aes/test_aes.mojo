@@ -68,7 +68,7 @@ def check_aes_cbc_eft[
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
-        
+
         checked_at_least_once = True
 
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
@@ -107,7 +107,7 @@ def check_aes_mct[
     for v in parse_acvp_aes(vectors):
         if len(v.key) != KeySize:
             continue
-        
+
         checked_at_least_once = True
 
         var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
@@ -145,7 +145,7 @@ def check_aes_cbc_mct[
             continue
 
         checked_at_least_once = True
-        
+
         var msg = "[CbcMode[{}]], file_name={} count={}".format(
             reflect[C]().name(), v.file_name, v.count
         )
@@ -175,47 +175,6 @@ def check_aes_cbc_mct[
             assert_equal(next_block, v.pt, msg=msg)
 
     assert_equal(checked_at_least_once, True)
-
-
-def check_aes_ctr_mct[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Movable
-    & ImplicitlyDestructible,
-    KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    # AESAVS CTR MCT: 1000 inner iterations, chaining CT → PT each step.
-    # CtrMode maintains counter state across calls, so one instance covers all
-    # 1000 blocks (counter increments by 1 per block, matching ICB_j = ICB_0+j).
-    comptime MCT_INNER_ITERATIONS: Int = 1000
-
-    checked_at_least_once = False
-    for v in parse_acvp_aes(vectors):
-        if len(v.key) != KeySize:
-            continue
-
-        checked_at_least_once = True
-
-        var msg = "[CtrMode[{}]], file_name={} count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
-
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
-        var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
-        var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
-
-        var ctr = CtrMode[C](cipher_init(key), iv)
-        for _ in range(MCT_INNER_ITERATIONS):
-            if v.is_encrypt:
-                ctr.encrypt(block[:])
-            else:
-                ctr.decrypt(block[:])
-        assert_equal(block, expected, msg=msg)
-
-    assert_equal(checked_at_least_once, True)
-
 
 def check_aes_ctr_aft[
     C: BlockCipherEncryptable
@@ -344,18 +303,12 @@ def test_aes_cbc_mct() raises:
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
+# AES-CTR only defines AFT groups (no MCT).
 def test_aes_ctr_aft() raises:
     var vectors = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "AFT"
     )
     run_checks[check_aes_ctr_aft](vectors)
-
-
-def test_aes_ctr_mct() raises:
-    var vectors = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "MCT"
-    )
-    run_checks[check_aes_ctr_mct](vectors)
 
 
 def main() raises:
