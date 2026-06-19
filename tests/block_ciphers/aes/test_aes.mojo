@@ -236,7 +236,7 @@ def check_aes_gcm_aft[
         checked_at_least_once = True
 
         msg = "[GcmMode[{}], nonce={}, tag={}], file_name={} count={}".format(
-            reflect[C].name(), NONCE_SIZE, TAG_SIZE, v.file_name, v.count
+            reflect[C]().name(), NONCE_SIZE, TAG_SIZE, v.file_name, v.count
         )
         key = to_inline_array[KeySize](v.key)
         nonce = to_inline_array[NONCE_SIZE](v.iv)
