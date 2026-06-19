@@ -5,6 +5,7 @@ from std.sys import has_accelerator
 from std.gpu.host import DeviceContext
 
 from mojo_crypto.utils import target_triple_contains_any, to_inline_array
+from mojo_crypto.universal_hashes import GHashCpu
 from mojo_crypto.block_ciphers.aes import (
     AesCpu,
     AesAarch64,
@@ -15,7 +16,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
-from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
+from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode, GcmMode
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -212,6 +213,7 @@ def check_aes_ctr_aft[
 
     assert_true(checked_at_least_once)
 
+
 def check_aes_gcm_aft[
     NONCE_SIZE: Int,
     TAG_SIZE: Int,
@@ -251,14 +253,16 @@ def check_aes_gcm_aft[
             assert_equal(actual_tag, tag, msg=msg)
         else:
             data = v.ct.copy()
-            gcm = GcmMode[C, GHashCpu, NONCE_SIZE, TAG_SIZE](cipher_init(key), nonce)
+            gcm = GcmMode[C, GHashCpu, NONCE_SIZE, TAG_SIZE](
+                cipher_init(key), nonce
+            )
             if v.test_passed:
                 gcm.decrypt(v.aad[:], data[:], tag)
                 assert_equal(data, v.pt, msg=msg)
             else:
                 with assert_raises():
                     gcm.decrypt(v.aad[:], data[:], tag)
-                
+
     assert_true(checked_at_least_once)
 
 
