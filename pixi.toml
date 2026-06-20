@@ -15,6 +15,7 @@ fmt    = "mojo format ."
 # environments (e.g. restricted CI containers)
 test   = """
 mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/test_ctr.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/containers/encoding/test_hex.mojo &&
 
 mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_field_element.mojo &&
