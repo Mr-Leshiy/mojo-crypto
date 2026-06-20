@@ -5,10 +5,12 @@ from mojo_crypto.block_ciphers.traits import (
 
 
 struct CtrMode[
-    Cipher: BlockCipherEncryptable
+    C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Movable
-    & ImplicitlyDestructible
+    & ImplicitlyDestructible,
+    SIZE: Int = C.BLOCK_SIZE,
+    BIG_ENDIAN: Bool = True,
 ](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -16,20 +18,42 @@ struct CtrMode[
     Movable,
 ):
     """
+    Counter (CTR) block cipher mode.
+
+    NIST SP 800-38A, Section 6.5:
     https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
-    Section 6.5
+
+    `SIZE` is the width in bytes of the incrementing counter field; the
+    remaining `BLOCK_SIZE - SIZE` bytes are the fixed nonce, never touched by
+    the increment. `SIZE == BLOCK_SIZE` (the default) increments the whole block.
+
+    `BIG_ENDIAN` (default) places the counter in the last `SIZE` bytes and
+    increments big-endian (CTR-32BE / AES-GCM style). When `False`, the counter
+    occupies the first `SIZE` bytes and increments little-endian (CTR-32LE).
     """
 
-    comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
+    comptime BLOCK_SIZE: Int = Self.C.BLOCK_SIZE
+    comptime NONCE_SIZE: Int = Self.BLOCK_SIZE - Self.SIZE
 
-    var _cipher: Self.Cipher
-    var _ctr: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE]
+    var _cipher: Self.C
+    var _ctr: InlineArray[UInt8, Self.C.BLOCK_SIZE]
+
+    @staticmethod
+    def _assert_valid_params():
+        comptime assert Self.SIZE > 0, "counter SIZE must be positive"
+        comptime assert (
+            Self.SIZE <= Self.BLOCK_SIZE
+        ), "counter SIZE cannot exceed BLOCK_SIZE"
 
     def __init__(
         out self,
-        var cipher: Self.Cipher,
-        ctr: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE],
+        var cipher: Self.C,
+        ctr: InlineArray[UInt8, Self.BLOCK_SIZE],
     ):
+        """Initialize from a fully-assembled initial counter block."""
+
+        Self._assert_valid_params()
+
         self._cipher = cipher^
         self._ctr = ctr
 
@@ -54,8 +78,17 @@ struct CtrMode[
             offset += Self.BLOCK_SIZE
 
     def _increment_ctr(mut self):
-        # inc128: full 128-bit big-endian increment (NIST SP 800-38A)
-        for i in range(Self.BLOCK_SIZE - 1, -1, -1):
-            self._ctr[i] += 1
-            if self._ctr[i] != 0:
-                break
+        # Increment is confined to the SIZE-byte counter field; the nonce bytes
+        # are never carried into (NIST SP 800-38A).
+        comptime if Self.BIG_ENDIAN:
+            # counter = last SIZE bytes, big-endian
+            for i in range(Self.BLOCK_SIZE - 1, Self.NONCE_SIZE - 1, -1):
+                self._ctr[i] += 1
+                if self._ctr[i] != 0:
+                    break
+        else:
+            # counter = first SIZE bytes, little-endian
+            for i in range(Self.SIZE):
+                self._ctr[i] += 1
+                if self._ctr[i] != 0:
+                    break
