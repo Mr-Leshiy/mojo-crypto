@@ -21,7 +21,7 @@ def test_ctr_32_le_aes() raises:
         + "EB96774669D24B560C9AD028C5C39C45"
         + "80775A82065256B4787DC91C6942B700"
     )
-    
+
     var zeros = InlineArray[UInt8, 64](fill=0)
     var ctr = CTR(AesCpu[16](key), iv)
     ctr.encrypt(zeros)
