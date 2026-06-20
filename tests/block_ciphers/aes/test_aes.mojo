@@ -256,8 +256,6 @@ def check_aes_gcm_siv_aft[
     comptime TAG_SIZE = GcmSiv.TAG_SIZE
 
     for v in parse_acvp_aes(vectors):
-        # GCM-SIV only defines 128- and 256-bit keys; vectors that don't match
-        # this instantiation's sizes are handled by another instantiation.
         if (
             len(v.key) != KeySize
             or len(v.iv) != NONCE_SIZE
