@@ -11,7 +11,7 @@ from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 
 struct GcmSiv[
-    Cipher: BlockCipherEncryptable
+    C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
     & Movable
@@ -45,24 +45,24 @@ struct GcmSiv[
     RFC 8452: https://www.rfc-editor.org/rfc/rfc8452
     """
 
-    comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
+    comptime BLOCK_SIZE: Int = Self.C.BLOCK_SIZE
     comptime NONCE_SIZE: Int = 12
     comptime TAG_SIZE: Int = 16
 
     # The key-generating key, embodied by an already-keyed cipher. Per-record
     # keys are derived from this; see `_derive_keys`.
-    var _cipher: Self.Cipher
+    var _cipher: Self.C
     var _polyval: Self.G
     var _nonce: InlineArray[UInt8, Self.NONCE_SIZE]
 
     def __init__(
         out self,
-        var cipher: Self.Cipher,
+        var cipher: Self.C,
         nonce: InlineArray[UInt8, Self.NONCE_SIZE],
     ) raises:
         """Initialize GCM-SIV with the key-generating-key cipher and nonce."""
         Self._assert_valid_params()
-        
+
         mac_key = InlineArray[UInt8, Self.G.KEY_SIZE](fill=0)
         block = InlineArray[UInt8, Self.C.BLOCK_SIZE](fill=0)
         counter = 0
@@ -166,7 +166,7 @@ struct GcmSiv[
     def _init_ctr(
         self,
         nonce: InlineArray[UInt8, Self.TAG_SIZE],
-    ) -> CtrMode[Self.Cipher]:
+    ) -> CtrMode[Self.C, 4, BIG_ENDIAN=False]:
         """
         Initialize counter mode for payload encryption/decryption.
 
