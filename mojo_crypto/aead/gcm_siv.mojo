@@ -95,17 +95,18 @@ struct GcmSiv[
         # The key-generating-key cipher is used only to derive the subkeys.
         var cipher = cipher_init(key_generating_key)
 
-        # A single counter runs across both keys: 0,1 for the POLYVAL key, then
-        # 2,3 (AES-128) or 2..5 (AES-256) for the message-encryption key.
-        var counter: UInt32 = 0
-        var mac_key = _derive_subkey[N=Self.G.KEY_SIZE](
+        # A single counter sequence runs across both keys: 0,1 for the POLYVAL
+        # key, then 2,3 (AES-128) or 2..5 (AES-256) for the message-encryption
+        # key. `_derive_subkey` takes the *starting* counter, so the second call
+        # resumes where the first left off (G.KEY_SIZE // 8 blocks of 8 bytes).
+        var mac_key = _derive_subkey[N = Self.G.KEY_SIZE](
             cipher,
-            counter,
+            0,
             nonce,
         )
         var enc_key = _derive_subkey[N=KEY_SIZE](
             cipher,
-            counter,
+            Self.G.KEY_SIZE // 8,
             nonce,
         )
 
@@ -322,6 +323,9 @@ def _derive_subkey[
     > discarding half, four blocks need to be encrypted.  The counter
     > values for these blocks are 0, 1, 2, and 3.  For AES-256, six blocks
     > are needed in total, with counter values 0 through 5 (inclusive).
+
+    `counter` is the starting counter value for this key; the caller passes the
+    next value in the sequence for each successive key.
     """
     comptime assert (
         N % 8 == 0
