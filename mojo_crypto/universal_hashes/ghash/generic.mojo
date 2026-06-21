@@ -33,6 +33,9 @@ struct GHashGeneric[
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return reverse(self._poly.copy().finalize())
 
+    def reset(mut self):
+        self._poly.reset()
+
 
 def reverse[
     SIZE: Int

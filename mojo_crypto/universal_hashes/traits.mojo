@@ -57,3 +57,9 @@ trait UniversalHashable:
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         """Consume self and return the TAG_SIZE-byte authentication tag."""
         ...
+
+    def reset(mut self):
+        """
+        Reset the accumulator to its initial state while keeping the key.
+        """
+        ...

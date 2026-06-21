@@ -259,6 +259,11 @@ struct GcmSiv[
         polyval.update_block(length_block)
         var tag = rebind[InlineArray[UInt8, Self.TAG_SIZE]](polyval^.finalize())
 
+        # Reset the live accumulator (it still holds this message's AAD and
+        # payload) so this instance can authenticate another message from
+        # scratch (finalize-then-reset, per RFC 8452).
+        self._polyval.reset()
+
         # XOR the nonce into the first 12 bytes of the tag.
         for i in range(Self.NONCE_SIZE):
             tag[i] ^= self._nonce[i]

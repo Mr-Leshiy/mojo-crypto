@@ -25,3 +25,6 @@ struct PolyvalCpu(Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
+
+    def reset(mut self):
+        self._y = FieldElement.zeros()
