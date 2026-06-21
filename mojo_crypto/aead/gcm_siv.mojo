@@ -85,7 +85,7 @@ struct GcmSiv[
         # > are needed in total, with counter values 0 through 5 (inclusive).
 
         self._cipher = cipher^
-        self_polyval = Self.G(key_generating_key)
+        self._polyval = Self.G(mac_key)
         self._nonce = nonce
 
     @staticmethod
