@@ -9,6 +9,7 @@ from mojo_crypto.block_ciphers.traits import (
 from mojo_crypto.block_ciphers.modes import CtrMode
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
+
 @fieldwise_init
 struct GcmSiv[
     C: BlockCipherEncryptable
@@ -54,7 +55,7 @@ struct GcmSiv[
     var _cipher: Self.C
     var _polyval: Self.G
     var _nonce: InlineArray[UInt8, Self.NONCE_SIZE]
-    
+
     @staticmethod
     def create[
         KEY_SIZE: Int,
@@ -87,8 +88,8 @@ struct GcmSiv[
         # > discarding half, four blocks need to be encrypted.  The counter
         # > values for these blocks are 0, 1, 2, and 3.  For AES-256, six blocks
         # > are needed in total, with counter values 0 through 5 (inclusive).
-        
-        return Self(cipher_init(key_generating_key),  Self.G(mac_key), nonce)
+
+        return Self(cipher_init(key_generating_key), Self.G(mac_key), nonce)
 
     @staticmethod
     def _assert_valid_params():
