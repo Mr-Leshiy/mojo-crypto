@@ -1,9 +1,8 @@
 name: Docs
 
 on:
-  # TEMPORARY: publish docs on a push to ANY branch. Revert to
-  # `push: { branches: [main] }` once docs publishing is finalized.
   push:
+    branches: [main]
   # Allow manual runs from the Actions tab.
   workflow_dispatch:
 
