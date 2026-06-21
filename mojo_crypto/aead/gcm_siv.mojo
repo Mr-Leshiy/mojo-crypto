@@ -99,14 +99,14 @@ struct GcmSiv[
         # key, then 2,3 (AES-128) or 2..5 (AES-256) for the message-encryption
         # key. `_derive_subkey` takes the *starting* counter, so the second call
         # resumes where the first left off (G.KEY_SIZE // 8 blocks of 8 bytes).
-        var mac_key = _derive_subkey[N = Self.G.KEY_SIZE](
+        var mac_key = _derive_subkey[N=Self.G.KEY_SIZE](
             cipher,
             0,
             nonce,
         )
         var enc_key = _derive_subkey[N=KEY_SIZE](
             cipher,
-            Self.G.KEY_SIZE // 8,
+            UInt32(Self.G.KEY_SIZE // 8),
             nonce,
         )
 
