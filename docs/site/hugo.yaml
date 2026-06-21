@@ -1,0 +1,40 @@
+baseURL: https://Mr-Leshiy.github.io/mojo-crypto/
+languageCode: en-us
+title: mojo-crypto
+disablePathToLower: true
+
+# The hextra theme's RSS template references `.Site.Author.email`, removed in
+# Hugo v0.158+. We don't need feeds for an API reference, so disable RSS.
+disableKinds:
+  - RSS
+
+markup:
+  highlight:
+    style: github-dark
+
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+menu:
+  main:
+    - name: Search
+      weight: 1
+      params:
+        type: search
+    - name: GitHub
+      weight: 2
+      url: "https://github.com/Mr-Leshiy/mojo-crypto"
+      params:
+        icon: github
+
+params:
+  search:
+    enable: true
+    type: flexsearch
+    flexsearch:
+      # index page by: content | summary | heading | title
+      index: content
+  navbar:
+    displayTitle: true
+    displayLogo: false
