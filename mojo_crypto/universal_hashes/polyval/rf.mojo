@@ -75,6 +75,9 @@ struct PolyvalRf[P: Pmull](
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
 
+    def reset(mut self):
+        self._y = FieldElement.zeros()
+
 
 # P1 polynomial: x^63 + x^62 + x^57 = 0xC200000000000000
 comptime P1: UInt64 = 0xC200_0000_0000_0000
