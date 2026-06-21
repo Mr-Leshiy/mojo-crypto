@@ -412,11 +412,11 @@ def test_aes_gcm_aft() raises:
 # AES-GCM-SIV only defines AFT groups (no MCT). The 16-byte tag is appended to
 # the ciphertext (ct = ciphertext||tag); check_aes_gcm_siv_aft splits it back
 # off, since these vectors have no separate tag field.
-# def test_aes_gcm_siv_aft() raises:
-#     var vectors = load_python_acvp_vectors(
-#         "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-SIV-1.0", "AFT"
-#     )
-#     run_checks[check_aes_gcm_siv_aft](vectors)
+def test_aes_gcm_siv_aft() raises:
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-SIV-1.0", "AFT"
+    )
+    run_checks[check_aes_gcm_siv_aft](vectors)
 
 
 def main() raises:
