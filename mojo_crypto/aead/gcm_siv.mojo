@@ -55,9 +55,10 @@ struct GcmSiv[
     var _polyval: Self.G
     var _nonce: InlineArray[UInt8, Self.NONCE_SIZE]
 
-    def __init__(
+    def __init__[KEY_SIZE: Int](
         out self,
         var cipher: Self.C,
+        key_generating_key: InlineArray[UInt8, KEY_SIZE],
         nonce: InlineArray[UInt8, Self.NONCE_SIZE],
     ) raises:
         """Initialize GCM-SIV with the key-generating-key cipher and nonce."""
@@ -84,7 +85,7 @@ struct GcmSiv[
         # > are needed in total, with counter values 0 through 5 (inclusive).
 
         self._cipher = cipher^
-
+        self_polyval = Self.G(key_generating_key)
         self._nonce = nonce
 
     @staticmethod
@@ -123,6 +124,8 @@ struct GcmSiv[
         """
 
         Self._assert_tag_size[TAG_SIZE]()
+
+        return InlineArray[UInt8, TAG_SIZE](fill=0)
 
     def decrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
