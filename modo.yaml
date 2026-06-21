@@ -51,20 +51,6 @@ pre-run:
   - |
     echo "Generating API JSON with 'mojo doc'..."
     mojo doc -I . -o docs/src/mojo_crypto.json mojo_crypto
-
-    echo "Including package README.md files as Overview pages..."
-    # Mirror each package README into the Modo input tree as an "Overview" page
-    # within that package's section. A regular page name (not _index.md) avoids
-    # colliding with Modo's auto-generated package index, and weight=1 sorts it
-    # to the top of the section. The Hugo front matter gives it a clean title.
-    find mojo_crypto -name README.md -print0 | while IFS= read -r -d '' readme; do
-      dest="docs/src/${readme%/README.md}/overview.md"
-      mkdir -p "$(dirname "$dest")"
-      {
-        printf -- '---\ntitle: Overview\ntype: docs\nweight: 1\n---\n\n'
-        cat "$readme"
-      } > "$dest"
-    done
     echo "Done."
 
 # Bash scripts to run before build.
@@ -72,6 +58,14 @@ pre-build: []
 
 # Bash scripts to run before test.
 pre-test: []
+
+# Bash scripts to run after build (the rendered Hugo content exists by now, so
+# we can splice the package README.md files into their generated landing pages).
+post-build:
+  - |
+    echo "Injecting package README.md files into their landing pages..."
+    python docs/inject_readmes.py
+    echo "Done."
 
 # Bash scripts to run after build as well as test.
 post-run: []
