@@ -1,6 +1,6 @@
 from std.bit import byte_swap
 from std.memory import memcpy
-from sys.info import is_little_endian
+from std.sys.info import is_little_endian
 
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
@@ -52,8 +52,8 @@ struct GcmSiv[
     comptime NONCE_SIZE: Int = 12
     comptime TAG_SIZE: Int = 16
 
-    # The key-generating key, embodied by an already-keyed cipher. Per-record
-    # keys are derived from this; see `_derive_keys`.
+    # The message-encryption cipher, keyed with the per-record message-encryption
+    # key derived in `create`. Used for both CTR encryption and tag encryption.
     var _cipher: Self.C
     var _polyval: Self.G
     var _nonce: InlineArray[UInt8, Self.NONCE_SIZE]
@@ -71,10 +71,6 @@ struct GcmSiv[
         """Initialize GCM-SIV with the key-generating-key cipher and nonce."""
         Self._assert_valid_params()
 
-        mac_key = InlineArray[UInt8, Self.G.KEY_SIZE](fill=0)
-        block = InlineArray[UInt8, Self.C.BLOCK_SIZE](fill=0)
-        counter = 0
-
         # Derive subkeys from the master key-generating-key in counter mode.
         #
         # From RFC8452 § 4: <https://tools.ietf.org/html/rfc8452#section-4>
@@ -91,7 +87,73 @@ struct GcmSiv[
         # > values for these blocks are 0, 1, 2, and 3.  For AES-256, six blocks
         # > are needed in total, with counter values 0 through 5 (inclusive).
 
-        return Self(cipher_init(key_generating_key), Self.G(mac_key), nonce)
+        # The key-generating-key cipher is used only to derive the subkeys.
+        var cipher = cipher_init(key_generating_key)
+
+        # The message-encryption key is the same size as the key-generating key
+        # (128 bits for AES-128, 256 for AES-256), so it re-keys the same cipher.
+        var mac_key = InlineArray[UInt8, Self.G.KEY_SIZE](uninitialized=True)
+        var enc_key = InlineArray[UInt8, KEY_SIZE](uninitialized=True)
+
+        # A single counter runs across both keys: 0,1 for the POLYVAL key, then
+        # 2,3 (AES-128) or 2..5 (AES-256) for the message-encryption key.
+        var counter: UInt32 = 0
+        mec_key = Self._derive_subkey(cipher, counter, nonce, mac_key)
+        enc_key = Self._derive_subkey(cipher, counter, nonce, enc_key)
+
+        # POLYVAL is keyed with mac_key; `_cipher` is keyed with enc_key.
+        return Self(cipher_init(enc_key), Self.G(mac_key), nonce)
+
+    @staticmethod
+    def _derive_subkey[
+        N: Int
+    ](
+        mut cipher: Self.C,
+        var counter: UInt32,
+        nonce: InlineArray[UInt8, Self.NONCE_SIZE],
+        var key: InlineArray[UInt8, N],
+    ) raises -> InlineArray[UInt8, N]:
+        """
+        Fill `out_key` with derived key material, 8 bytes per encrypted block.
+
+        Each plaintext block is the 4-byte little-endian `counter` followed by
+        the 12-byte nonce; the low 8 bytes of its encryption under the
+        key-generating key become the next 8 bytes of `out_key` (RFC 8452 §4).
+        `counter` is advanced so successive calls continue the same sequence.
+        """
+        comptime assert (
+            N % 8 == 0
+        ), "GCM-SIV derived key size must be a multiple of 8 bytes"
+
+        var block = InlineArray[UInt8, Self.C.BLOCK_SIZE](fill=0)
+        for chunk in range(N // 8):
+            # block[0:4] = counter as a little-endian u32, host-independent: only
+            # byte_swap on a big-endian host (branch resolved at compile time).
+            var c = counter
+
+            comptime if not is_little_endian():
+                c = byte_swap(c)
+            block.unsafe_ptr().bitcast[UInt32]().store[alignment=1](c)
+
+            # block[4:16] = nonce.
+            memcpy(
+                dest=block.unsafe_ptr() + 4,
+                src=nonce.unsafe_ptr(),
+                count=Self.NONCE_SIZE,
+            )
+
+            cipher.encrypt(block)
+
+            # Keep the low 8 bytes, discard the rest.
+            memcpy(
+                dest=key.unsafe_ptr() + chunk * 8,
+                src=block.unsafe_ptr(),
+                count=8,
+            )
+
+            counter += 1
+
+        return key^
 
     @staticmethod
     def _assert_valid_params():
@@ -181,8 +243,7 @@ struct GcmSiv[
             UInt64(aad_len) * 8, UInt64(buffer_len) * 8
         )
 
-        @parameter
-        if not is_little_endian():
+        comptime if not is_little_endian():
             lengths = byte_swap(lengths)
 
         length_block.unsafe_ptr().bitcast[UInt64]().store[alignment=1](lengths)
@@ -203,26 +264,6 @@ struct GcmSiv[
         self._cipher.encrypt(tag)
 
         return tag^
-
-    def _derive_keys(
-        self,
-    ) raises -> Tuple[Self.G, InlineArray[UInt8, Self.Cipher.BLOCK_SIZE]]:
-        """
-        Derive the per-record POLYVAL key and message-encryption key.
-
-        RFC 8452 §4: encrypt successive little-endian counter blocks (each the
-        4-byte counter followed by the 12-byte nonce) under the key-generating
-        key, taking the low 8 bytes of each output. Blocks 0-1 form the 16-byte
-        message-authentication (POLYVAL) key; the remaining blocks form the
-        message-encryption key (16 bytes for AES-128, 32 for AES-256).
-
-        Returns the keyed POLYVAL instance and the message-encryption key bytes.
-        Note: a fully generic implementation must construct a fresh `Cipher` from
-        the derived message-encryption key, which requires keyed construction not
-        yet exposed by the block-cipher traits — a constraint to resolve when
-        implementing this.
-        """
-        raise Error("GcmSiv._derive_keys: not implemented")
 
     def _init_ctr(
         self,
