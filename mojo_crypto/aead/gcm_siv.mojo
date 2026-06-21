@@ -241,11 +241,44 @@ struct GcmSiv[
 
         Because the tag seeds the CTR counter, GCM-SIV must decrypt before it can
         recompute the expected tag. The recomputed tag is compared against `tag`
-        in constant time; on mismatch this raises and the now-decrypted `data` is
-        zeroed (it cannot be left untouched the way `Gcm.decrypt` leaves it).
+        in constant time; on mismatch this raises and the recovered plaintext is
+        re-encrypted back to the input ciphertext (it cannot be left untouched
+        the way `Gcm.decrypt` leaves it), so a tampered `data` is never exposed.
         """
         Self._assert_tag_size[TAG_SIZE]()
-        raise Error("GcmSiv.decrypt: not implemented")
+
+        # RFC 8452 § 6 caps the AAD and ciphertext lengths.
+        if UInt64(len(data)) > Self.C_MAX or UInt64(len(aad)) > Self.A_MAX:
+            raise LengthError(len(aad), len(data))
+
+        var tag_block = rebind[InlineArray[UInt8, Self.TAG_SIZE]](tag)
+
+        # POLYVAL absorbs the AAD (padded) first.
+        self._polyval.update_padded(aad)
+
+        # The supplied tag seeds the CTR counter; applying the keystream
+        # decrypts `data` in place (CTR is symmetric).
+        var ctr = self._init_ctr(tag_block)
+        ctr.encrypt(data)
+
+        # `data` now holds the recovered plaintext; POLYVAL absorbs it (padded).
+        self._polyval.update_padded(data)
+
+        # Recompute the synthetic tag over AAD + recovered plaintext.
+        var expected_tag = self._compute_tag(len(aad), len(data))
+
+        # Constant-time comparison: XOR all bytes at once and OR-reduce so the
+        # running time does not depend on where the first mismatch occurs (see
+        # Gcm.decrypt for why a short-circuiting compare would leak). alignment=1
+        # because the InlineArray[UInt8] bases may be unaligned.
+        var e = expected_tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
+        var t = tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
+        if (e ^ t).reduce_or() != 0:
+            # On verification failure, re-encrypt the recovered plaintext back to
+            # the input ciphertext so the tampered plaintext is never exposed.
+            var reenc = self._init_ctr(tag_block)
+            reenc.encrypt(data)
+            raise AuthenticationError()
 
     def _compute_tag(
         mut self,
