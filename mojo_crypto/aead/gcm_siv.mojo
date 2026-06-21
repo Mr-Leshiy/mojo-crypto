@@ -1,4 +1,6 @@
+from std.bit import byte_swap
 from std.memory import memcpy
+from sys.info import is_little_endian
 
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
@@ -149,6 +151,58 @@ struct GcmSiv[
         """
         Self._assert_tag_size[TAG_SIZE]()
         raise Error("GcmSiv.decrypt: not implemented")
+
+    def _compute_tag(
+        mut self,
+        aad_len: Int,
+        buffer_len: Int,
+    ) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+        """
+        Finish the POLYVAL tag over already-absorbed AAD and payload.
+
+        `self._polyval` is assumed to have already absorbed the (padded) AAD and
+        plaintext blocks. This appends the final length block, finalizes, folds
+        in the nonce, and encrypts the result under `enc_cipher` (the per-record
+        message-encryption key) to produce the synthetic tag.
+
+        RFC 8452 §4 (<https://tools.ietf.org/html/rfc8452#section-4>):
+        """
+
+        # Final POLYVAL block: AAD bit-length and payload bit-length as two
+        # little-endian u64s. Unlike GHASH (big-endian), POLYVAL is
+        # little-endian. Build both lengths as a 2-lane vector and store them at
+        # once; byte_swap each lane on a big-endian host so the in-memory bytes
+        # are little-endian regardless of host endianness (the branch is
+        # resolved at compile time, so it costs nothing on little-endian
+        # targets). alignment=1 because the InlineArray[UInt8] base may be
+        # unaligned.
+        var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
+        var lengths = SIMD[DType.uint64, 2](
+            UInt64(aad_len) * 8, UInt64(buffer_len) * 8
+        )
+
+        @parameter
+        if not is_little_endian():
+            lengths = byte_swap(lengths)
+
+        length_block.unsafe_ptr().bitcast[UInt64]().store[alignment=1](lengths)
+
+        # Copy POLYVAL because `finalize` consumes it (matches Gcm._compute_tag).
+        var polyval = self._polyval.copy()
+        polyval.update_block(length_block)
+        var tag = rebind[InlineArray[UInt8, Self.TAG_SIZE]](polyval^.finalize())
+
+        # XOR the nonce into the first 12 bytes of the tag.
+        for i in range(Self.NONCE_SIZE):
+            tag[i] ^= self._nonce[i]
+
+        # Clear the most significant bit of the last byte.
+        tag[Self.BLOCK_SIZE - 1] &= 0x7F
+
+        # Encrypt the synthetic tag under the message-encryption key.
+        self._cipher.encrypt(tag)
+
+        return tag^
 
     def _derive_keys(
         self,
