@@ -242,7 +242,6 @@ def check_aes_gcm_aft[
                     gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
 
 
-
 def check_aes_gcm_siv_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
@@ -278,13 +277,13 @@ def check_aes_gcm_siv_aft[
         tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
             data = v.pt.copy()
-            gcm_siv = GcmSiv[C, PolyvalCpu](cipher_init(key), key, nonce)
+            gcm_siv = GcmSiv[C, PolyvalCpu].create[KeySize, cipher_init](key, nonce)
             actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, cipher_body, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
             data = cipher_body.copy()
-            gcm_siv = GcmSiv[C, PolyvalCpu](cipher_init(key),key, nonce)
+            gcm_siv = GcmSiv[C, PolyvalCpu].create[KeySize, cipher_init](key, nonce)
             if v.test_passed:
                 gcm_siv.decrypt(v.aad[:], data[:], tag)
                 assert_equal(data, v.pt, msg=msg)
