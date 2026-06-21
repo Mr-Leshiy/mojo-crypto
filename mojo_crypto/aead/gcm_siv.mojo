@@ -1,6 +1,4 @@
-from std.bit import byte_swap
 from std.memory import memcpy
-from std.sys.info import is_little_endian
 
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
@@ -10,6 +8,15 @@ from mojo_crypto.block_ciphers.traits import (
 )
 from mojo_crypto.block_ciphers.modes import CtrMode
 from mojo_crypto.universal_hashes.traits import UniversalHashable
+from mojo_crypto.utils import to_le_bytes
+
+
+# Maximum length of associated data (RFC 8452 § 6).
+comptime A_MAX: UInt64 = 1 << 36
+# Maximum length of plaintext (RFC 8452 § 6).
+comptime P_MAX: UInt64 = 1 << 36
+# Maximum length of ciphertext (RFC 8452 § 6).
+comptime C_MAX: UInt64 = (1 << 36) + 16
 
 
 @fieldwise_init
@@ -18,6 +25,18 @@ struct LengthError(ImplicitlyDestructible, Writable):
 
     var aad_len: Int
     var data_len: Int
+
+    @staticmethod
+    def check_encrypt(aad_len: Int, data_len: Int) raises:
+        """Enforce the RFC 8452 § 6 caps on AAD and plaintext lengths."""
+        if UInt64(aad_len) > A_MAX or UInt64(data_len) > P_MAX:
+            raise LengthError(aad_len, data_len)
+
+    @staticmethod
+    def check_decrypt(aad_len: Int, data_len: Int) raises:
+        """Enforce the RFC 8452 § 6 caps on AAD and ciphertext lengths."""
+        if UInt64(aad_len) > A_MAX or UInt64(data_len) > C_MAX:
+            raise LengthError(aad_len, data_len)
 
     def write_to(self, mut writer: Some[Writer]):
         writer.write(
@@ -65,13 +84,6 @@ struct GcmSiv[
     comptime BLOCK_SIZE: Int = Self.C.BLOCK_SIZE
     comptime NONCE_SIZE: Int = 12
     comptime TAG_SIZE: Int = 16
-
-    # Maximum length of associated data (RFC 8452 § 6).
-    comptime A_MAX: UInt64 = 1 << 36
-    # Maximum length of plaintext (RFC 8452 § 6).
-    comptime P_MAX: UInt64 = 1 << 36
-    # Maximum length of ciphertext (RFC 8452 § 6).
-    comptime C_MAX: UInt64 = (1 << 36) + 16
 
     # The message-encryption cipher, keyed with the per-record message-encryption
     # key derived in `create`. Used for both CTR encryption and tag encryption.
@@ -151,9 +163,7 @@ struct GcmSiv[
 
         Self._assert_tag_size[TAG_SIZE]()
 
-        # RFC 8452 § 6 caps the AAD and plaintext lengths.
-        if UInt64(len(aad)) > Self.A_MAX or UInt64(len(data)) > Self.P_MAX:
-            raise LengthError(len(aad), len(data))
+        LengthError.check_encrypt(len(aad), len(data))
 
         # POLYVAL absorbs the AAD then the plaintext, each zero-padded to a
         # block boundary.
@@ -188,9 +198,7 @@ struct GcmSiv[
         """
         Self._assert_tag_size[TAG_SIZE]()
 
-        # RFC 8452 § 6 caps the AAD and ciphertext lengths.
-        if UInt64(len(data)) > Self.C_MAX or UInt64(len(aad)) > Self.A_MAX:
-            raise LengthError(len(aad), len(data))
+        LengthError.check_decrypt(len(aad), len(data))
 
         var tag_block = rebind[InlineArray[UInt8, Self.TAG_SIZE]](tag)
 
@@ -239,20 +247,13 @@ struct GcmSiv[
 
         # Final POLYVAL block: AAD bit-length and payload bit-length as two
         # little-endian u64s. Unlike GHASH (big-endian), POLYVAL is
-        # little-endian. Build both lengths as a 2-lane vector and store them at
-        # once; byte_swap each lane on a big-endian host so the in-memory bytes
-        # are little-endian regardless of host endianness (the branch is
-        # resolved at compile time, so it costs nothing on little-endian
-        # targets). alignment=1 because the InlineArray[UInt8] base may be
-        # unaligned.
+        # little-endian, so `to_le_bytes` lays the two lengths out little-endian
+        # regardless of host endianness. alignment=1 because the
+        # InlineArray[UInt8] base may be unaligned.
         var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
-        var lengths = SIMD[DType.uint64, 2](
-            UInt64(aad_len) * 8, UInt64(buffer_len) * 8
+        var lengths = to_le_bytes(
+            SIMD[DType.uint64, 2](UInt64(aad_len) * 8, UInt64(buffer_len) * 8)
         )
-
-        comptime if not is_little_endian():
-            lengths = byte_swap(lengths)
-
         length_block.unsafe_ptr().bitcast[UInt64]().store[alignment=1](lengths)
 
         self._polyval.update_block(length_block)
@@ -334,12 +335,8 @@ def _derive_subkey[
     var key = InlineArray[UInt8, N](uninitialized=True)
     var block = InlineArray[UInt8, C.BLOCK_SIZE](fill=0)
     for chunk in range(N // 8):
-        # block[0:4] = counter as a little-endian u32, host-independent: only
-        # byte_swap on a big-endian host (branch resolved at compile time).
-        var c = counter
-
-        comptime if not is_little_endian():
-            c = byte_swap(c)
+        # block[0:4] = counter as a little-endian u32, host-independent.
+        var c = to_le_bytes(counter)
         block.unsafe_ptr().bitcast[UInt32]().store[alignment=1](c)
 
         # block[4:16] = nonce.

@@ -1,5 +1,55 @@
-from std.sys.info import _current_target
+from std.bit import byte_swap
+from std.sys.info import _current_target, is_little_endian, is_big_endian
 from std.memory import memcpy
+
+
+def to_le_bytes[
+    dtype: DType, width: Int
+](value: SIMD[dtype, width]) -> SIMD[dtype, width]:
+    """Return `value` laid out little-endian in memory.
+
+    A no-op on little-endian targets; on a big-endian target each lane is
+    byte-swapped so that storing the result yields little-endian bytes. The
+    branch is resolved at compile time, so it costs nothing on little-endian
+    targets.
+
+    Parameters:
+        dtype: The element type of the vector (inferred from the argument).
+        width: The number of lanes (inferred from the argument).
+
+    Args:
+        value: The integer scalar or vector to reorder.
+
+    Returns:
+        `value` with each lane's bytes in little-endian order.
+    """
+    comptime if is_big_endian():
+        return byte_swap(value)
+    return value
+
+
+def to_be_bytes[
+    dtype: DType, width: Int
+](value: SIMD[dtype, width]) -> SIMD[dtype, width]:
+    """Return `value` laid out big-endian in memory.
+
+    A no-op on big-endian targets; on a little-endian target each lane is
+    byte-swapped so that storing the result yields big-endian bytes. The branch
+    is resolved at compile time, so it costs nothing on big-endian targets.
+
+    Parameters:
+        dtype: The element type of the vector (inferred from the argument).
+        width: The number of lanes (inferred from the argument).
+
+    Args:
+        value: The integer scalar or vector to reorder.
+
+    Returns:
+        `value` with each lane's bytes in big-endian order.
+    """
+    comptime if is_little_endian():
+        return byte_swap(value)
+    return value
 
 
 def to_inline_array[
