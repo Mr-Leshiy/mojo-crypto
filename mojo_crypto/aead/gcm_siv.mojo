@@ -254,11 +254,10 @@ struct GcmSiv[
 
         length_block.unsafe_ptr().bitcast[UInt64]().store[alignment=1](lengths)
 
-        # Copy POLYVAL because `finalize` consumes it (matches Gcm._compute_tag).
-        var polyval = self._polyval.copy()
-        polyval.update_block(length_block)
-        var tag = rebind[InlineArray[UInt8, Self.TAG_SIZE]](polyval^.finalize())
-
+        self._polyval.update_block(length_block)
+        var tag = rebind[InlineArray[UInt8, Self.TAG_SIZE]](
+            self._polyval.copy().finalize()
+        )
         # Reset the live accumulator (it still holds this message's AAD and
         # payload) so this instance can authenticate another message from
         # scratch (finalize-then-reset, per RFC 8452).
