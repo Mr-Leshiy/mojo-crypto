@@ -2,7 +2,7 @@ name: Docs
 
 on:
   push:
-    branches: [main]
+  #  branches: [main]
   # Allow manual runs from the Actions tab.
   workflow_dispatch:
 
