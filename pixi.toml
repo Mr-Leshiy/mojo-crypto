@@ -9,6 +9,14 @@ license = "MIT OR Apache-2.0"
 [tasks]
 fmt    = "mojo format ."
 
+# Build the API documentation site into docs/site/public:
+#   1. modo runs `mojo doc`, copies each package README.md in as an Overview
+#      page, and emits Hugo content (see modo.yaml). Invoked as `python -m
+#      pymodo` (the documented fallback) so it works without depending on the
+#      `modo` console script being exposed on PATH.
+#   2. `hugo` renders the static HTML site (theme fetched via Hugo Modules).
+docs = "python -m pymodo build && hugo --source docs/site"
+
 # $MOJO_TEST_FEATURES lets CI enable the crypto instructions used by the hardware
 # backends, so the tests exercise the native backend on each runner. We set it
 # explicitly because `mojo run`'s host-feature autodetection is unreliable in some
@@ -52,6 +60,9 @@ bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.t
 [dependencies]
 mojo = ">=1.0.0b1,<2"
 rust = ">=1.80.0,<2"
+hugo = ">=0.163.3,<0.164"
+go = ">=1.26.4,<2"
 
 [pypi-dependencies]
 typer = ">=0.12"
+pymodo = ">=0.11.13, <0.12"

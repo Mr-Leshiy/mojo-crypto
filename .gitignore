@@ -9,3 +9,11 @@ target
 
 .vscode
 .claude
+
+# Generated API documentation artifacts (see the `docs` pixi task)
+docs/src/mojo_crypto.json
+docs/src/mojo_crypto/
+docs/site/content/
+docs/site/public/
+docs/site/resources/
+docs/site/.hugo_build.lock

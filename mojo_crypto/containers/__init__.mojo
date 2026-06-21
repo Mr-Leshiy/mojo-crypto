@@ -1,1 +1,1 @@
-from .encoding import HexError, hex_encode, hex_decode
+from .encoding import Hex, HexGpu, Encodable, Decodable
