@@ -93,9 +93,10 @@ struct GcmSiv[
 
     @staticmethod
     def _assert_valid_params():
-        comptime assert (
-            Self.BLOCK_SIZE == 16
-        ), "GCM-SIV is defined only for 128-bit (16-byte) block ciphers"
+        comptime assert Self.BLOCK_SIZE == 16 or Self.BLOCK_SIZE == 32, (
+            "GCM-SIV is defined only for 128-bit (16-byte) or 256-bit (32-byte)"
+            " block ciphers"
+        )
         comptime assert (
             Self.G.BLOCK_SIZE == Self.BLOCK_SIZE
             and Self.G.TAG_SIZE == Self.BLOCK_SIZE
