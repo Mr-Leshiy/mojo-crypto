@@ -338,7 +338,12 @@ def _derive_subkey[
     var block = InlineArray[UInt8, C.BLOCK_SIZE](fill=0)
     for chunk in range(N // 8):
         # block[0:4] = counter as a little-endian u32, host-independent.
-        var block = counter.as_bytes[big_endian=False]()
+        var counter_bytes = counter.as_bytes[big_endian=False]()
+        memcpy(
+            dest=block.unsafe_ptr(),
+            src=counter_bytes.unsafe_ptr(),
+            count=4,
+        )
 
         # block[4:16] = nonce.
         memcpy(
