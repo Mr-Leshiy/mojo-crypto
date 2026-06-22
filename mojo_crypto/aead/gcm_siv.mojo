@@ -248,7 +248,7 @@ struct GcmSiv[
         # little-endian u64s. Unlike GHASH (big-endian), POLYVAL is
         # little-endian, so `as_bytes[big_endian=False]` lays the two lengths out
         # little-endian regardless of host endianness.
-        var lengths_block = SIMD[DType.uint64, 2](
+        var length_block = SIMD[DType.uint64, 2](
             UInt64(aad_len) * 8, UInt64(buffer_len) * 8
         ).as_bytes[big_endian=False]()
 
