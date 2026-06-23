@@ -252,7 +252,9 @@ struct GcmSiv[
             UInt64(aad_len) * 8, UInt64(buffer_len) * 8
         ).as_bytes[big_endian=False]()
 
-        self._polyval.update_block(length_block)
+        self._polyval.update_block(
+            rebind[InlineArray[UInt8, Self.G.BLOCK_SIZE]](length_block)
+        )
         var tag = rebind[InlineArray[UInt8, Self.TAG_SIZE]](
             self._polyval.copy().finalize()
         )
