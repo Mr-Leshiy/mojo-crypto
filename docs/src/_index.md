@@ -3,8 +3,6 @@ title: mojo-crypto
 type: docs
 ---
 
-# mojo-crypto
-
 Cryptographic primitives implemented in [Mojo](https://www.modular.com/mojo).
 
 This is the API reference, generated from the source with

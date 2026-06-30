@@ -8,7 +8,6 @@ from mojo_crypto.block_ciphers.traits import (
 )
 from mojo_crypto.block_ciphers.modes import CtrMode
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.utils import to_le_bytes
 
 
 # Maximum length of associated data (RFC 8452 § 6).
@@ -247,16 +246,15 @@ struct GcmSiv[
 
         # Final POLYVAL block: AAD bit-length and payload bit-length as two
         # little-endian u64s. Unlike GHASH (big-endian), POLYVAL is
-        # little-endian, so `to_le_bytes` lays the two lengths out little-endian
-        # regardless of host endianness. alignment=1 because the
-        # InlineArray[UInt8] base may be unaligned.
-        var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
-        var lengths = to_le_bytes(
-            SIMD[DType.uint64, 2](UInt64(aad_len) * 8, UInt64(buffer_len) * 8)
-        )
-        length_block.unsafe_ptr().bitcast[UInt64]().store[alignment=1](lengths)
+        # little-endian, so `as_bytes[big_endian=False]` lays the two lengths out
+        # little-endian regardless of host endianness.
+        var length_block = SIMD[DType.uint64, 2](
+            UInt64(aad_len) * 8, UInt64(buffer_len) * 8
+        ).as_bytes[big_endian=False]()
 
-        self._polyval.update_block(length_block)
+        self._polyval.update_block(
+            rebind[InlineArray[UInt8, Self.G.BLOCK_SIZE]](length_block)
+        )
         var tag = rebind[InlineArray[UInt8, Self.TAG_SIZE]](
             self._polyval.copy().finalize()
         )
@@ -336,8 +334,12 @@ def _derive_subkey[
     var block = InlineArray[UInt8, C.BLOCK_SIZE](fill=0)
     for chunk in range(N // 8):
         # block[0:4] = counter as a little-endian u32, host-independent.
-        var c = to_le_bytes(counter)
-        block.unsafe_ptr().bitcast[UInt32]().store[alignment=1](c)
+        var counter_bytes = counter.as_bytes[big_endian=False]()
+        memcpy(
+            dest=block.unsafe_ptr(),
+            src=counter_bytes.unsafe_ptr(),
+            count=4,
+        )
 
         # block[4:16] = nonce.
         memcpy(
