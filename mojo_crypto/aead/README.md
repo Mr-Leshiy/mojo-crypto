@@ -2,9 +2,7 @@
 
 Mojo implementations of [AEAD][1] schemes — constructions that simultaneously
 provide **confidentiality** for the message and **integrity/authenticity** for
-both the message and any associated data (`aad`) that travels alongside it (for
-example packet headers that must stay in the clear but must not be tampered
-with).
+both the message and any associated data (`aad`) that travels alongside it.
 
 ## Implemented schemes
 
