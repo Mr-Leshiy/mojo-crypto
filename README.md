@@ -18,6 +18,8 @@ Full API documentation is published at
   CPU / ARMv8 / x86 / GPU backends) and modes of operation (CTR).
 - **[`universal_hashes`](mojo_crypto/universal_hashes/)** — GHASH and POLYVAL
   universal hash functions.
+- **[`macs`](mojo_crypto/macs/)** — message authentication codes: CMAC
+  (OMAC1).
 - **[`containers`](mojo_crypto/containers/)** — supporting containers and
   encodings (hex).
 
