@@ -21,6 +21,7 @@ from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
 from mojo_crypto.aead import AuthenticationError
 from mojo_crypto.aead.gcm import Gcm
 from mojo_crypto.aead.gcm_siv import GcmSiv
+from mojo_crypto.macs import Cmac
 
 from tests.block_ciphers.aes.utils import (
     AesTestVector,
@@ -296,6 +297,40 @@ def check_aes_gcm_siv_aft[
                     gcm_siv.decrypt(v.aad[:], data[:], tag)
 
 
+def check_aes_cmac_aft[
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Copyable
+    & Movable
+    & ImplicitlyDestructible,
+    KeySize: Int,
+    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+](vectors: PythonObject) raises:
+    for v in parse_acvp_aes(vectors):
+        if len(v.key) != KeySize:
+            continue
+
+        var msg = "[Cmac[{}]], file_name={}, count={}".format(
+            reflect[C]().name(), v.file_name, v.count
+        )
+
+        var cmac = Cmac[C](cipher_init(to_inline_array[KeySize](v.key)))
+        cmac.update(v.pt[:])
+        var full_tag = cmac^.finalize()
+
+        # ACVP CMAC vectors may specify a MAC truncated below the full block
+        # (64..128 bits); v.tag is already decoded at that length, so only
+        # compare that many leading bytes of our computed tag.
+        var actual_mac = List[UInt8](capacity=len(v.tag))
+        for i in range(len(v.tag)):
+            actual_mac.append(full_tag[i])
+
+        if v.is_encrypt:
+            assert_equal(actual_mac, v.tag, msg=msg)
+        else:
+            assert_equal(actual_mac == v.tag, v.test_passed, msg=msg)
+
+
 def run_checks[
     check: def[
         C: BlockCipherEncryptable
@@ -417,6 +452,17 @@ def test_aes_gcm_siv_aft() raises:
         "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-SIV-1.0", "AFT"
     )
     run_checks[check_aes_gcm_siv_aft](vectors)
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/CMAC-AES-1.0
+# CMAC only defines AFT groups (no MCT); "direction" is gen/ver rather than
+# encrypt/decrypt, folded into the same is_encrypt/tag_hex fields load()
+# already uses for GCM's produce-vs-verify duality.
+def test_aes_cmac_aft() raises:
+    var vectors = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/CMAC-AES-1.0", "AFT"
+    )
+    run_checks[check_aes_cmac_aft](vectors)
 
 
 def main() raises:

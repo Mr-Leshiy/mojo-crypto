@@ -33,11 +33,34 @@ def _result_index(expected: dict) -> dict[int, dict]:
 
 
 def _parse_aft(group: dict, results: dict[int, dict]) -> list[TestData]:
-    is_encrypt = group["direction"] == "encrypt"
+    # CMAC uses "gen"/"ver" instead of "encrypt"/"decrypt" for the same
+    # produce-vs-check duality: "gen" computes the canonical MAC (like
+    # encrypt), "ver" checks a possibly-wrong candidate (like GCM decrypt).
+    is_encrypt = group["direction"] in ("encrypt", "gen")
     records: list[TestData] = []
 
     for tc in group["tests"]:
         expected = results.get(tc["tcId"], {})
+
+        # CMAC vectors carry a single "message" field and a "mac" tag instead
+        # of pt/ct — reuse pt_hex for the message and tag_hex for the MAC.
+        # The MAC may be truncated below the full block (macLen 64..128
+        # bits); tag_hex is left at whatever length the JSON already gives,
+        # so callers derive the truncation from len(tag) rather than a
+        # separate field.
+        if "message" in tc:
+            records.append(TestData(
+                is_encrypt=is_encrypt,
+                key_len=group["keyLen"],
+                count=tc["tcId"],
+                key_hex=tc["key"],
+                iv_hex=None,
+                pt_hex=tc["message"],
+                ct_hex="",
+                tag_hex=expected.get("mac") if is_encrypt else tc.get("mac"),
+                test_passed=expected.get("testPassed", True),
+            ))
+            continue
 
         # CTR encryption vectors carry the IV in expectedResults rather than the
         # prompt; skip them and rely on the decryption vectors (same keystream
