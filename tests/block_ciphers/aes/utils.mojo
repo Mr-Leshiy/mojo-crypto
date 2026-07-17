@@ -34,7 +34,7 @@ def run_checks[
         & ImplicitlyDestructible,
         KeySize: Int,
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-    ](List[TestVector]) raises capturing[_]
+    ](List[TestVector]) raises capturing[_],
 ](vectors: List[TestVector]) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:

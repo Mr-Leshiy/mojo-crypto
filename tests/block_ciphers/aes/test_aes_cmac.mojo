@@ -105,9 +105,7 @@ def test_aes_cmac_aft() raises:
     var raw = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/CMAC-AES-1.0", "AFT"
     )
-    run_checks[CmacTestVector, check_aes_cmac_aft](
-        parse_acvp_aes_cmac_aft(raw)
-    )
+    run_checks[CmacTestVector, check_aes_cmac_aft](parse_acvp_aes_cmac_aft(raw))
 
 
 def main() raises:
