@@ -146,7 +146,9 @@ def test_aes_aft() raises:
     var raw = load_python_acvp_vectors_2(
         "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "AFT"
     )
-    run_checks[check_aes_ecb_aft](parse_acvp_aes_ecb_aft(raw))
+    run_checks[EcbTestVector, check_aes_ecb_aft](
+        parse_acvp_aes_ecb_aft(raw)
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
@@ -154,7 +156,9 @@ def test_aes_mct() raises:
     var raw = load_python_acvp_vectors_2(
         "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "MCT"
     )
-    run_checks[check_aes_ecb_mct](parse_acvp_aes_ecb_mct(raw))
+    run_checks[EcbTestVector, check_aes_ecb_mct](
+        parse_acvp_aes_ecb_mct(raw)
+    )
 
 
 def main() raises:

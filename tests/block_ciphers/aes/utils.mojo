@@ -86,8 +86,7 @@ def parse_acvp_aes(
 
 
 def run_checks[
-    Vectors: AnyType,
-    //,
+    TestVector: Copyable & Movable,
     check: def[
         C: BlockCipherEncryptable
         & BlockCipherDecryptable
@@ -96,8 +95,8 @@ def run_checks[
         & ImplicitlyDestructible,
         KeySize: Int,
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-    ](Vectors) raises capturing[_]
-](vectors: Vectors) raises:
+    ](List[TestVector]) raises capturing[_]
+](vectors: List[TestVector]) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
 
