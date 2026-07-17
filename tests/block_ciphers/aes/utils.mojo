@@ -36,18 +36,18 @@ def run_checks[
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
     ](List[TestVector]) raises capturing[_]
 ](vectors: List[TestVector]) raises:
-    # comptime if has_accelerator():
-    #     with DeviceContext() as ctx:
-    #
-    #         @parameter
-    #         def aes_gpu[
-    #             KeySize: Int
-    #         ](key: InlineArray[UInt8, KeySize]) raises -> AesGpu[KeySize]:
-    #             return AesGpu[KeySize](ctx, key)
-    #
-    #         check[AesGpu[16], 16, aes_gpu[16]](vectors)
-    #         check[AesGpu[24], 24, aes_gpu[24]](vectors)
-    #         check[AesGpu[32], 32, aes_gpu[32]](vectors)
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+
+            @parameter
+            def aes_gpu[
+                KeySize: Int
+            ](key: InlineArray[UInt8, KeySize]) raises -> AesGpu[KeySize]:
+                return AesGpu[KeySize](ctx, key)
+
+            check[AesGpu[16], 16, aes_gpu[16]](vectors)
+            check[AesGpu[24], 24, aes_gpu[24]](vectors)
+            check[AesGpu[32], 32, aes_gpu[32]](vectors)
 
     comptime if target_triple_contains_any(["aarch64", "arm64"]):
 
