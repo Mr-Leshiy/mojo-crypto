@@ -8,28 +8,28 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
+from mojo_crypto.block_ciphers.modes import CbcMode
 
 from tests.block_ciphers.aes.utils import (
-    load_python_acvp_vectors_2,
+    load_python_acvp_vectors,
     run_checks,
 )
 
 
-# Dedicated to the ECB AFT/MCT vectors only: no iv/aad/tag/test_passed
-# fields, unlike the generic AesTestVector used for the other modes.
 @fieldwise_init
-struct EcbTestVector(Copyable, Movable):
+struct CbcTestVector(Copyable, Movable):
     var is_encrypt: Bool
     var count: Int
     var key: List[UInt8]
+    var iv: List[UInt8]
     var pt: List[UInt8]
     var ct: List[UInt8]
 
 
-def parse_acvp_aes_ecb_aft(
+def parse_acvp_aes_cbc_aft(
     python_vectors: PythonObject,
-) raises -> List[EcbTestVector]:
-    var vectors = List[EcbTestVector]()
+) raises -> List[CbcTestVector]:
+    var vectors = List[CbcTestVector]()
     hex = Hex()
     for v in python_vectors:
         group = v["group"]
@@ -47,10 +47,11 @@ def parse_acvp_aes_ecb_aft(
             pt_hex = String(expected["pt"])
 
         vectors.append(
-            EcbTestVector(
+            CbcTestVector(
                 is_encrypt=is_encrypt,
-                count=atol(String(test["tcId"])),
+                count=Int(py=test["tcId"]),
                 key=hex.decode(String(test["key"])),
+                iv=hex.decode(String(test["iv"])),
                 pt=hex.decode(pt_hex),
                 ct=hex.decode(ct_hex),
             )
@@ -58,10 +59,10 @@ def parse_acvp_aes_ecb_aft(
     return vectors^
 
 
-def parse_acvp_aes_ecb_mct(
+def parse_acvp_aes_cbc_mct(
     python_vectors: PythonObject,
-) raises -> List[EcbTestVector]:
-    var vectors = List[EcbTestVector]()
+) raises -> List[CbcTestVector]:
+    var vectors = List[CbcTestVector]()
     hex = Hex()
     for v in python_vectors:
         group = v["group"]
@@ -71,10 +72,11 @@ def parse_acvp_aes_ecb_mct(
         var i = 0
         for entry in expected["resultsArray"]:
             vectors.append(
-                EcbTestVector(
+                CbcTestVector(
                     is_encrypt=is_encrypt,
                     count=i,
                     key=hex.decode(String(entry["key"])),
+                    iv=hex.decode(String(entry["iv"])),
                     pt=hex.decode(String(entry["pt"])),
                     ct=hex.decode(String(entry["ct"])),
                 )
@@ -83,7 +85,7 @@ def parse_acvp_aes_ecb_mct(
     return vectors^
 
 
-def check_aes_ecb_aft[
+def check_aes_cbc_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
@@ -91,25 +93,30 @@ def check_aes_ecb_aft[
     & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: List[EcbTestVector]) raises:
+](vectors: List[CbcTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[{}], count={}".format(reflect[C]().name(), v.count)
+        var msg = "[CbcMode[{}]], count={}".format(
+            reflect[C]().name(), v.count
+        )
 
-        var cipher = cipher_init(to_inline_array[KeySize](v.key))
-
+        var key = to_inline_array[KeySize](v.key)
+        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
         var pt = v.pt.copy()
-        cipher.encrypt(pt[:])
+
+        var cbc_enc = CbcMode[C](cipher_init(key), iv)
+        cbc_enc.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
         var ct = v.ct.copy()
-        cipher.decrypt(ct[:])
+        var cbc_dec = CbcMode[C](cipher_init(key), iv)
+        cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
 
-def check_aes_ecb_mct[
+def check_aes_cbc_mct[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
@@ -117,48 +124,56 @@ def check_aes_ecb_mct[
     & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: List[EcbTestVector]) raises:
-    # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
-    # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
+](vectors: List[CbcTestVector]) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
     for v in vectors:
         if len(v.key) != KeySize:
             continue
 
-        var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
-        var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
+        var msg = "[CbcMode[{}]], count={}".format(
+            reflect[C]().name(), v.count
+        )
+
         var key = to_inline_array[KeySize](v.key)
+        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
 
-        var cipher = cipher_init(key)
-        for _ in range(MCT_INNER_ITERATIONS):
-            if v.is_encrypt:
-                cipher.encrypt(block[:])
-            else:
-                cipher.decrypt(block[:])
+        if v.is_encrypt:
+            var block = v.pt.copy()
+            var next_block = v.iv.copy()
+            var cbc = CbcMode[C](cipher_init(key), iv)
+            for _ in range(MCT_INNER_ITERATIONS):
+                cbc.encrypt(block[:])
+                var tmp = block^
+                block = next_block^
+                next_block = tmp^
+            assert_equal(next_block, v.ct, msg=msg)
+        else:
+            var block = v.ct.copy()
+            var next_block = v.iv.copy()
+            var cbc = CbcMode[C](cipher_init(key), iv)
+            for _ in range(MCT_INNER_ITERATIONS):
+                cbc.decrypt(block[:])
+                var tmp = block^
+                block = next_block^
+                next_block = tmp^
+            assert_equal(next_block, v.pt, msg=msg)
 
-        var msg = "[{}], count={}".format(reflect[C]().name(), v.count)
-        assert_equal(block, expected, msg=msg)
 
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_aft() raises:
-    var raw = load_python_acvp_vectors_2(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "AFT"
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
+def test_aes_cbc_aft() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "AFT"
     )
-    run_checks[EcbTestVector, check_aes_ecb_aft](
-        parse_acvp_aes_ecb_aft(raw)
-    )
+    run_checks[CbcTestVector, check_aes_cbc_aft](parse_acvp_aes_cbc_aft(raw))
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_mct() raises:
-    var raw = load_python_acvp_vectors_2(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "MCT"
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
+def test_aes_cbc_mct() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "MCT"
     )
-    run_checks[EcbTestVector, check_aes_ecb_mct](
-        parse_acvp_aes_ecb_mct(raw)
-    )
+    run_checks[CbcTestVector, check_aes_cbc_mct](parse_acvp_aes_cbc_mct(raw))
 
 
 def main() raises:

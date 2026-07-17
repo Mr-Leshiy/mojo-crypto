@@ -1,36 +1,89 @@
-from std.testing import assert_equal, assert_raises, TestSuite
+from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
-from std.sys import has_accelerator
-from std.gpu.host import DeviceContext
 
-from mojo_crypto.utils import target_triple_contains_any, to_inline_array
-from mojo_crypto.universal_hashes.ghash import GHashCpu
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu
-from mojo_crypto.block_ciphers.aes import (
-    AesCpu,
-    AesAarch64,
-    AesX86,
-    AesGpu,
-)
+from mojo_crypto.utils import to_inline_array
+from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
-from mojo_crypto.block_ciphers.modes import CbcMode, CtrMode
-from mojo_crypto.aead import AuthenticationError
-from mojo_crypto.aead.gcm import Gcm
-from mojo_crypto.aead.gcm_siv import GcmSiv
-from mojo_crypto.macs import Cmac
 
 from tests.block_ciphers.aes.utils import (
-    AesTestVector,
     load_python_acvp_vectors,
-    parse_acvp_aes,
+    run_checks,
 )
 
 
-def check_aes_eft[
+# Dedicated to the ECB AFT/MCT vectors only: no iv/aad/tag/test_passed
+# fields, unlike the generic AesTestVector used for the other modes.
+@fieldwise_init
+struct EcbTestVector(Copyable, Movable):
+    var is_encrypt: Bool
+    var count: Int
+    var key: List[UInt8]
+    var pt: List[UInt8]
+    var ct: List[UInt8]
+
+
+def parse_acvp_aes_ecb_aft(
+    python_vectors: PythonObject,
+) raises -> List[EcbTestVector]:
+    var vectors = List[EcbTestVector]()
+    hex = Hex()
+    for v in python_vectors:
+        group = v["group"]
+        test = v["test"]
+        expected = v["expected"]
+        is_encrypt = String(group["direction"]) == "encrypt"
+
+        var pt_hex: String
+        var ct_hex: String
+        if is_encrypt:
+            pt_hex = String(test["pt"])
+            ct_hex = String(expected["ct"])
+        else:
+            ct_hex = String(test["ct"])
+            pt_hex = String(expected["pt"])
+
+        vectors.append(
+            EcbTestVector(
+                is_encrypt=is_encrypt,
+                count=Int(py=test["tcId"]),
+                key=hex.decode(String(test["key"])),
+                pt=hex.decode(pt_hex),
+                ct=hex.decode(ct_hex),
+            )
+        )
+    return vectors^
+
+
+def parse_acvp_aes_ecb_mct(
+    python_vectors: PythonObject,
+) raises -> List[EcbTestVector]:
+    var vectors = List[EcbTestVector]()
+    hex = Hex()
+    for v in python_vectors:
+        group = v["group"]
+        expected = v["expected"]
+        is_encrypt = String(group["direction"]) == "encrypt"
+
+        var i = 0
+        for entry in expected["resultsArray"]:
+            vectors.append(
+                EcbTestVector(
+                    is_encrypt=is_encrypt,
+                    count=i,
+                    key=hex.decode(String(entry["key"])),
+                    pt=hex.decode(String(entry["pt"])),
+                    ct=hex.decode(String(entry["ct"])),
+                )
+            )
+            i += 1
+    return vectors^
+
+
+def check_aes_ecb_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
@@ -38,14 +91,12 @@ def check_aes_eft[
     & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    for v in parse_acvp_aes(vectors):
+](vectors: List[EcbTestVector]) raises:
+    for v in vectors:
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[{}], file_name={}, count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
+        var msg = "[{}], count={}".format(reflect[C]().name(), v.count)
 
         var cipher = cipher_init(to_inline_array[KeySize](v.key))
 
@@ -58,7 +109,7 @@ def check_aes_eft[
         assert_equal(ct, v.pt, msg=msg)
 
 
-def check_aes_cbc_eft[
+def check_aes_ecb_mct[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
@@ -66,43 +117,12 @@ def check_aes_cbc_eft[
     & ImplicitlyDestructible,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    for v in parse_acvp_aes(vectors):
-        if len(v.key) != KeySize:
-            continue
-
-        var msg = "[CbcMode[{}]], file_name={} count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
-
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
-        var pt = v.pt.copy()
-
-        var cbc_enc = CbcMode[C](cipher_init(key), iv)
-        cbc_enc.encrypt(pt[:])
-        assert_equal(pt, v.ct, msg=msg)
-
-        var ct = v.ct.copy()
-        var cbc_dec = CbcMode[C](cipher_init(key), iv)
-        cbc_dec.decrypt(ct[:])
-        assert_equal(ct, v.pt, msg=msg)
-
-
-def check_aes_mct[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
+](vectors: List[EcbTestVector]) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
-    for v in parse_acvp_aes(vectors):
+    for v in vectors:
         if len(v.key) != KeySize:
             continue
 
@@ -117,352 +137,28 @@ def check_aes_mct[
             else:
                 cipher.decrypt(block[:])
 
-        var msg = "[{}], file_name={} count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
+        var msg = "[{}], count={}".format(reflect[C]().name(), v.count)
         assert_equal(block, expected, msg=msg)
-
-
-def check_aes_cbc_mct[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    comptime MCT_INNER_ITERATIONS: Int = 1000
-
-    for v in parse_acvp_aes(vectors):
-        if len(v.key) != KeySize:
-            continue
-
-        var msg = "[CbcMode[{}]], file_name={} count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
-
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
-
-        if v.is_encrypt:
-            var block = v.pt.copy()
-            var next_block = v.iv.copy()
-            var cbc = CbcMode[C](cipher_init(key), iv)
-            for _ in range(MCT_INNER_ITERATIONS):
-                cbc.encrypt(block[:])
-                var tmp = block^
-                block = next_block^
-                next_block = tmp^
-            assert_equal(next_block, v.ct, msg=msg)
-        else:
-            var block = v.ct.copy()
-            var next_block = v.iv.copy()
-            var cbc = CbcMode[C](cipher_init(key), iv)
-            for _ in range(MCT_INNER_ITERATIONS):
-                cbc.decrypt(block[:])
-                var tmp = block^
-                block = next_block^
-                next_block = tmp^
-            assert_equal(next_block, v.pt, msg=msg)
-
-
-def check_aes_ctr_aft[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    for v in parse_acvp_aes(vectors):
-        if len(v.key) != KeySize:
-            continue
-
-        var msg = "[CtrMode[{}]], file_name={} count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
-
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
-
-        if v.is_encrypt:
-            var pt = v.pt.copy()
-            var ctr = CtrMode[C](cipher_init(key), iv)
-            ctr.encrypt(pt[:])
-            assert_equal(pt, v.ct, msg=msg)
-        else:
-            var ct = v.ct.copy()
-            var ctr = CtrMode[C](cipher_init(key), iv)
-            ctr.decrypt(ct[:])
-            assert_equal(ct, v.pt, msg=msg)
-
-
-def check_aes_gcm_aft[
-    NONCE_SIZE: Int,
-    TAG_SIZE: Int,
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    for v in parse_acvp_aes(vectors):
-        # This instantiation only handles vectors matching its sizes; the GCM
-        # set mixes several (key, nonce, tag) byte-length combinations.
-        if (
-            len(v.key) != KeySize
-            or len(v.iv) != NONCE_SIZE
-            or len(v.tag) != TAG_SIZE
-        ):
-            continue
-
-        msg = "[Gcm[{}], nonce={}, tag={}], file_name={} count={}".format(
-            reflect[C]().name(), NONCE_SIZE, TAG_SIZE, v.file_name, v.count
-        )
-        key = to_inline_array[KeySize](v.key)
-        nonce = to_inline_array[NONCE_SIZE](v.iv)
-        tag = to_inline_array[TAG_SIZE](v.tag)
-        if v.is_encrypt:
-            data = v.pt.copy()
-            gcm = Gcm[C, GHashCpu, NONCE_SIZE](cipher_init(key), nonce)
-            actual_tag = gcm.encrypt[TAG_SIZE](v.aad[:], data[:])
-            assert_equal(data, v.ct, msg=msg)
-            assert_equal(actual_tag, tag, msg=msg)
-        else:
-            data = v.ct.copy()
-            gcm = Gcm[C, GHashCpu, NONCE_SIZE](cipher_init(key), nonce)
-            if v.test_passed:
-                gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
-                assert_equal(data, v.pt, msg=msg)
-            else:
-                with assert_raises():
-                    gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
-
-
-def check_aes_gcm_siv_aft[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    # GCM-SIV (RFC 8452) fixes the nonce at 96 bits and the tag at 128 bits.
-    comptime NONCE_SIZE = 12
-    comptime TAG_SIZE = GcmSiv.TAG_SIZE
-
-    for v in parse_acvp_aes(vectors):
-        if (
-            len(v.key) != KeySize
-            or len(v.iv) != NONCE_SIZE
-            or len(v.ct) < TAG_SIZE
-        ):
-            continue
-
-        # GCM-SIV ACVP vectors have no separate tag field: the ciphertext is
-        # ciphertext||tag (RFC 8452), so split the trailing TAG_SIZE bytes of
-        # `v.ct` back out into the ciphertext body and the tag.
-        cipher_len = len(v.ct) - TAG_SIZE
-        cipher_body = List[UInt8](v.ct[:cipher_len])
-
-        msg = "[GcmSiv[{}]], file_name={} count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
-        key = to_inline_array[KeySize](v.key)
-        nonce = to_inline_array[NONCE_SIZE](v.iv)
-        tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
-        if v.is_encrypt:
-            data = v.pt.copy()
-            gcm_siv = GcmSiv[C, PolyvalCpu].create[KeySize, cipher_init](
-                key, nonce
-            )
-            actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
-            assert_equal(data, cipher_body, msg=msg)
-            assert_equal(actual_tag, tag, msg=msg)
-        else:
-            data = cipher_body.copy()
-            gcm_siv = GcmSiv[C, PolyvalCpu].create[KeySize, cipher_init](
-                key, nonce
-            )
-            if v.test_passed:
-                gcm_siv.decrypt(v.aad[:], data[:], tag)
-                assert_equal(data, v.pt, msg=msg)
-            else:
-                with assert_raises():
-                    gcm_siv.decrypt(v.aad[:], data[:], tag)
-
-
-def check_aes_cmac_aft[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: PythonObject) raises:
-    for v in parse_acvp_aes(vectors):
-        if len(v.key) != KeySize:
-            continue
-
-        var msg = "[Cmac[{}]], file_name={}, count={}".format(
-            reflect[C]().name(), v.file_name, v.count
-        )
-
-        var cmac = Cmac[C](cipher_init(to_inline_array[KeySize](v.key)))
-        cmac.update(v.pt[:])
-        var full_tag = cmac^.finalize()
-
-        # ACVP CMAC vectors may specify a MAC truncated below the full block
-        # (64..128 bits); v.tag is already decoded at that length, so only
-        # compare that many leading bytes of our computed tag.
-        var actual_mac = List[UInt8](capacity=len(v.tag))
-        for i in range(len(v.tag)):
-            actual_mac.append(full_tag[i])
-
-        if v.is_encrypt:
-            assert_equal(actual_mac, v.tag, msg=msg)
-        else:
-            assert_equal(actual_mac == v.tag, v.test_passed, msg=msg)
-
-
-def run_checks[
-    check: def[
-        C: BlockCipherEncryptable
-        & BlockCipherDecryptable
-        & Copyable
-        & Movable
-        & ImplicitlyDestructible,
-        KeySize: Int,
-        cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-    ](PythonObject) raises capturing[_]
-](vectors: PythonObject) raises:
-    comptime if has_accelerator():
-        with DeviceContext() as ctx:
-
-            @parameter
-            def aes_gpu[
-                KeySize: Int
-            ](key: InlineArray[UInt8, KeySize]) raises -> AesGpu[KeySize]:
-                return AesGpu[KeySize](ctx, key)
-
-            check[AesGpu[16], 16, aes_gpu[16]](vectors)
-            check[AesGpu[24], 24, aes_gpu[24]](vectors)
-            check[AesGpu[32], 32, aes_gpu[32]](vectors)
-
-    comptime if target_triple_contains_any(["aarch64", "arm64"]):
-
-        @parameter
-        def aes_aarch64[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> AesAarch64[KeySize]:
-            return AesAarch64[KeySize](key)
-
-        check[AesAarch64[16], 16, aes_aarch64[16]](vectors)
-        check[AesAarch64[24], 24, aes_aarch64[24]](vectors)
-        check[AesAarch64[32], 32, aes_aarch64[32]](vectors)
-
-    comptime if target_triple_contains_any(["x86_64"]):
-
-        @parameter
-        def aes_x86[
-            KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> AesX86[KeySize]:
-            return AesX86[KeySize](key)
-
-        check[AesX86[16], 16, aes_x86[16]](vectors)
-        check[AesX86[24], 24, aes_x86[24]](vectors)
-        check[AesX86[32], 32, aes_x86[32]](vectors)
-
-    @parameter
-    def aes_cpu[
-        KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> AesCpu[KeySize]:
-        return AesCpu[KeySize](key)
-
-    check[AesCpu[16], 16, aes_cpu[16]](vectors)
-    check[AesCpu[24], 24, aes_cpu[24]](vectors)
-    check[AesCpu[32], 32, aes_cpu[32]](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_aft() raises:
-    var vectors = load_python_acvp_vectors(
+    var raw = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "AFT"
     )
-    run_checks[check_aes_eft](vectors)
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def test_aes_cbc_aft() raises:
-    var vectors = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "AFT"
+    run_checks[EcbTestVector, check_aes_ecb_aft](
+        parse_acvp_aes_ecb_aft(raw)
     )
-    run_checks[check_aes_cbc_eft](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_mct() raises:
-    var vectors = load_python_acvp_vectors(
+    var raw = load_python_acvp_vectors(
         "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "MCT"
     )
-    run_checks[check_aes_mct](vectors)
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def test_aes_cbc_mct() raises:
-    var vectors = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "MCT"
+    run_checks[EcbTestVector, check_aes_ecb_mct](
+        parse_acvp_aes_ecb_mct(raw)
     )
-    run_checks[check_aes_cbc_mct](vectors)
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
-# AES-CTR only defines AFT groups (no MCT).
-def test_aes_ctr_aft() raises:
-    var vectors = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "AFT"
-    )
-    run_checks[check_aes_ctr_aft](vectors)
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-1.0
-# AES-GCM only defines AFT groups (no MCT).
-def test_aes_gcm_aft() raises:
-    var vectors = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-1.0", "AFT"
-    )
-    # The ACVP-AES-GCM-1.0 set uses two (nonce, tag) byte-size combinations.
-    # `_` unbinds the remaining params (C, KeySize, cipher_init) for run_checks.
-    run_checks[check_aes_gcm_aft[12, 16, _, _, _]](vectors)
-    run_checks[check_aes_gcm_aft[15, 4, _, _, _]](vectors)
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-SIV-1.0
-# AES-GCM-SIV only defines AFT groups (no MCT). The 16-byte tag is appended to
-# the ciphertext (ct = ciphertext||tag); check_aes_gcm_siv_aft splits it back
-# off, since these vectors have no separate tag field.
-def test_aes_gcm_siv_aft() raises:
-    var vectors = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-SIV-1.0", "AFT"
-    )
-    run_checks[check_aes_gcm_siv_aft](vectors)
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/CMAC-AES-1.0
-# CMAC only defines AFT groups (no MCT); "direction" is gen/ver rather than
-# encrypt/decrypt, folded into the same is_encrypt/tag_hex fields load()
-# already uses for GCM's produce-vs-verify duality.
-def test_aes_cmac_aft() raises:
-    var vectors = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/CMAC-AES-1.0", "AFT"
-    )
-    run_checks[check_aes_cmac_aft](vectors)
 
 
 def main() raises:
