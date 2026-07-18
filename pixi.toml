@@ -23,7 +23,14 @@ docs = "python -m pymodo build && hugo --source docs/site"
 # environments (e.g. restricted CI containers)
 test   = """
 mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_cbc.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_ctr.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_gcm.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_gcm_siv.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_cmac.mojo &&
+
 mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/test_ctr.mojo &&
+
 mojo run $MOJO_TEST_FEATURES -I . tests/containers/encoding/test_hex.mojo &&
 
 mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_field_element.mojo &&

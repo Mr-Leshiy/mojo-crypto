@@ -1,27 +1,15 @@
 import json
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
 
 class TestType(Enum):
+    # Algorithm Functional Test: independent key/pt/ct vectors, checked in isolation.
     AFT = "AFT"
+    # Monte Carlo Test: a chained ~1000-iteration loop per seed, with the key
+    # itself mutated periodically; only 100 checkpoint snapshots are given in
+    # resultsArray, so the implementation must reproduce the inner loop.
     MCT = "MCT"
-
-
-@dataclass
-class TestData:
-    is_encrypt: bool
-    key_len: int
-    count: int
-    key_hex: str
-    iv_hex: str | None
-    pt_hex: str
-    ct_hex: str
-    # AEAD-only fields (e.g. GCM); left as defaults for the other modes.
-    aad_hex: str | None = None
-    tag_hex: str | None = None
-    test_passed: bool = True
 
 
 def _result_index(expected: dict) -> dict[int, dict]:
@@ -32,102 +20,25 @@ def _result_index(expected: dict) -> dict[int, dict]:
     return index
 
 
-def _parse_aft(group: dict, results: dict[int, dict]) -> list[TestData]:
-    # CMAC uses "gen"/"ver" instead of "encrypt"/"decrypt" for the same
-    # produce-vs-check duality: "gen" computes the canonical MAC (like
-    # encrypt), "ver" checks a possibly-wrong candidate (like GCM decrypt).
-    is_encrypt = group["direction"] in ("encrypt", "gen")
-    records: list[TestData] = []
-
-    for tc in group["tests"]:
-        expected = results.get(tc["tcId"], {})
-
-        # CMAC vectors carry a single "message" field and a "mac" tag instead
-        # of pt/ct — reuse pt_hex for the message and tag_hex for the MAC.
-        # The MAC may be truncated below the full block (macLen 64..128
-        # bits); tag_hex is left at whatever length the JSON already gives,
-        # so callers derive the truncation from len(tag) rather than a
-        # separate field.
-        if "message" in tc:
-            records.append(TestData(
-                is_encrypt=is_encrypt,
-                key_len=group["keyLen"],
-                count=tc["tcId"],
-                key_hex=tc["key"],
-                iv_hex=None,
-                pt_hex=tc["message"],
-                ct_hex="",
-                tag_hex=expected.get("mac") if is_encrypt else tc.get("mac"),
-                test_passed=expected.get("testPassed", True),
-            ))
-            continue
-
-        # CTR encryption vectors carry the IV in expectedResults rather than the
-        # prompt; skip them and rely on the decryption vectors (same keystream
-        # logic, IV available in the prompt).
-        if tc.get("iv") is None and expected.get("iv") is not None:
-            continue
-
-        # Skip non-byte-aligned payloads (CTR payloadLen field, in bits).
-        payload_len = tc.get("payloadLen")
-        if payload_len is not None and payload_len % 8 != 0:
-            continue
-
-        if is_encrypt:
-            pt_hex, ct_hex = tc["pt"], expected.get("ct", "")
-        else:
-            ct_hex, pt_hex = tc["ct"], expected.get("pt", "")
-
-        # GCM carries the tag in the prompt on decrypt and in expectedResults on
-        # encrypt; authentication failures are flagged via testPassed=false.
-        tag_hex = expected.get("tag") if is_encrypt else tc.get("tag")
-
-        records.append(TestData(
-            is_encrypt=is_encrypt,
-            key_len=group["keyLen"],
-            count=tc["tcId"],
-            key_hex=tc["key"],
-            iv_hex=tc.get("iv"),
-            pt_hex=pt_hex,
-            ct_hex=ct_hex,
-            aad_hex=tc.get("aad"),
-            tag_hex=tag_hex,
-            test_passed=expected.get("testPassed", True),
-        ))
-
-    return records
-
-
-def _parse_mct(group: dict, results: dict[int, dict]) -> list[TestData]:
-    is_encrypt = group["direction"] == "encrypt"
-    assert len(group["tests"]) == 1
-    expected = results.get(group["tests"][0]["tcId"], {})
-
-    return [
-        TestData(
-            is_encrypt=is_encrypt,
-            key_len=group["keyLen"],
-            count=i,
-            key_hex=entry["key"],
-            iv_hex=entry.get("iv"),
-            pt_hex=entry["pt"],
-            ct_hex=entry["ct"],
-        )
-        for i, entry in enumerate(expected.get("resultsArray", []))
-    ]
-
-
-def load(dir: str, test_type: TestType) -> list[TestData]:
+def load(dir: str, test_type: TestType) -> list[dict]:
+    # No AFT/MCT-specific field extraction or renaming (pt_hex/ct_hex/
+    # is_encrypt/...): each record is just the raw group, test-case, and
+    # expected-result dicts as read from JSON, keyed by tcId. Interpretation
+    # of these fields happens on the Mojo side.
     root = Path(dir)
     prompt = json.loads((root / "prompt.json").read_text())
     expected = json.loads((root / "expectedResults.json").read_text())
     results = _result_index(expected)
 
-    records: list[TestData] = []
+    records: list[dict] = []
     for group in prompt.get("testGroups", []):
-        if group["testType"] == test_type.value:
-            if test_type == TestType.AFT:
-                records.extend(_parse_aft(group, results))
-            else:
-                records.extend(_parse_mct(group, results))
+        if group["testType"] != test_type.value:
+            continue
+        group_fields = {k: v for k, v in group.items() if k != "tests"}
+        for tc in group["tests"]:
+            records.append({
+                "group": group_fields,
+                "test": tc,
+                "expected": results.get(tc["tcId"], {}),
+            })
     return records
