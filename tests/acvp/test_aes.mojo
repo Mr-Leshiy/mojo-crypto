@@ -9,10 +9,8 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
-from tests.acvp.utils import (
-    load_python_acvp_vectors,
-    run_aes_checks,
-)
+from tests.acvp.utils import load_python_acvp_vectors
+from tests.block_ciphers.utils import run_aes_checks
 
 
 # Dedicated to the ECB AFT/MCT vectors only: no iv/aad/tag/test_passed

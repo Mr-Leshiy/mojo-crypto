@@ -10,10 +10,8 @@ from mojo_crypto.block_ciphers.traits import (
 )
 from mojo_crypto.macs import Cmac
 
-from tests.acvp.utils import (
-    load_python_acvp_vectors,
-    run_aes_checks,
-)
+from tests.acvp.utils import load_python_acvp_vectors
+from tests.block_ciphers.utils import run_aes_checks
 
 
 @fieldwise_init
