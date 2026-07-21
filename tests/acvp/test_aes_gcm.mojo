@@ -28,7 +28,7 @@ struct GcmTestVector(Copyable, Movable):
     # Authentication tag, possibly truncated (tagLen varies per group).
     var tag: List[UInt8]
     # For decrypt vectors: whether authentication is expected to succeed.
-    var test_passe§: Bool
+    var test_passes: Bool
 
 
 def parse_acvp_aes_gcm_aft(
