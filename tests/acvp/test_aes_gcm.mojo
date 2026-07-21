@@ -121,7 +121,7 @@ def check_aes_gcm_aft[
 # AES-GCM only defines AFT groups (no MCT).
 def test_aes_gcm_aft() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/acvp/data/ACVP-AES-GCM-1.0", "AFT"
+        "tests/acvp/data/ACVP-AES-GCM-1.0", "AFT"
     )
     var vectors = parse_acvp_aes_gcm_aft(raw)
     # The ACVP-AES-GCM-1.0 set uses two (nonce, tag) byte-size combinations.
