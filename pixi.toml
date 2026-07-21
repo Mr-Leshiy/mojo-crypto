@@ -22,12 +22,12 @@ docs = "python -m pymodo build && hugo --source docs/site"
 # explicitly because `mojo run`'s host-feature autodetection is unreliable in some
 # environments (e.g. restricted CI containers)
 test   = """
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes.mojo &&
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_cbc.mojo &&
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_ctr.mojo &&
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_gcm.mojo &&
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_gcm_siv.mojo &&
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/aes/test_aes_cmac.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_cbc.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_ctr.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_gcm.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_gcm_siv.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_cmac.mojo &&
 
 mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/test_ctr.mojo &&
 
@@ -49,10 +49,10 @@ bench-build = { depends-on = ["bench-build-mojo", "bench-build-rust"] }
 
 bench-build-mojo = """
 out=$(mktemp -d) &&
-mojo build --emit=asm -I . benchmarks/block_ciphers/aes/cpu.mojo -o $out/aes_cpu &&
-mojo build --emit=asm --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/block_ciphers/aes/aarch64.mojo -o $out/aes_aarch64 &&
-mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features=+aes,+sse2 -I . benchmarks/block_ciphers/aes/x86.mojo -o $out/aes_x86 &&
-mojo build --emit=asm --target-accelerator=sm_80 -I . benchmarks/block_ciphers/aes/gpu.mojo -o $out/aes_gpu &&
+mojo build --emit=asm -I . benchmarks/acvp/cpu.mojo -o $out/aes_cpu &&
+mojo build --emit=asm --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/acvp/aarch64.mojo -o $out/aes_aarch64 &&
+mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features=+aes,+sse2 -I . benchmarks/acvp/x86.mojo -o $out/aes_x86 &&
+mojo build --emit=asm --target-accelerator=sm_80 -I . benchmarks/acvp/gpu.mojo -o $out/aes_gpu &&
 mojo build --emit=asm -I . benchmarks/universal_hashes/ghash/cpu.mojo -o $out/ghash_cpu &&
 mojo build --emit=asm --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/universal_hashes/ghash/aarch64.mojo -o $out/ghash_aarch64 &&
 mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features=+pclmul,+sse2 -I . benchmarks/universal_hashes/ghash/x86.mojo -o $out/ghash_x86 &&
