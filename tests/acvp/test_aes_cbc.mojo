@@ -10,10 +10,8 @@ from mojo_crypto.block_ciphers.traits import (
 )
 from mojo_crypto.block_ciphers.modes import CbcMode
 
-from tests.block_ciphers.aes.utils import (
-    load_python_acvp_vectors,
-    run_checks,
-)
+from tests.acvp.utils import load_python_acvp_vectors
+from tests.block_ciphers.utils import run_aes_checks
 
 
 @fieldwise_init
@@ -159,17 +157,21 @@ def check_aes_cbc_mct[
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_aes_cbc_aft() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "AFT"
+        "tests/acvp/data/ACVP-AES-CBC-1.0", "AFT"
     )
-    run_checks[CbcTestVector, check_aes_cbc_aft](parse_acvp_aes_cbc_aft(raw))
+    run_aes_checks[CbcTestVector, check_aes_cbc_aft](
+        parse_acvp_aes_cbc_aft(raw)
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_aes_cbc_mct() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CBC-1.0", "MCT"
+        "tests/acvp/data/ACVP-AES-CBC-1.0", "MCT"
     )
-    run_checks[CbcTestVector, check_aes_cbc_mct](parse_acvp_aes_cbc_mct(raw))
+    run_aes_checks[CbcTestVector, check_aes_cbc_mct](
+        parse_acvp_aes_cbc_mct(raw)
+    )
 
 
 def main() raises:

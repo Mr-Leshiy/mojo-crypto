@@ -10,10 +10,8 @@ from mojo_crypto.block_ciphers.traits import (
 )
 from mojo_crypto.block_ciphers.modes import CtrMode
 
-from tests.block_ciphers.aes.utils import (
-    load_python_acvp_vectors,
-    run_checks,
-)
+from tests.acvp.utils import load_python_acvp_vectors
+from tests.block_ciphers.utils import run_aes_checks
 
 
 @fieldwise_init
@@ -94,9 +92,11 @@ def check_aes_ctr_aft[
 # AES-CTR only defines AFT groups (no MCT).
 def test_aes_ctr_aft() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "AFT"
+        "tests/acvp/data/ACVP-AES-CTR-1.0", "AFT"
     )
-    run_checks[CtrTestVector, check_aes_ctr_aft](parse_acvp_aes_ctr_aft(raw))
+    run_aes_checks[CtrTestVector, check_aes_ctr_aft](
+        parse_acvp_aes_ctr_aft(raw)
+    )
 
 
 def main() raises:

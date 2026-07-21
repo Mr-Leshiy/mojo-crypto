@@ -9,10 +9,8 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
-from tests.block_ciphers.aes.utils import (
-    load_python_acvp_vectors,
-    run_checks,
-)
+from tests.acvp.utils import load_python_acvp_vectors
+from tests.block_ciphers.utils import run_aes_checks
 
 
 # Dedicated to the ECB AFT/MCT vectors only: no iv/aad/tag/test_passed
@@ -144,17 +142,21 @@ def check_aes_ecb_mct[
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_aft() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "AFT"
+        "tests/acvp/data/ACVP-AES-ECB-1.0", "AFT"
     )
-    run_checks[EcbTestVector, check_aes_ecb_aft](parse_acvp_aes_ecb_aft(raw))
+    run_aes_checks[EcbTestVector, check_aes_ecb_aft](
+        parse_acvp_aes_ecb_aft(raw)
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_mct() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-ECB-1.0", "MCT"
+        "tests/acvp/data/ACVP-AES-ECB-1.0", "MCT"
     )
-    run_checks[EcbTestVector, check_aes_ecb_mct](parse_acvp_aes_ecb_mct(raw))
+    run_aes_checks[EcbTestVector, check_aes_ecb_mct](
+        parse_acvp_aes_ecb_mct(raw)
+    )
 
 
 def main() raises:

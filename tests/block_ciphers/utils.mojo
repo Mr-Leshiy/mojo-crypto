@@ -1,8 +1,7 @@
-from std.python import Python, PythonObject
 from std.sys import has_accelerator
 from std.gpu.host import DeviceContext
 
-from mojo_crypto.utils import target_triple_contains_any, to_inline_array
+from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.block_ciphers.aes import (
     AesCpu,
     AesAarch64,
@@ -15,16 +14,7 @@ from mojo_crypto.block_ciphers.traits import (
 )
 
 
-def load_python_acvp_vectors(
-    dir: String, test_type: String
-) raises -> PythonObject:
-    var sys = Python.import_module("sys")
-    sys.path.insert(0, PythonObject("tests/block_ciphers/aes"))
-    var read_acvp_vectors = Python.import_module("read_acvp_vectors")
-    return read_acvp_vectors.load(dir, read_acvp_vectors.TestType(test_type))
-
-
-def run_checks[
+def run_aes_checks[
     TestVector: Copyable & Movable,
     check: def[
         C: BlockCipherEncryptable
