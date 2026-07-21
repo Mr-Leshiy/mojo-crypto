@@ -44,11 +44,9 @@ def check_aes[
         assert_equal(ct, v.pt, msg=msg)
 
 
-# Single-block known-answer vectors for AES-128/192/256, from FIPS 197
-# Appendix B (AES-128) / Appendix C (AES-128/192/256), also reproduced as
-# RustCrypto's `aes` crate hazmat test vectors:
+# Single-block known-answer vectors for AES-128/192/256
+# from FIPS 197 Appendix C
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
-# https://github.com/RustCrypto/block-ciphers/blob/master/aes/tests/hazmat.rs
 def test_aes_fips197_kat() raises:
     var hex = Hex()
     var vectors: List[AesTestVector] = [
@@ -58,16 +56,13 @@ def test_aes_fips197_kat() raises:
             ct=hex.decode("69c4e0d86a7b0430d8cdb78070b4c55a"),
         ),
         AesTestVector(
-            key=hex.decode(
-                "000102030405060708090a0b0c0d0e0f1011121314151617"
-            ),
+            key=hex.decode("000102030405060708090a0b0c0d0e0f1011121314151617"),
             pt=hex.decode("00112233445566778899aabbccddeeff"),
             ct=hex.decode("dda97ca4864cdfe06eaf70a0ec0d7191"),
         ),
         AesTestVector(
             key=hex.decode(
-                "000102030405060708090a0b0c0d0e0f"
-                "101112131415161718191a1b1c1d1e1f"
+                "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
             ),
             pt=hex.decode("00112233445566778899aabbccddeeff"),
             ct=hex.decode("8ea2b7ca516745bfeafc49904b496089"),
