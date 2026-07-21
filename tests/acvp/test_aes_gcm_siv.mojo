@@ -121,7 +121,7 @@ def check_aes_gcm_siv_aft[
 # AES-GCM-SIV only defines AFT groups (no MCT).
 def test_aes_gcm_siv_aft() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-GCM-SIV-1.0", "AFT"
+        "tests/acvp/data/ACVP-AES-GCM-SIV-1.0", "AFT"
     )
     run_aes_checks[GcmSivTestVector, check_aes_gcm_siv_aft](
         parse_acvp_aes_gcm_siv_aft(raw)

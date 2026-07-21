@@ -92,7 +92,7 @@ def check_aes_ctr_aft[
 # AES-CTR only defines AFT groups (no MCT).
 def test_aes_ctr_aft() raises:
     var raw = load_python_acvp_vectors(
-        "tests/block_ciphers/aes/acvp/ACVP-AES-CTR-1.0", "AFT"
+        "tests/acvp/data/ACVP-AES-CTR-1.0", "AFT"
     )
     run_aes_checks[CtrTestVector, check_aes_ctr_aft](
         parse_acvp_aes_ctr_aft(raw)
