@@ -23,12 +23,12 @@
 from std.sys.info import is_64bit
 
 from mojo_crypto.containers.encoding import Hex
-from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
+from mojo_crypto.universal_hashes.polyval._common import BLOCK_SIZE
 from mojo_crypto.universal_hashes.polyval.field_element.mul64 import (
-    karatsuba_mul64,
+    _karatsuba_mul64,
 )
 from mojo_crypto.universal_hashes.polyval.field_element.mul32 import (
-    karatsuba_mul32,
+    _karatsuba_mul32,
 )
 
 
@@ -81,9 +81,9 @@ struct FieldElement(
         32-bit path on 32-bit platforms.
         """
         comptime if is_64bit():
-            return Self(karatsuba_mul64(self._v, rhs._v).mont_reduce())
+            return Self(_karatsuba_mul64(self._v, rhs._v).mont_reduce())
         else:
-            return Self(karatsuba_mul32(self._v, rhs._v).mont_reduce())
+            return Self(_karatsuba_mul32(self._v, rhs._v).mont_reduce())
 
     def __imul__(mut self, rhs: Self):
         self = self * rhs

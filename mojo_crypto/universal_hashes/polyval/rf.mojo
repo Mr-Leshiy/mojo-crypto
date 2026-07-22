@@ -1,6 +1,6 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from .field_element import FieldElement
-from .common import (
+from ._common import (
     BLOCK_SIZE,
     KEY_SIZE,
     TAG_SIZE,
@@ -61,16 +61,16 @@ struct PolyvalRf[P: Pmull](
 
     def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
         """Absorb one block into the accumulator: y = (y ⊕ block) × H."""
-        data = load_bytes(block)
-        y = load_bytes(self._y._v)
-        h1 = load_bytes(self._h.h1._v)
-        d1 = load_bytes(self._h.d1._v)
+        data = _load_bytes(block)
+        y = _load_bytes(self._y._v)
+        h1 = _load_bytes(self._h.h1._v)
+        d1 = _load_bytes(self._h.d1._v)
 
         # XOR with accumulator
         acc = y ^ data
 
         # Multiply by H using R/F algorithm
-        self._y = FieldElement(store_bytes(gf128_mul_rf[Self.P](acc, h1, d1)))
+        self._y = FieldElement(_store_bytes(_gf128_mul_rf[Self.P](acc, h1, d1)))
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return self._y._v
@@ -116,26 +116,26 @@ struct ExpandedKey[P: Pmull](
     var d4: FieldElement
 
     def __init__(out self, h: InlineArray[UInt8, KEY_SIZE]):
-        h1 = load_bytes(h)
-        d1 = compute_d[Self.P](h1)
+        h1 = _load_bytes(h)
+        d1 = _compute_d[Self.P](h1)
 
-        h2 = gf128_mul_rf[Self.P](h1, h1, d1)
-        d2 = compute_d[Self.P](h2)
+        h2 = _gf128_mul_rf[Self.P](h1, h1, d1)
+        d2 = _compute_d[Self.P](h2)
 
-        h3 = gf128_mul_rf[Self.P](h2, h1, d1)
-        d3 = compute_d[Self.P](h3)
+        h3 = _gf128_mul_rf[Self.P](h2, h1, d1)
+        d3 = _compute_d[Self.P](h3)
 
-        h4 = gf128_mul_rf[Self.P](h2, h2, d2)
-        d4 = compute_d[Self.P](h4)
+        h4 = _gf128_mul_rf[Self.P](h2, h2, d2)
+        d4 = _compute_d[Self.P](h4)
 
-        self.h1 = FieldElement(store_bytes(h1))
-        self.d1 = FieldElement(store_bytes(d1))
-        self.h2 = FieldElement(store_bytes(h2))
-        self.d2 = FieldElement(store_bytes(d2))
-        self.h3 = FieldElement(store_bytes(h3))
-        self.d3 = FieldElement(store_bytes(d3))
-        self.h4 = FieldElement(store_bytes(h4))
-        self.d4 = FieldElement(store_bytes(d4))
+        self.h1 = FieldElement(_store_bytes(h1))
+        self.d1 = FieldElement(_store_bytes(d1))
+        self.h2 = FieldElement(_store_bytes(h2))
+        self.d2 = FieldElement(_store_bytes(d2))
+        self.h3 = FieldElement(_store_bytes(h3))
+        self.d3 = FieldElement(_store_bytes(d3))
+        self.h4 = FieldElement(_store_bytes(h4))
+        self.d4 = FieldElement(_store_bytes(d4))
 
     @staticmethod
     def zeros() -> Self:
@@ -152,13 +152,13 @@ struct ExpandedKey[P: Pmull](
 
 
 @always_inline
-def load_bytes(bytes: InlineArray[UInt8, 16]) -> SIMD[DType.uint64, 2]:
+def _load_bytes(bytes: InlineArray[UInt8, 16]) -> SIMD[DType.uint64, 2]:
     """Load 16 bytes as two 64-bit lanes."""
     return bytes.unsafe_ptr().bitcast[UInt64]().load[width=2]()
 
 
 @always_inline
-def store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
+def _store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
     """Store two 64-bit lanes back into 16 bytes."""
     out = InlineArray[UInt8, 16](uninitialized=True)
     out.unsafe_ptr().bitcast[UInt64]().store(reg)
@@ -166,7 +166,7 @@ def store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
 
 
 @always_inline
-def compute_d[P: Pmull](h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
+def _compute_d[P: Pmull](h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     """
     Compute D = swap(H) ⊕ (H0 × P1) for the R/F algorithm.
 
@@ -180,7 +180,7 @@ def compute_d[P: Pmull](h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
 
 
 @always_inline
-def gf128_mul_rf[
+def _gf128_mul_rf[
     P: Pmull
 ](
     m: SIMD[DType.uint64, 2],
@@ -189,12 +189,12 @@ def gf128_mul_rf[
 ) -> SIMD[DType.uint64, 2]:
     """Complete R/F multiplication with reduction (5 PCLMULQDQs total)."""
 
-    rf = rf_mul_unreduced[P](m, h, d)
-    return reduce_rf[P](rf[0], rf[1])
+    rf = _rf_mul_unreduced[P](m, h, d)
+    return _reduce_rf[P](rf[0], rf[1])
 
 
 @always_inline
-def rf_mul_unreduced[
+def _rf_mul_unreduced[
     P: Pmull
 ](
     m: SIMD[DType.uint64, 2],
@@ -214,7 +214,7 @@ def rf_mul_unreduced[
 
 
 @always_inline
-def reduce_rf[
+def _reduce_rf[
     P: Pmull
 ](r: SIMD[DType.uint64, 2], f: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     """

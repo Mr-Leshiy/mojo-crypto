@@ -11,7 +11,7 @@ struct GHashGeneric[
     AES-GCM authenticated encryption cipher.
 
     GHASH is the big-endian counterpart of POLYVAL: every input/output block is
-    byte-reversed and the key is run through `mulx` (RFC 8452 Appendix A). This
+    byte-reversed and the key is run through `_mulx` (RFC 8452 Appendix A). This
     struct is parameterized by the underlying POLYVAL backend `P` (e.g.
     `PolyvalCpu`, `PolyvalAarch64`), so the field arithmetic is shared.
     """
@@ -25,19 +25,19 @@ struct GHashGeneric[
     var _poly: Self.P
 
     def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
-        self._poly = Self.P(mulx(reverse(h)))
+        self._poly = Self.P(_mulx(_reverse(h)))
 
     def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
-        self._poly.update_block(reverse(block))
+        self._poly.update_block(_reverse(block))
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-        return reverse(self._poly.copy().finalize())
+        return _reverse(self._poly.copy().finalize())
 
     def reset(mut self):
         self._poly.reset()
 
 
-def reverse[
+def _reverse[
     SIZE: Int
 ](var v: InlineArray[UInt8, SIZE]) -> InlineArray[UInt8, SIZE]:
     """
@@ -48,7 +48,7 @@ def reverse[
     return out^
 
 
-def mulx[
+def _mulx[
     SIZE: Int
 ](var v: InlineArray[UInt8, SIZE]) -> InlineArray[UInt8, SIZE]:
     """

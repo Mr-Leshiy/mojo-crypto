@@ -10,7 +10,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
     BlockCipherDecryptable,
 )
-from .common import BLOCK_SIZE, SBOX, check_key_size
+from ._common import BLOCK_SIZE, SBOX, _check_key_size
 
 
 struct AesAarch64[KEY_SIZE: Int](
@@ -28,7 +28,7 @@ struct AesAarch64[KEY_SIZE: Int](
     var dec_rks: InlineArray[SIMD[DType.uint8, 16], Self.NR + 1]
 
     def __init__(out self, key: InlineArray[UInt8, Self.KEY_SIZE]):
-        check_key_size[Self.KEY_SIZE]()
+        _check_key_size[Self.KEY_SIZE]()
 
         self.enc_rks = _expand_enc_rks[Self.NR, Self.NK](key)
         self.dec_rks = _dec_from_enc_rks[Self.NR](self.enc_rks)
@@ -37,18 +37,18 @@ struct AesAarch64[KEY_SIZE: Int](
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            cipher(data[offset : offset + BLOCK_SIZE], self.enc_rks)
+            _cipher(data[offset : offset + BLOCK_SIZE], self.enc_rks)
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            decipher(data[offset : offset + BLOCK_SIZE], self.dec_rks)
+            _decipher(data[offset : offset + BLOCK_SIZE], self.dec_rks)
 
 
 # AESE: AddRoundKey(state XOR key), SubBytes, ShiftRows → next-round state.
 # Note: AESE fuses AddRoundKey into the instruction — key is XOR'd before the
-# S-box, not after. This produces the "lag-by-one" key schedule used in cipher().
+# S-box, not after. This produces the "lag-by-one" key schedule used in _cipher().
 @always_inline
 def _aese(
     state: SIMD[DType.uint8, BLOCK_SIZE], key: SIMD[DType.uint8, BLOCK_SIZE]
@@ -88,7 +88,7 @@ def _inv_mix(v: SIMD[DType.uint8, BLOCK_SIZE]) -> SIMD[DType.uint8, BLOCK_SIZE]:
 
 
 # FIPS 197 §5.1 Cipher() via ARMv8 Crypto Extension.
-def cipher[
+def _cipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
     var s = data.unsafe_ptr().load[width=BLOCK_SIZE]()
@@ -100,7 +100,7 @@ def cipher[
 
 
 # FIPS 197 §5.3 InvCipher() via ARMv8 Crypto Extension (equivalent inverse).
-def decipher[
+def _decipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
     var s = data.unsafe_ptr().load[width=BLOCK_SIZE]()
@@ -162,8 +162,8 @@ def _expand_enc_rks[
     return rks
 
 
-# Convert encrypt round keys to the equivalent-inverse schedule for decipher().
-# Mirrors expand_round_keys_inv() from cipher.mojo, operating on SIMD keys
+# Convert encrypt round keys to the equivalent-inverse schedule for _decipher().
+# Mirrors expand_round_keys_inv() from cpu.mojo, operating on SIMD keys
 # instead of UInt32 words: dk[0]=ek[NR], dk[1..NR-1]=aesimc(ek[NR-r]), dk[NR]=ek[0].
 def _dec_from_enc_rks[
     NR: Int

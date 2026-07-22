@@ -1,4 +1,4 @@
-from .common import HEX_CHARS, HexError
+from ._common import HEX_CHARS, HexError
 
 
 @fieldwise_init

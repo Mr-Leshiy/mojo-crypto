@@ -1,7 +1,7 @@
 from std.gpu.host import DeviceContext, DeviceBuffer
 from std.gpu import thread_idx, block_idx
 
-from .common import HexError
+from ._common import HexError
 
 
 struct HexGpu[BLOCK_SIZE: Int = 256](

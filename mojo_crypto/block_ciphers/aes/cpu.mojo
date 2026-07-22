@@ -4,7 +4,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
-from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, check_key_size
+from ._common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
 
 
 struct AesCpu[KEY_SIZE: Int](
@@ -23,7 +23,7 @@ struct AesCpu[KEY_SIZE: Int](
     var w: InlineArray[UInt32, Self.WORDS_SIZE]
 
     def __init__(out self, key: InlineArray[UInt8, Self.KEY_SIZE]):
-        check_key_size[Self.KEY_SIZE]()
+        _check_key_size[Self.KEY_SIZE]()
         comptime assert (
             Self.KEY_SIZE == 16 or Self.KEY_SIZE == 24 or Self.KEY_SIZE == 32
         ), "KEY_SIZE must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
@@ -33,50 +33,50 @@ struct AesCpu[KEY_SIZE: Int](
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            cipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
+            _cipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            decipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
+            _decipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
 
 
 # FIPS 197 §5.1 Cipher()
 # FIPS 197 §3.4: state[r][c] = in[r + 4*c] (column-major).
 # All helpers operate directly on the flat InlineArray[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
-def cipher[
+def _cipher[
     NR: Int, WORDS_SIZE: Int, o: MutOrigin
 ](state: Span[UInt8, o], w: InlineArray[UInt32, WORDS_SIZE]):
-    add_round_key(state, 0, w)
+    _add_round_key(state, 0, w)
     for r in range(1, NR):
-        sub_bytes(state)
-        shift_rows(state)
-        mix_columns(state)
-        add_round_key(state, r, w)
-    sub_bytes(state)
-    shift_rows(state)
-    add_round_key(state, NR, w)
+        _sub_bytes(state)
+        _shift_rows(state)
+        _mix_columns(state)
+        _add_round_key(state, r, w)
+    _sub_bytes(state)
+    _shift_rows(state)
+    _add_round_key(state, NR, w)
 
 
 # FIPS 197 §5.3 InvCipher()
-def decipher[
+def _decipher[
     NR: Int, WORDS_SIZE: Int, o: MutOrigin
 ](state: Span[UInt8, o], w: InlineArray[UInt32, WORDS_SIZE]):
-    add_round_key(state, NR, w)
+    _add_round_key(state, NR, w)
     for r in range(NR - 1, 0, -1):
-        inv_shift_rows(state)
-        inv_sub_bytes(state)
-        add_round_key(state, r, w)
-        inv_mix_columns(state)
-    inv_shift_rows(state)
-    inv_sub_bytes(state)
-    add_round_key(state, 0, w)
+        _inv_shift_rows(state)
+        _inv_sub_bytes(state)
+        _add_round_key(state, r, w)
+        _inv_mix_columns(state)
+    _inv_shift_rows(state)
+    _inv_sub_bytes(state)
+    _add_round_key(state, 0, w)
 
 
 # FIPS 197 §5.1.4 AddRoundKey()
-def add_round_key[
+def _add_round_key[
     WORDS_SIZE: Int, o: MutOrigin
 ](state: Span[UInt8, o], round: Int, w: InlineArray[UInt32, WORDS_SIZE],):
     for c in range(NB):
@@ -88,20 +88,20 @@ def add_round_key[
 
 
 # FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
-def sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
+def _sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
     for i in range(16):
         state[i] = UInt8(SBOX[Int(state[i])])
 
 
 # FIPS 197 §5.3.2 InvSubBytes() — apply inverse S-box to every byte
-def inv_sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
+def _inv_sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
     for i in range(16):
         state[i] = SBOX_INV[Int(state[i])]
 
 
 # FIPS 197 §5.1.2 ShiftRows() — cyclic left shift of row r by r positions
 # Row r in flat layout occupies indices r, r+4, r+8, r+12
-def shift_rows[o: MutOrigin](state: Span[UInt8, o]):
+def _shift_rows[o: MutOrigin](state: Span[UInt8, o]):
     for r in range(1, NB):
         var tmp = InlineArray[UInt8, NB](uninitialized=True)
         for c in range(NB):
@@ -111,7 +111,7 @@ def shift_rows[o: MutOrigin](state: Span[UInt8, o]):
 
 
 # FIPS 197 §5.3.1 InvShiftRows() — cyclic right shift of row r by r positions
-def inv_shift_rows[o: MutOrigin](state: Span[UInt8, o]):
+def _inv_shift_rows[o: MutOrigin](state: Span[UInt8, o]):
     for r in range(1, NB):
         var tmp = InlineArray[UInt8, NB](uninitialized=True)
         for c in range(NB):
@@ -122,68 +122,68 @@ def inv_shift_rows[o: MutOrigin](state: Span[UInt8, o]):
 
 # FIPS 197 §5.1.3 MixColumns() — GF(2^8) matrix multiply on each column
 # Column col in flat layout occupies indices 4*col, 1+4*col, 2+4*col, 3+4*col
-def mix_columns[o: MutOrigin](state: Span[UInt8, o]):
+def _mix_columns[o: MutOrigin](state: Span[UInt8, o]):
     for col in range(NB):
         var s0 = state[4 * col]
         var s1 = state[1 + 4 * col]
         var s2 = state[2 + 4 * col]
         var s3 = state[3 + 4 * col]
-        state[4 * col] = multiply(0x02, s0) ^ multiply(0x03, s1) ^ s2 ^ s3
-        state[1 + 4 * col] = s0 ^ multiply(0x02, s1) ^ multiply(0x03, s2) ^ s3
-        state[2 + 4 * col] = s0 ^ s1 ^ multiply(0x02, s2) ^ multiply(0x03, s3)
-        state[3 + 4 * col] = multiply(0x03, s0) ^ s1 ^ s2 ^ multiply(0x02, s3)
+        state[4 * col] = _multiply(0x02, s0) ^ _multiply(0x03, s1) ^ s2 ^ s3
+        state[1 + 4 * col] = s0 ^ _multiply(0x02, s1) ^ _multiply(0x03, s2) ^ s3
+        state[2 + 4 * col] = s0 ^ s1 ^ _multiply(0x02, s2) ^ _multiply(0x03, s3)
+        state[3 + 4 * col] = _multiply(0x03, s0) ^ s1 ^ s2 ^ _multiply(0x02, s3)
 
 
 # FIPS 197 §5.3.3 InvMixColumns() — GF(2^8) inverse matrix multiply on each column
-def inv_mix_columns[o: MutOrigin](state: Span[UInt8, o]):
+def _inv_mix_columns[o: MutOrigin](state: Span[UInt8, o]):
     for col in range(NB):
         var s0 = state[4 * col]
         var s1 = state[1 + 4 * col]
         var s2 = state[2 + 4 * col]
         var s3 = state[3 + 4 * col]
         state[4 * col] = (
-            multiply(0x0E, s0)
-            ^ multiply(0x0B, s1)
-            ^ multiply(0x0D, s2)
-            ^ multiply(0x09, s3)
+            _multiply(0x0E, s0)
+            ^ _multiply(0x0B, s1)
+            ^ _multiply(0x0D, s2)
+            ^ _multiply(0x09, s3)
         )
         state[1 + 4 * col] = (
-            multiply(0x09, s0)
-            ^ multiply(0x0E, s1)
-            ^ multiply(0x0B, s2)
-            ^ multiply(0x0D, s3)
+            _multiply(0x09, s0)
+            ^ _multiply(0x0E, s1)
+            ^ _multiply(0x0B, s2)
+            ^ _multiply(0x0D, s3)
         )
         state[2 + 4 * col] = (
-            multiply(0x0D, s0)
-            ^ multiply(0x09, s1)
-            ^ multiply(0x0E, s2)
-            ^ multiply(0x0B, s3)
+            _multiply(0x0D, s0)
+            ^ _multiply(0x09, s1)
+            ^ _multiply(0x0E, s2)
+            ^ _multiply(0x0B, s3)
         )
         state[3 + 4 * col] = (
-            multiply(0x0B, s0)
-            ^ multiply(0x0D, s1)
-            ^ multiply(0x09, s2)
-            ^ multiply(0x0E, s3)
+            _multiply(0x0B, s0)
+            ^ _multiply(0x0D, s1)
+            ^ _multiply(0x09, s2)
+            ^ _multiply(0x0E, s3)
         )
 
 
 # General GF(2^8) multiply via Russian peasant: iterate over bits of `a`
 @always_inline
-def multiply(a: UInt8, b: UInt8) -> UInt8:
+def _multiply(a: UInt8, b: UInt8) -> UInt8:
     var result: UInt8 = 0
     var factor = b
     var scalar = a
     while scalar != 0:
         if scalar & 1:
             result ^= factor
-        factor = xtime(factor)
+        factor = _xtime(factor)
         scalar >>= 1
     return result
 
 
 # Multiply by 0x02 in GF(2^8) with AES reduction polynomial x^8+x^4+x^3+x+1
 @always_inline
-def xtime(a: UInt8) -> UInt8:
+def _xtime(a: UInt8) -> UInt8:
     var result = a << 1
     if a & 0x80:
         result ^= 0x1B

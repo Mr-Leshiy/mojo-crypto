@@ -5,7 +5,7 @@ from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from mojo_crypto.universal_hashes.ghash import GHashCpu, GHashAarch64, GHashX86
-from mojo_crypto.universal_hashes.ghash.generic import mulx
+from mojo_crypto.universal_hashes.ghash.generic import _mulx
 
 
 def check_ghash_test_vector[
@@ -49,7 +49,7 @@ def test_mulx_rfc8452_vector() raises:
     expected = hex.decode[GHashCpu.BLOCK_SIZE](
         "3931819bf271fada0503eb52574ca572"
     )
-    assert_equal(expected, mulx(input))
+    assert_equal(expected, _mulx(input))
 
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element/mulx.rs
@@ -189,7 +189,7 @@ def test_fe_mulx() raises:
     r = hex.decode[GHashCpu.BLOCK_SIZE]("01000000000000000000000000000000")
 
     for vec in MULX_TEST_VECTORS:
-        r = mulx(r)
+        r = _mulx(r)
         assert_equal(vec, r)
 
 

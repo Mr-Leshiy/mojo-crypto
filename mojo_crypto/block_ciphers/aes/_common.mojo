@@ -55,7 +55,7 @@ comptime SBOX_INV: InlineArray[UInt8, 256] = [
 
 
 @always_inline
-def check_key_size[KeySize: Int]():
+def _check_key_size[KeySize: Int]():
     comptime assert (
         KeySize == 16 or KeySize == 24 or KeySize == 32
     ), "KeySize must be 16, 24, or 32 bytes (AES-128, AES-192, AES-256)"
