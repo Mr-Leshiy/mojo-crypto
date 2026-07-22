@@ -9,6 +9,7 @@ from ._common import (
 from .rf import PolyvalRf, Pmull
 
 comptime PolyvalX86 = PolyvalRf[_Pmull]
+"""POLYVAL using x86 PCLMULQDQ for the 64×64→128-bit carry-less multiply."""
 
 
 struct _Pmull(Pmull):

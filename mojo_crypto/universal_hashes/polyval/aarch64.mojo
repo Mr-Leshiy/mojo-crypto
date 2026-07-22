@@ -8,6 +8,7 @@ from ._common import (
 from .rf import PolyvalRf, Pmull
 
 comptime PolyvalAarch64 = PolyvalRf[_Pmull]
+"""POLYVAL using ARMv8 Crypto Extension PMULL for the 64×64→128-bit multiply."""
 
 
 struct _Pmull(Pmull):

@@ -18,9 +18,10 @@ struct CbcMode[
     ImplicitlyDestructible,
     Movable,
 ):
-    """
-    https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
-    Section 6.2
+    """CBC block cipher mode of operation.
+
+    See [NIST SP 800-38A](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf),
+    Section 6.2.
     """
 
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE

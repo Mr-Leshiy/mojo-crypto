@@ -69,6 +69,7 @@ def load_be[dtype: DType, o: Origin](data: Span[UInt8, o]) -> Scalar[dtype]:
 
     Parameters:
         dtype: The scalar type to assemble.
+        o: The origin of the byte span.
 
     Args:
         data: The big-endian bytes to assemble.
@@ -105,13 +106,8 @@ def target_triple() -> StaticString:
 def target_triple_contains_any(needles: List[StaticString]) -> Bool:
     """Whether the current target triple contains any of the given substrings.
 
-    Takes an `InlineArray` so the whole check can be folded at compile time,
-    e.g. `comptime is_x86 = target_triple_with(["x86_64", "amd64"])`. Useful for
-    detecting an architecture family that has no dedicated `CompilationTarget`
-    predicate.
-
-    Parameters:
-        size: The number of substrings (inferred from the argument).
+    Useful for detecting an architecture family that has no dedicated
+    `CompilationTarget` predicate.
 
     Args:
         needles: Substrings to look for in the target triple.

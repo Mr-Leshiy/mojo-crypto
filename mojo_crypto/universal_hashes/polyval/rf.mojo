@@ -25,11 +25,10 @@ trait Pmull:
 struct PolyvalRf[P: Pmull](
     Copyable, ImplicitlyDestructible, Movable, UniversalHashable
 ):
-    """
-    optimized POLYVAL implementation using R/F Algorithm
+    """Optimized POLYVAL implementation using the R/F algorithm.
 
-    Adapted from the implementation in the Apache 2.0 + MIT-licensed HPCrypt library
-    Copyright (c) 2024 HPCrypt Contributors
+    Adapted from the implementation in the Apache 2.0 + MIT-licensed HPCrypt
+    library. Copyright (c) 2024 HPCrypt Contributors.
 
     This implementation uses the R/F (Reduction/Field) algorithm:
     - 4 PMULL per block for R and F terms
@@ -42,10 +41,11 @@ struct PolyvalRf[P: Pmull](
     - F = M0×D0 ⊕ M1×H0
     - Result = R ⊕ F1 ⊕ (x^64×F0) ⊕ (P1×F0)
 
-    POLYVAL operates in GF(2^128) with polynomial x^128 + x^127 + x^126 + x^121 + 1
-    Unlike GHASH, POLYVAL uses little-endian byte ordering (no byte swap needed).
+    POLYVAL operates in GF(2^128) with polynomial x^128 + x^127 + x^126 +
+    x^121 + 1. Unlike GHASH, POLYVAL uses little-endian byte ordering (no
+    byte swap needed).
 
-    <https://eprint.iacr.org/2025/2171.pdf>
+    See <https://eprint.iacr.org/2025/2171.pdf>.
     """
 
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
@@ -87,10 +87,9 @@ comptime P1: UInt64 = 0xC200_0000_0000_0000
 struct ExpandedKey[P: Pmull](
     Copyable, Equatable, ImplicitlyDestructible, Movable, Writable
 ):
-    """
-    Precomputed key material for POLYVAL using R/F algorithm
+    """Precomputed key material for POLYVAL using the R/F algorithm.
 
-    Stores H and D values for each power, where D = swap(H) ⊕ (H0 × P1)
+    Stores H and D values for each power, where D = swap(H) ⊕ (H0 × P1).
 
     Only h1/d1 are needed for single-block processing (update_block). The
     higher powers h2/d2 .. h4/d4 are precomputed for 4-block aggregated
