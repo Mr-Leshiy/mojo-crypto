@@ -15,6 +15,7 @@ Full API documentation is published at
 - **[`aead`](mojo_crypto/aead/)** — Authenticated Encryption with Associated Data (AES-GCM, AES-GCM-SIV etc.).
 - **[`block_ciphers`](mojo_crypto/block_ciphers/)** — block ciphers (AES etc.) and modes of operation (CTR, CBC etc.).
 - **[`universal_hashes`](mojo_crypto/universal_hashes/)** — universal hash functions (GHASH, POLYVAL etc.).
+- **[`hashes`](mojo_crypto/hashes/)** — cryptographic hash functions (SHA-2, SHA-3 etc.).
 - **[`macs`](mojo_crypto/macs/)** — message authentication codes (CMAC, HMAC etc.).
 - **[`containers`](mojo_crypto/containers/)** — supporting containers and
   encodings (hex).

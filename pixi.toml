@@ -22,6 +22,8 @@ docs = "python -m pymodo build && hugo --source docs/site"
 # explicitly because `mojo run`'s host-feature autodetection is unreliable in some
 # environments (e.g. restricted CI containers)
 test   = """
+mojo run $MOJO_TEST_FEATURES -I . tests/test_utils.mojo &&
+
 mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_cbc.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_ctr.mojo &&
@@ -38,7 +40,9 @@ mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_field_element.mojo
 mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_polyval.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_ghash.mojo &&
 
-mojo run $MOJO_TEST_FEATURES -I . tests/macs/test_cmac.mojo
+mojo run $MOJO_TEST_FEATURES -I . tests/macs/test_cmac.mojo &&
+
+mojo run $MOJO_TEST_FEATURES -I . tests/hashes/test_sha2.mojo
 """
 
 bench  = "python -m benchmarks.cli"
