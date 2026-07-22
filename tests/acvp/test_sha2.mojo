@@ -100,6 +100,7 @@ def check_sha2_aft[
         var expected = to_inline_array[T.OUTPUT_SIZE](v.digest)
         assert_equal(actual, expected, msg=msg)
 
+
 # https://github.com/usnistgov/ACVP/blob/master/src/sha/sections/04-testtypes.adoc
 #   For j = 0 to 99:
 #     A = B = C = SEED
@@ -127,10 +128,8 @@ def check_sha2_mct[
             var c = seed.copy()
 
             for _ in range(1000):
-                var target_len = (
-                    initial_len if v.is_alternate else (
-                        len(a) + len(b) + len(c)
-                    )
+                var target_len = initial_len if v.is_alternate else (
+                    len(a) + len(b) + len(c)
                 )
                 var buf = List[UInt8](capacity=target_len)
 

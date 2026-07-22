@@ -2,6 +2,7 @@ from std.bit import byte_swap
 from std.sys.info import _current_target, is_little_endian, is_big_endian
 from std.memory import memcpy
 
+
 @always_inline
 def to_inline_array[
     size: Int,
@@ -33,8 +34,11 @@ def to_inline_array[
     memcpy(dest=arr.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
     return arr^
 
+
 @always_inline
-def to_list[size: Int, T: Copyable & Movable](data: InlineArray[T, size]) -> List[T]:
+def to_list[
+    size: Int, T: Copyable & Movable
+](data: InlineArray[T, size]) -> List[T]:
     """Copy a fixed-size InlineArray into a List.
 
     Copies the underlying buffer in a single `memcpy` rather than
@@ -53,6 +57,7 @@ def to_list[size: Int, T: Copyable & Movable](data: InlineArray[T, size]) -> Lis
     var list = List[T](unsafe_uninit_length=size)
     memcpy(dest=list.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
     return list^
+
 
 @always_inline
 def load_be[dtype: DType, o: Origin](data: Span[UInt8, o]) -> Scalar[dtype]:
