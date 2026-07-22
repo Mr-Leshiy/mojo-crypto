@@ -19,6 +19,29 @@ def to_inline_array[
     return arr^
 
 
+@always_inline
+def load_be[dtype: DType, o: Origin](data: Span[UInt8, o]) -> Scalar[dtype]:
+    """Assemble a big-endian word from a byte span.
+
+    Every byte of `data` is consumed, most-significant first; the caller
+    picks `dtype` and slices `data` to the matching byte width (e.g. 4 bytes
+    for `DType.uint32`, 8 bytes for `DType.uint64`).
+
+    Parameters:
+        dtype: The scalar type to assemble.
+
+    Args:
+        data: The big-endian bytes to assemble.
+
+    Returns:
+        The assembled `Scalar[dtype]` value.
+    """
+    var word: Scalar[dtype] = 0
+    for i in range(len(data)):
+        word = (word << 8) | Scalar[dtype](data[i])
+    return word
+
+
 def target_triple() -> StaticString:
     """The current compilation target triple, e.g. "x86_64-unknown-linux-gnu".
 

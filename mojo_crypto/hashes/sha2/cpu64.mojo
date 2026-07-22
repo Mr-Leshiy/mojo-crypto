@@ -2,6 +2,7 @@ from std.memory import memcpy
 from std.math import min
 
 from mojo_crypto.hashes.traits import Digest
+from mojo_crypto.utils import load_be
 
 from ._common import K64, ROUNDS_64
 
@@ -153,13 +154,10 @@ comptime BIG_SIGMA1_ROT_C: UInt64 = 41
 # FIPS 180-4 §6.4.2 — the SHA-512 compression function (also used by
 # SHA-384, SHA-512/224, and SHA-512/256).
 def _compress(mut state: SIMD[DType.uint64, 8], block: InlineArray[UInt8, 128]):
+    var block_span = Span(block)
     var w = InlineArray[UInt64, ROUNDS_64](uninitialized=True)
     for t in range(16):
-        var i = 8 * t
-        var word: UInt64 = 0
-        for j in range(8):
-            word = (word << 8) | UInt64(block[i + j])
-        w[t] = word
+        w[t] = load_be[DType.uint64](block_span[8 * t : 8 * t + 8])
     for t in range(16, ROUNDS_64):
         var s0 = (
             _rotr(w[t - 15], SIGMA0_ROT_A)
