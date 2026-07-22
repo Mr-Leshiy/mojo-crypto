@@ -1,6 +1,6 @@
 from std.sys.intrinsics import llvm_intrinsic
 
-from .common import (
+from ._common import (
     BLOCK_SIZE,
     KEY_SIZE,
     TAG_SIZE,

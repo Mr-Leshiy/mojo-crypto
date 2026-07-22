@@ -12,7 +12,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
     BlockCipherDecryptable,
 )
-from .common import BLOCK_SIZE, SBOX, check_key_size
+from ._common import BLOCK_SIZE, SBOX, _check_key_size
 
 
 # All AES-NI instructions use v2i64 in LLVM IR. Round keys are stored as
@@ -33,7 +33,7 @@ struct AesX86[KEY_SIZE: Int](
     var dec_rks: InlineArray[SIMD[DType.uint64, 2], Self.NR + 1]
 
     def __init__(out self, key: InlineArray[UInt8, Self.KEY_SIZE]):
-        check_key_size[Self.KEY_SIZE]()
+        _check_key_size[Self.KEY_SIZE]()
 
         self.enc_rks = _expand_enc_rks[Self.NR, Self.NK](key)
         self.dec_rks = _dec_from_enc_rks[Self.NR](self.enc_rks)
@@ -42,13 +42,13 @@ struct AesX86[KEY_SIZE: Int](
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            cipher(data[offset : offset + BLOCK_SIZE], self.enc_rks)
+            _cipher(data[offset : offset + BLOCK_SIZE], self.enc_rks)
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            decipher(data[offset : offset + BLOCK_SIZE], self.dec_rks)
+            _decipher(data[offset : offset + BLOCK_SIZE], self.dec_rks)
 
 
 # AESENC: ShiftRows + SubBytes + MixColumns + AddRoundKey(rk).
@@ -101,7 +101,7 @@ def _inv_mix(v: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
 # Unlike ARM AESE (which XORs the key before SubBytes), AESENC folds
 # AddRoundKey at the end — so rks[0] is applied with an explicit XOR and
 # rks[NR] is consumed by AESENCLAST.
-def cipher[
+def _cipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], NR + 1]):
     var s = data.unsafe_ptr().bitcast[UInt64]().load[width=2]()
@@ -115,7 +115,7 @@ def cipher[
 # FIPS 197 §5.3 InvCipher() via AES-NI (equivalent inverse).
 # Key schedule: rks[0]=enc_rks[NR], rks[1..NR-1]=InvMixColumns(enc_rks[NR-r]),
 # rks[NR]=enc_rks[0] — produced by _dec_from_enc_rks in setup.mojo.
-def decipher[
+def _decipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], NR + 1]):
     var s = data.unsafe_ptr().bitcast[UInt64]().load[width=2]()
@@ -174,7 +174,7 @@ def _expand_enc_rks[
     return rks
 
 
-# Convert encrypt round keys to the equivalent-inverse schedule for decipher().
+# Convert encrypt round keys to the equivalent-inverse schedule for _decipher().
 # dk[0]=ek[NR], dk[1..NR-1]=aesimc(ek[NR-r]), dk[NR]=ek[0].
 def _dec_from_enc_rks[
     NR: Int

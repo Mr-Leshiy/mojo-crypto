@@ -15,7 +15,7 @@
 
 from std.sys.intrinsics import llvm_intrinsic
 
-from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
+from mojo_crypto.universal_hashes.polyval._common import BLOCK_SIZE
 
 
 @always_inline
@@ -93,7 +93,7 @@ struct Product32(Copyable, Movable):
         return result^
 
 
-def karatsuba_mul32(
+def _karatsuba_mul32(
     a: InlineArray[UInt8, BLOCK_SIZE], b: InlineArray[UInt8, BLOCK_SIZE]
 ) -> Product32:
     """Compute the unreduced 256-bit carryless product of two 128-bit field elements.
