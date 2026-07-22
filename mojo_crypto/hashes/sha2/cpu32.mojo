@@ -73,9 +73,7 @@ struct Sha2Cpu32[
                 self._buffer_len = 0
 
         while len(input) >= Self.BLOCK_SIZE:
-            var block = InlineArray[UInt8, Self.BLOCK_SIZE](
-                uninitialized=True
-            )
+            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             memcpy(
                 dest=block.unsafe_ptr(),
                 src=input.unsafe_ptr(),
@@ -120,9 +118,7 @@ struct Sha2Cpu32[
 
         var out = InlineArray[UInt8, Self.OUTPUT_SIZE](uninitialized=True)
         for i in range(Self.OUTPUT_SIZE):
-            out[i] = UInt8(
-                self._state[i // 4] >> UInt32(8 * (3 - i % 4))
-            )
+            out[i] = UInt8(self._state[i // 4] >> UInt32(8 * (3 - i % 4)))
         return out^
 
     def reset(mut self):
@@ -152,9 +148,7 @@ comptime BIG_SIGMA1_ROT_C: UInt32 = 25
 
 
 # FIPS 180-4 §6.2.2 — the SHA-256 compression function (also used by SHA-224).
-def _compress(
-    mut state: SIMD[DType.uint32, 8], block: InlineArray[UInt8, 64]
-):
+def _compress(mut state: SIMD[DType.uint32, 8], block: InlineArray[UInt8, 64]):
     var w = InlineArray[UInt32, ROUNDS_32](uninitialized=True)
     for t in range(16):
         var i = 4 * t
