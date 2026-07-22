@@ -2,22 +2,57 @@ from std.bit import byte_swap
 from std.sys.info import _current_target, is_little_endian, is_big_endian
 from std.memory import memcpy
 
-
+@always_inline
 def to_inline_array[
-    size: Int
-](data: List[UInt8]) raises -> InlineArray[UInt8, size]:
+    size: Int,
+    T: Copyable & Movable,
+](data: List[T]) raises -> InlineArray[T, size]:
     """Copy a `size`-length List into a fixed-size InlineArray.
 
-    Raises if `len(data) != size`.
+    Copies the underlying buffer in a single `memcpy` rather than
+    element-by-element.
+
+    Parameters:
+        size: The expected length of `data` and of the resulting array.
+        T: The element type.
+
+    Args:
+        data: The list to copy from.
+
+    Returns:
+        An `InlineArray[T, size]` holding a copy of `data`.
+
+    Raises:
+        Error: If `len(data) != size`.
     """
     if len(data) != size:
         raise Error(
             "expected list of length {}; got {}".format(size, len(data))
         )
-    var arr = InlineArray[UInt8, size](uninitialized=True)
+    var arr = InlineArray[T, size](uninitialized=True)
     memcpy(dest=arr.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
     return arr^
 
+@always_inline
+def to_list[size: Int, T: Copyable & Movable](data: InlineArray[T, size]) -> List[T]:
+    """Copy a fixed-size InlineArray into a List.
+
+    Copies the underlying buffer in a single `memcpy` rather than
+    element-by-element.
+
+    Parameters:
+        size: The length of `data` and of the resulting list.
+        T: The element type.
+
+    Args:
+        data: The array to copy from.
+
+    Returns:
+        A `List[T]` holding a copy of `data`.
+    """
+    var list = List[T](unsafe_uninit_length=size)
+    memcpy(dest=list.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
+    return list^
 
 @always_inline
 def load_be[dtype: DType, o: Origin](data: Span[UInt8, o]) -> Scalar[dtype]:

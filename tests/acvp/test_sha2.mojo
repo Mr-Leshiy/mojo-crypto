@@ -13,6 +13,7 @@ from mojo_crypto.hashes import (
     Sha512_256,
 )
 from mojo_crypto.hashes.traits import Digest
+from mojo_crypto.utils import to_inline_array, to_list
 
 from tests.acvp.utils import load_python_acvp_vectors
 
@@ -94,27 +95,10 @@ def check_sha2_aft[
 
         var h = T()
         h.update(v.msg[:])
-        var digest = h^.finalize()
+        var actual = h^.finalize()
 
-        var actual = List[UInt8](capacity=len(digest))
-        for i in range(len(digest)):
-            actual.append(digest[i])
-
-        assert_equal(actual, v.digest, msg=msg)
-
-
-def _digest_bytes[
-    T: Digest & Movable & ImplicitlyDestructible
-](data: List[UInt8]) raises -> List[UInt8]:
-    var h = T()
-    h.update(data[:])
-    var digest = h^.finalize()
-
-    var result = List[UInt8](capacity=len(digest))
-    for i in range(len(digest)):
-        result.append(digest[i])
-    return result^
-
+        var expected = to_inline_array[T.OUTPUT_SIZE](v.digest)
+        assert_equal(actual, expected, msg=msg)
 
 # https://github.com/usnistgov/ACVP/blob/master/src/sha/sections/04-testtypes.adoc
 #   For j = 0 to 99:
@@ -165,7 +149,10 @@ def check_sha2_mct[
                 for _ in range(target_len - len(buf)):
                     buf.append(0)
 
-                var md = _digest_bytes[T](buf)
+                var h = T()
+                h.update(buf[:])
+                var md = to_list(h^.finalize())
+
                 a = b^
                 b = c^
                 c = md^
