@@ -19,15 +19,6 @@ Vectors are parsed by `read_acvp_vectors.py` and bridged into Mojo via
 its expected result before handing it to the Mojo-side parser in the
 corresponding `test_*.mojo` file.
 
-## Test types
-
-- **AFT** (Algorithm Functional Test) — independent key/plaintext/ciphertext
-  vectors, each checked in isolation.
-- **MCT** (Monte Carlo Test) — a chained ~1000-iteration loop per seed, with
-  the key itself mutated periodically per [AESAVS §6.4.1](https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf);
-  only 100 checkpoint snapshots are given in `resultsArray`, so the
-  implementation must reproduce the inner loop to match them.
-
 ## Vector sets
 
 | Directory | Mode | Test file |
@@ -38,3 +29,14 @@ corresponding `test_*.mojo` file.
 | `ACVP-AES-GCM-SIV-1.0` | GCM-SIV | `test_aes_gcm_siv.mojo` |
 | `CMAC-AES-1.0` | CMAC (OMAC1) | `test_aes_cmac.mojo` |
 | `ACVP-AES-GCM-1.0` | GCM | not yet covered |
+| `SHA2-224-1.0` | SHA-224 | `test_sha2.mojo` |
+| `SHA2-256-1.0` | SHA-256 | `test_sha2.mojo` |
+| `SHA2-384-1.0` | SHA-384 | `test_sha2.mojo` |
+| `SHA2-512-1.0` | SHA-512 | `test_sha2.mojo` |
+| `SHA2-512-224-1.0` | SHA-512/224 | `test_sha2.mojo` |
+| `SHA2-512-256-1.0` | SHA-512/256 | `test_sha2.mojo` |
+
+SHA-2 AFT vectors with a non-byte-aligned bit length (allowed for
+SHA-224/384/512-224, whose registration permits bit-granular
+`messageLength`) are skipped: `Digest.update` only consumes whole bytes, so
+there's no way to feed a message ending mid-byte.
