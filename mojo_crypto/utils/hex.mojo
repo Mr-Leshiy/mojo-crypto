@@ -47,7 +47,8 @@ def hex_decode[SIZE: Int](s: String) raises -> InlineArray[UInt8, SIZE]:
 
 @always_inline
 def hex_decode[o: MutOrigin](s: String, result: Span[UInt8, o]) raises:
-    """Hex-decode `s` into `result`, which must be exactly `len(s) // 2` bytes."""
+    """Hex-decode `s` into `result`, which must be exactly `len(s) // 2` bytes.
+    """
     if s.byte_length() != len(result) * 2:
         raise HexError(
             "expected hex string of length {}; got {}".format(

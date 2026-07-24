@@ -5,7 +5,6 @@ from mojo_crypto.utils import load_be
 
 
 def test_load_be() raises:
-
     assert_equal(
         load_be[DType.uint32](Span(hex_decode[4]("00000000"))), UInt32(0)
     )

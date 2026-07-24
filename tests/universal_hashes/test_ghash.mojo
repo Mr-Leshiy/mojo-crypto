@@ -4,7 +4,11 @@ from std.sys.info import CompilationTarget
 from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from mojo_crypto.universal_hashes.ghash import GHashNaive, GHashAarch64, GHashX86
+from mojo_crypto.universal_hashes.ghash import (
+    GHashNaive,
+    GHashAarch64,
+    GHashX86,
+)
 from mojo_crypto.universal_hashes.ghash.generic import _mulx
 
 
@@ -43,7 +47,9 @@ def test_ghash_test_vector() raises:
 # as RFC errata, so we use the corrected vector from the errata instead:
 # <https://www.rfc-editor.org/errata_search.php?rfc=8452>
 def test_mulx_rfc8452_vector() raises:
-    input = hex_decode[GHashNaive.BLOCK_SIZE]("9c98c04df9387ded828175a92ba652d8")
+    input = hex_decode[GHashNaive.BLOCK_SIZE](
+        "9c98c04df9387ded828175a92ba652d8"
+    )
     expected = hex_decode[GHashNaive.BLOCK_SIZE](
         "3931819bf271fada0503eb52574ca572"
     )
@@ -52,7 +58,6 @@ def test_mulx_rfc8452_vector() raises:
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element/mulx.rs
 def test_fe_mulx() raises:
-
     MULX_TEST_VECTORS = [
         hex_decode[GHashNaive.BLOCK_SIZE]("02000000000000000000000000000000"),
         hex_decode[GHashNaive.BLOCK_SIZE]("04000000000000000000000000000000"),

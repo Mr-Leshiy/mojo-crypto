@@ -28,7 +28,6 @@ def test_fe_add() raises:
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element.rs
 def test_fe_mul() raises:
-
     a = FieldElement(hex_decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e"))
     b = FieldElement(hex_decode[BLOCK_SIZE]("ff000000000000000000000000000000"))
     expected = FieldElement(
