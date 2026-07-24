@@ -96,7 +96,7 @@ def check_aes_cbc_aft[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[CbcMode[{}]], count={}".format(reflect[C]().name(), v.count)
+        var msg = "[CbcMode[{}]], count={}".format(reflect[C].name(), v.count)
 
         var key = to_inline_array[KeySize](v.key)
         var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
@@ -127,7 +127,7 @@ def check_aes_cbc_mct[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[CbcMode[{}]], count={}".format(reflect[C]().name(), v.count)
+        var msg = "[CbcMode[{}]], count={}".format(reflect[C].name(), v.count)
 
         var key = to_inline_array[KeySize](v.key)
         var iv = to_inline_array[C.BLOCK_SIZE](v.iv)

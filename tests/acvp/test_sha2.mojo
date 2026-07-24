@@ -91,7 +91,7 @@ def check_sha2_aft[
     T: Digest & Movable & ImplicitlyDestructible
 ](vectors: List[HashTestVector]) raises:
     for v in vectors:
-        var msg = "[{}], count={}".format(reflect[T]().name(), v.count)
+        var msg = "[{}], count={}".format(reflect[T].name(), v.count)
 
         var h = T()
         h.update(v.msg[:])
@@ -118,7 +118,7 @@ def check_sha2_mct[
     T: Digest & Movable & ImplicitlyDestructible
 ](vectors: List[MctTestVector]) raises:
     for v in vectors:
-        var msg = "[{}], count={}".format(reflect[T]().name(), v.count)
+        var msg = "[{}], count={}".format(reflect[T].name(), v.count)
         var initial_len = len(v.seed)
 
         var seed = v.seed.copy()

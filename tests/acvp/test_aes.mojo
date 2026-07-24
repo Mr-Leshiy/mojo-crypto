@@ -94,7 +94,7 @@ def check_aes_ecb_aft[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[{}], count={}".format(reflect[C]().name(), v.count)
+        var msg = "[{}], count={}".format(reflect[C].name(), v.count)
 
         var cipher = cipher_init(to_inline_array[KeySize](v.key))
 
@@ -135,7 +135,7 @@ def check_aes_ecb_mct[
             else:
                 cipher.decrypt(block[:])
 
-        var msg = "[{}], count={}".format(reflect[C]().name(), v.count)
+        var msg = "[{}], count={}".format(reflect[C].name(), v.count)
         assert_equal(block, expected, msg=msg)
 
 
