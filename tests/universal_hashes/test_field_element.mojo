@@ -1,24 +1,23 @@
 from std.testing import assert_equal, TestSuite
 
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.polyval.field_element import FieldElement
 from mojo_crypto.universal_hashes.polyval._common import BLOCK_SIZE
 
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element.rs
 def test_fe_add() raises:
-    hex = Hex()
-    a = FieldElement(hex.decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e"))
-    b = FieldElement(hex.decode[BLOCK_SIZE]("ff000000000000000000000000000000"))
+    a = FieldElement(hex_decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e"))
+    b = FieldElement(hex_decode[BLOCK_SIZE]("ff000000000000000000000000000000"))
     expected = FieldElement(
-        hex.decode[BLOCK_SIZE]("99e94bd4ef8a2c3b884cfa59ca342b2e")
+        hex_decode[BLOCK_SIZE]("99e94bd4ef8a2c3b884cfa59ca342b2e")
     )
 
     assert_equal(a + b, expected)
     assert_equal(b + a, expected)
 
     zero = FieldElement(
-        hex.decode[BLOCK_SIZE]("00000000000000000000000000000000")
+        hex_decode[BLOCK_SIZE]("00000000000000000000000000000000")
     )
 
     assert_equal(a + zero, a)
@@ -29,12 +28,10 @@ def test_fe_add() raises:
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element.rs
 def test_fe_mul() raises:
-    hex = Hex()
-
-    a = FieldElement(hex.decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e"))
-    b = FieldElement(hex.decode[BLOCK_SIZE]("ff000000000000000000000000000000"))
+    a = FieldElement(hex_decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e"))
+    b = FieldElement(hex_decode[BLOCK_SIZE]("ff000000000000000000000000000000"))
     expected = FieldElement(
-        hex.decode[BLOCK_SIZE]("ebe563401e7e91ea3ad6426b8140c394")
+        hex_decode[BLOCK_SIZE]("ebe563401e7e91ea3ad6426b8140c394")
     )
 
     assert_equal(a * b, expected)

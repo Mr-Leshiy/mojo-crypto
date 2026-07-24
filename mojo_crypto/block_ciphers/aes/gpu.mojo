@@ -9,7 +9,7 @@ from mojo_crypto.block_ciphers.traits import (
 )
 from mojo_crypto.block_ciphers.errors import BlockSizeError
 from ._common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
-from .cpu import _key_expansion
+from .naive import _key_expansion
 
 
 struct AesGpu[KEY_SIZE: Int](

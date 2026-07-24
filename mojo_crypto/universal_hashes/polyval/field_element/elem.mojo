@@ -22,7 +22,7 @@
 
 from std.sys.info import is_64bit
 
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils import hex_encode
 from mojo_crypto.universal_hashes.polyval._common import BLOCK_SIZE
 from mojo_crypto.universal_hashes.polyval.field_element.mul64 import (
     _karatsuba_mul64,
@@ -91,7 +91,7 @@ struct FieldElement(
     def write_to(self, mut writer: Some[Writer]):
         var hex = String()
         try:
-            hex = Hex().encode(
+            hex = hex_encode(
                 Span[UInt8, origin_of(self._v)](
                     ptr=self._v.unsafe_ptr(), length=BLOCK_SIZE
                 )

@@ -7,7 +7,7 @@ from mojo_crypto.utils import load_be
 from ._common import K32, ROUNDS_32
 
 
-struct Sha2Cpu32[
+struct Sha2Naive32[
     H0: UInt32,
     H1: UInt32,
     H2: UInt32,

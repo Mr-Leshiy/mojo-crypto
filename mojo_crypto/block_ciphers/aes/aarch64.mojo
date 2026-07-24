@@ -163,7 +163,7 @@ def _expand_enc_rks[
 
 
 # Convert encrypt round keys to the equivalent-inverse schedule for _decipher().
-# Mirrors expand_round_keys_inv() from cpu.mojo, operating on SIMD keys
+# Mirrors expand_round_keys_inv() from naive.mojo, operating on SIMD keys
 # instead of UInt32 words: dk[0]=ek[NR], dk[1..NR-1]=aesimc(ek[NR-r]), dk[NR]=ek[0].
 def _dec_from_enc_rks[
     NR: Int

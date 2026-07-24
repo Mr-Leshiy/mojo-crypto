@@ -7,7 +7,7 @@ that transform a fixed-size block of plaintext into a block of ciphertext.
 
 | Cipher | Directory | Specification | Description |
 |--------|-----------|---------------|-------------|
-| [AES](aes/README.md) | `aes/` | FIPS 197 | Advanced Encryption Standard (AES-128/192/256), with CPU, ARMv8, x86 AES-NI, and GPU backends |
+| [AES](aes/README.md) | `aes/` | FIPS 197 | Advanced Encryption Standard (AES-128/192/256), with naive, ARMv8, x86 AES-NI, and GPU backends |
 
 ## Modes of operation
 

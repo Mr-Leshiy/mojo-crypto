@@ -17,6 +17,4 @@ API, or start from the modules below.
   of operation (CTR).
 - [`universal_hashes`](mojo_crypto/universal_hashes/) — GHASH and POLYVAL
   universal hash functions.
-- [`containers`](mojo_crypto/containers/) — supporting containers and encodings
-  (hex).
-- [`utils`](mojo_crypto/utils/) — shared utilities.
+- [`utils`](mojo_crypto/utils/) — shared utilities and encodings (hex).
