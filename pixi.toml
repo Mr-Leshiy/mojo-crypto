@@ -35,7 +35,7 @@ mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_sha2.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/test_aes.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/test_ctr.mojo &&
 
-mojo run $MOJO_TEST_FEATURES -I . tests/containers/encoding/test_hex.mojo &&
+mojo run $MOJO_TEST_FEATURES -I . tests/utils/test_hex.mojo &&
 
 mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_field_element.mojo &&
 mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_polyval.mojo &&
@@ -66,9 +66,6 @@ mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features
 mojo build --emit=asm -I . benchmarks/universal_hashes/polyval/naive.mojo -o $out/polyval_naive &&
 mojo build --emit=asm --target-triple=aarch64-unknown-linux-gnu --target-features=+neon,+aes -I . benchmarks/universal_hashes/polyval/aarch64.mojo -o $out/polyval_aarch64 &&
 mojo build --emit=asm --target-triple=x86_64-unknown-linux-gnu --target-features=+pclmul,+sse2 -I . benchmarks/universal_hashes/polyval/x86.mojo -o $out/polyval_x86 &&
-
-mojo build --emit=asm -I . benchmarks/containers/encoding/hex/naive.mojo -o $out/hex_naive &&
-mojo build --emit=asm --target-accelerator=sm_80 -I . benchmarks/containers/encoding/hex/gpu.mojo -o $out/hex_gpu &&
 
 rm -rf $out
 """

@@ -2,20 +2,19 @@ from std.testing import assert_equal, TestSuite
 
 from mojo_crypto.block_ciphers.aes import AesNaive
 from mojo_crypto.block_ciphers.modes import CtrMode
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 
 
 # Reference vectors from RustCrypto `block-modes`:
 # https://github.com/RustCrypto/block-modes/blob/master/ctr/tests/ctr32/le.rs
 def test_ctr_32_le_aes() raises:
-    var hex = Hex()
-    var key = hex.decode[16]("000102030405060708090A0B0C0D0E0F")
-    var iv = hex.decode[16]("11111111111111111111111111111191")
+    var key = hex_decode[16]("000102030405060708090A0B0C0D0E0F")
+    var iv = hex_decode[16]("11111111111111111111111111111191")
 
     comptime CTR = CtrMode[AesNaive[16], 4, BIG_ENDIAN=False]
 
     # `counter_incr`: encrypting 64 zero bytes yields the raw keystream.
-    var ks_expected = hex.decode[64](
+    var ks_expected = hex_decode[64](
         "2A0680B210CAD45E886D7EF6DAB357C9"
         + "F18B39AFF6930FDB2D9FCE34261FF699"
         + "EB96774669D24B560C9AD028C5C39C45"
@@ -28,7 +27,7 @@ def test_ctr_32_le_aes() raises:
     assert_equal(zeros, ks_expected, msg="counter_incr")
 
     # `keystream_xor`: encrypting 64 bytes of 0x01 yields keystream XOR 0x01.
-    var xor_expected = hex.decode[64](
+    var xor_expected = hex_decode[64](
         "2B0781B311CBD55F896C7FF7DBB256C8"
         + "F08A38AEF7920EDA2C9ECF35271EF798"
         + "EA97764768D34A570D9BD129C4C29D44"
@@ -42,8 +41,8 @@ def test_ctr_32_le_aes() raises:
     # `counter_wrap`: NONCE2 starts the LE counter at 0xFFFFFFFE, so the 4-block
     # (64-byte) keystream crosses the 32-bit wrap (..FE, ..FF, 0, 1) without the
     # carry escaping into the nonce.
-    var iv2 = hex.decode[16]("FEFFFFFF2222222222222222222222A2")
-    var wrap_expected = hex.decode[64](
+    var iv2 = hex_decode[16]("FEFFFFFF2222222222222222222222A2")
+    var wrap_expected = hex_decode[64](
         "A1E649D8B382293DC28375C42443BB6A"
         + "226BAADC9E9CCA8214F56E07A4024E06"
         + "6355A0DA2E08FB00112FFA38C26189EE"
@@ -58,14 +57,13 @@ def test_ctr_32_le_aes() raises:
 # Reference vectors from RustCrypto `block-modes`:
 # https://github.com/RustCrypto/block-modes/blob/master/ctr/tests/ctr32/be.rs
 def test_ctr_32_be_aes() raises:
-    var hex = Hex()
-    var key = hex.decode[16]("000102030405060708090A0B0C0D0E0F")
-    var iv = hex.decode[16]("11111111111111111111111111111111")
+    var key = hex_decode[16]("000102030405060708090A0B0C0D0E0F")
+    var iv = hex_decode[16]("11111111111111111111111111111111")
 
     comptime CTR = CtrMode[AesNaive[16], 4, BIG_ENDIAN=True]
 
     # `counter_incr`: encrypting 64 zero bytes yields the raw keystream.
-    var ks_expected = hex.decode[64](
+    var ks_expected = hex_decode[64](
         "35D14E6D3E3A279CF01E343E34E7DED3"
         + "6EEADB04F42E2251AB4377F257856DBA"
         + "0AB37657B9C2AA09762E518FC9395D53"
@@ -77,7 +75,7 @@ def test_ctr_32_be_aes() raises:
     assert_equal(zeros, ks_expected, msg="counter_incr")
 
     # `keystream_xor`: encrypting 64 bytes of 0x01 yields keystream XOR 0x01.
-    var xor_expected = hex.decode[64](
+    var xor_expected = hex_decode[64](
         "34D04F6C3F3B269DF11F353F35E6DFD2"
         + "6FEBDA05F52F2350AA4276F356846CBB"
         + "0BB27756B8C3AB08772F508EC8385C52"
@@ -91,8 +89,8 @@ def test_ctr_32_be_aes() raises:
     # `counter_wrap`: NONCE2 starts the BE counter at 0xFFFFFFFE, so the 4-block
     # (64-byte) keystream crosses the 32-bit wrap (..FE, ..FF, 0, 1) without the
     # carry escaping into the nonce.
-    var iv2 = hex.decode[16]("222222222222222222222222FFFFFFFE")
-    var wrap_expected = hex.decode[64](
+    var iv2 = hex_decode[16]("222222222222222222222222FFFFFFFE")
+    var wrap_expected = hex_decode[64](
         "58FC849D1CF53C54C63E1B1D15CB3C8A"
         + "AA335F72135585E9FF943F4DAC77CB63"
         + "BD1AE8716BE69C3B4D886B222B9B4E1E"

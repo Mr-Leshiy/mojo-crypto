@@ -3,7 +3,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -28,7 +28,6 @@ def parse_acvp_aes_ecb_aft(
     python_vectors: PythonObject,
 ) raises -> List[EcbTestVector]:
     var vectors = List[EcbTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         test = v["test"]
@@ -48,9 +47,9 @@ def parse_acvp_aes_ecb_aft(
             EcbTestVector(
                 is_encrypt=is_encrypt,
                 count=Int(py=test["tcId"]),
-                key=hex.decode(String(test["key"])),
-                pt=hex.decode(pt_hex),
-                ct=hex.decode(ct_hex),
+                key=hex_decode(String(test["key"])),
+                pt=hex_decode(pt_hex),
+                ct=hex_decode(ct_hex),
             )
         )
     return vectors^
@@ -60,7 +59,6 @@ def parse_acvp_aes_ecb_mct(
     python_vectors: PythonObject,
 ) raises -> List[EcbTestVector]:
     var vectors = List[EcbTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         expected = v["expected"]
@@ -72,9 +70,9 @@ def parse_acvp_aes_ecb_mct(
                 EcbTestVector(
                     is_encrypt=is_encrypt,
                     count=i,
-                    key=hex.decode(String(entry["key"])),
-                    pt=hex.decode(String(entry["pt"])),
-                    ct=hex.decode(String(entry["ct"])),
+                    key=hex_decode(String(entry["key"])),
+                    pt=hex_decode(String(entry["pt"])),
+                    ct=hex_decode(String(entry["ct"])),
                 )
             )
             i += 1

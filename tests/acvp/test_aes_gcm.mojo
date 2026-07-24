@@ -3,7 +3,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.ghash import GHashNaive
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
@@ -35,7 +35,6 @@ def parse_acvp_aes_gcm_aft(
     python_vectors: PythonObject,
 ) raises -> List[GcmTestVector]:
     var vectors = List[GcmTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         test = v["test"]
@@ -61,12 +60,12 @@ def parse_acvp_aes_gcm_aft(
             GcmTestVector(
                 is_encrypt=is_encrypt,
                 count=Int(py=test["tcId"]),
-                key=hex.decode(String(test["key"])),
-                iv=hex.decode(String(test["iv"])),
-                pt=hex.decode(pt_hex),
-                ct=hex.decode(ct_hex),
-                aad=hex.decode(String(test["aad"])),
-                tag=hex.decode(tag_hex),
+                key=hex_decode(String(test["key"])),
+                iv=hex_decode(String(test["iv"])),
+                pt=hex_decode(pt_hex),
+                ct=hex_decode(ct_hex),
+                aad=hex_decode(String(test["aad"])),
+                tag=hex_decode(tag_hex),
                 test_passed=expected.get("testPassed", True).__bool__(),
             )
         )
