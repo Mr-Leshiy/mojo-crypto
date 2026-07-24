@@ -34,7 +34,7 @@ struct HexGpu[BLOCK_SIZE: Int = 256](
         in_buf.enqueue_copy_from(data.unsafe_ptr())
 
         comptime kernel = _encode_kernel[Self.BLOCK_SIZE]
-        self.ctx.enqueue_function[kernel, kernel](
+        self.ctx.enqueue_function[kernel](
             out_buf,
             in_buf,
             n,
@@ -63,7 +63,7 @@ struct HexGpu[BLOCK_SIZE: Int = 256](
         hex_s.enqueue_copy_from(s.unsafe_ptr())
 
         comptime kernel = _decode_kernel[Self.BLOCK_SIZE]
-        self.ctx.enqueue_function[kernel, kernel](
+        self.ctx.enqueue_function[kernel](
             out_buf,
             hex_s,
             n,
@@ -93,7 +93,7 @@ struct HexGpu[BLOCK_SIZE: Int = 256](
         hex_s.enqueue_copy_from(s.unsafe_ptr())
 
         comptime kernel = _decode_kernel[Self.BLOCK_SIZE]
-        self.ctx.enqueue_function[kernel, kernel](
+        self.ctx.enqueue_function[kernel](
             out_buf,
             hex_s,
             SIZE,
