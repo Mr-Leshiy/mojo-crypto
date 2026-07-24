@@ -31,7 +31,7 @@ def check_aes[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[{}], key_size={}".format(reflect[C]().name(), KeySize)
+        var msg = "[{}], key_size={}".format(reflect[C].name(), KeySize)
 
         var cipher = cipher_init(to_inline_array[KeySize](v.key))
 

@@ -92,7 +92,7 @@ def check_aes_gcm_siv_aft[
         cipher_len = len(v.ct) - TAG_SIZE
         cipher_body = List[UInt8](v.ct[:cipher_len])
 
-        msg = "[GcmSiv[{}]], count={}".format(reflect[C]().name(), v.count)
+        msg = "[GcmSiv[{}]], count={}".format(reflect[C].name(), v.count)
         key = to_inline_array[KeySize](v.key)
         nonce = to_inline_array[NONCE_SIZE](v.iv)
         tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))

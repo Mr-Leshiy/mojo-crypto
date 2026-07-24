@@ -95,7 +95,7 @@ def check_aes_gcm_aft[
             continue
 
         msg = "[Gcm[{}], nonce={}, tag={}], count={}".format(
-            reflect[C]().name(), NONCE_SIZE, TAG_SIZE, v.count
+            reflect[C].name(), NONCE_SIZE, TAG_SIZE, v.count
         )
         key = to_inline_array[KeySize](v.key)
         nonce = to_inline_array[NONCE_SIZE](v.iv)
