@@ -1,7 +1,7 @@
 from std.testing import assert_equal, TestSuite
 from std.math import min
 
-from mojo_crypto.block_ciphers.aes import AesCpu
+from mojo_crypto.block_ciphers.aes import AesNaive
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.macs import Cmac
 
@@ -14,7 +14,7 @@ def check_cmac_test_vector[
     var msg = hex.decode(msg_hex)
     var expected = hex.decode[16](expected_hex)
 
-    var cmac = Cmac[AesCpu[KEY_SIZE]](AesCpu[KEY_SIZE](key))
+    var cmac = Cmac[AesNaive[KEY_SIZE]](AesNaive[KEY_SIZE](key))
     cmac.update(msg)
     assert_equal(cmac^.finalize(), expected)
 

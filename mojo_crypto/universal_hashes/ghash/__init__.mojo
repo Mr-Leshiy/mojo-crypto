@@ -1,11 +1,11 @@
 from mojo_crypto.universal_hashes.polyval import (
-    PolyvalCpu,
+    PolyvalNaive,
     PolyvalAarch64,
     PolyvalX86,
 )
 from .generic import GHashGeneric
 
-comptime GHashCpu = GHashGeneric[PolyvalCpu]
+comptime GHashNaive = GHashGeneric[PolyvalNaive]
 """GHASH backed by the portable CPU POLYVAL implementation."""
 
 comptime GHashAarch64 = GHashGeneric[PolyvalAarch64]

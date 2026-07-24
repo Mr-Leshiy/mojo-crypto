@@ -1,7 +1,7 @@
-from .cpu32 import Sha2Cpu32
-from .cpu64 import Sha2Cpu64
+from .naive32 import Sha2Naive32
+from .naive64 import Sha2Naive64
 
-comptime Sha224 = Sha2Cpu32[
+comptime Sha224 = Sha2Naive32[
     0xC1059ED8,
     0x367CD507,
     0x3070DD17,
@@ -14,7 +14,7 @@ comptime Sha224 = Sha2Cpu32[
 ]
 """SHA-224 (FIPS 180-4 §5.3.2 initial hash value)."""
 
-comptime Sha256 = Sha2Cpu32[
+comptime Sha256 = Sha2Naive32[
     0x6A09E667,
     0xBB67AE85,
     0x3C6EF372,
@@ -27,7 +27,7 @@ comptime Sha256 = Sha2Cpu32[
 ]
 """SHA-256 (FIPS 180-4 §5.3.3 initial hash value)."""
 
-comptime Sha384 = Sha2Cpu64[
+comptime Sha384 = Sha2Naive64[
     0xCBBB9D5DC1059ED8,
     0x629A292A367CD507,
     0x9159015A3070DD17,
@@ -40,7 +40,7 @@ comptime Sha384 = Sha2Cpu64[
 ]
 """SHA-384 (FIPS 180-4 §5.3.4 initial hash value)."""
 
-comptime Sha512 = Sha2Cpu64[
+comptime Sha512 = Sha2Naive64[
     0x6A09E667F3BCC908,
     0xBB67AE8584CAA73B,
     0x3C6EF372FE94F82B,
@@ -53,7 +53,7 @@ comptime Sha512 = Sha2Cpu64[
 ]
 """SHA-512 (FIPS 180-4 §5.3.5 initial hash value)."""
 
-comptime Sha512_224 = Sha2Cpu64[
+comptime Sha512_224 = Sha2Naive64[
     0x8C3D37C819544DA2,
     0x73E1996689DCD4D6,
     0x1DFAB7AE32FF9C82,
@@ -66,7 +66,7 @@ comptime Sha512_224 = Sha2Cpu64[
 ]
 """SHA-512/224 (FIPS 180-4 §5.3.6.1 initial hash value)."""
 
-comptime Sha512_256 = Sha2Cpu64[
+comptime Sha512_256 = Sha2Naive64[
     0x22312194FC2BF72C,
     0x9F555FA3C84C64C2,
     0x2393B86B6F53B151,

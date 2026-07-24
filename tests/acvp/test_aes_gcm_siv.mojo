@@ -4,7 +4,7 @@ from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
 from mojo_crypto.containers.encoding import Hex
-from mojo_crypto.universal_hashes.polyval import PolyvalCpu
+from mojo_crypto.universal_hashes.polyval import PolyvalNaive
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -98,7 +98,7 @@ def check_aes_gcm_siv_aft[
         tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
             data = v.pt.copy()
-            gcm_siv = GcmSiv[C, PolyvalCpu].create[KeySize, cipher_init](
+            gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
                 key, nonce
             )
             actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
@@ -106,7 +106,7 @@ def check_aes_gcm_siv_aft[
             assert_equal(actual_tag, tag, msg=msg)
         else:
             data = cipher_body.copy()
-            gcm_siv = GcmSiv[C, PolyvalCpu].create[KeySize, cipher_init](
+            gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
                 key, nonce
             )
             if v.test_passed:

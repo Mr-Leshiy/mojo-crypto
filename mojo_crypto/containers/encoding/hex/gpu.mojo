@@ -11,8 +11,8 @@ struct HexGpu[BLOCK_SIZE: Int = 256](
 
     Hex encoding/decoding is memory-bandwidth-bound and operates on very small
     units of work per thread. The kernel launch overhead and host↔device transfers
-    make this slower than HexCpu for typical input sizes. Benchmark against
-    HexCpu before using in production.
+    make this slower than Hex for typical input sizes. Benchmark against
+    Hex before using in production.
 
     Parameters:
         BLOCK_SIZE: Number of threads per GPU thread block. Each thread encodes

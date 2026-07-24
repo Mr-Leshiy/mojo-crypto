@@ -3,7 +3,7 @@ from std.gpu.host import DeviceContext
 
 from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.block_ciphers.aes import (
-    AesCpu,
+    AesNaive,
     AesAarch64,
     AesX86,
     AesGpu,
@@ -66,9 +66,9 @@ def run_aes_checks[
     @parameter
     def aes_cpu[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> AesCpu[KeySize]:
-        return AesCpu[KeySize](key)
+    ](key: InlineArray[UInt8, KeySize]) raises -> AesNaive[KeySize]:
+        return AesNaive[KeySize](key)
 
-    check[AesCpu[16], 16, aes_cpu[16]](vectors)
-    check[AesCpu[24], 24, aes_cpu[24]](vectors)
-    check[AesCpu[32], 32, aes_cpu[32]](vectors)
+    check[AesNaive[16], 16, aes_cpu[16]](vectors)
+    check[AesNaive[24], 24, aes_cpu[24]](vectors)
+    check[AesNaive[32], 32, aes_cpu[32]](vectors)

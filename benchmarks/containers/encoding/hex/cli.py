@@ -10,9 +10,9 @@ def _bench(backend: str) -> None:
 
 
 @app.command()
-def cpu() -> None:
-    """Benchmark hex encode/decode using the CPU backend."""
-    _bench("cpu")
+def naive() -> None:
+    """Benchmark hex encode/decode using the naive backend."""
+    _bench("naive")
 
 
 @app.command()

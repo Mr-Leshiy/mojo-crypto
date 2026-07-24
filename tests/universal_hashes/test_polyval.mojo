@@ -5,7 +5,7 @@ from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.containers.encoding import Hex
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from mojo_crypto.universal_hashes.polyval import (
-    PolyvalCpu,
+    PolyvalNaive,
     PolyvalAarch64,
     PolyvalX86,
 )
@@ -32,7 +32,7 @@ def check_polyval_test_vector[
 # Test vectors from RFC 8452 Appendix A.
 # <https://www.rfc-editor.org/rfc/rfc8452#appendix-A>
 def test_polyval_test_vector() raises:
-    check_polyval_test_vector[PolyvalCpu]()
+    check_polyval_test_vector[PolyvalNaive]()
 
     comptime if target_triple_contains_any(["aarch64", "arm64"]):
         check_polyval_test_vector[PolyvalAarch64]()

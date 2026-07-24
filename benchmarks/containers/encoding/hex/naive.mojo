@@ -4,10 +4,10 @@ from benchmarks.containers.encoding.hex.common import bench_hex
 
 
 def main() raises:
-    print("Running Hex CPU benchmarks")
+    print("Running Hex naive benchmarks")
 
     @parameter
-    def hex_cpu() raises -> Hex:
+    def hex_naive() raises -> Hex:
         return Hex()
 
-    bench_hex[Hex, hex_cpu, "hex_cpu"]()
+    bench_hex[Hex, hex_naive, "hex_naive"]()
