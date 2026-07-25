@@ -3,7 +3,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.hashes import (
     Sha224,
     Sha256,
@@ -29,7 +29,6 @@ def parse_acvp_sha2_aft(
     python_vectors: PythonObject,
 ) raises -> List[HashTestVector]:
     var vectors = List[HashTestVector]()
-    hex = Hex()
     for v in python_vectors:
         test = v["test"]
         expected = v["expected"]
@@ -45,8 +44,8 @@ def parse_acvp_sha2_aft(
         vectors.append(
             HashTestVector(
                 count=Int(py=test["tcId"]),
-                msg=hex.decode(String(test["msg"])),
-                digest=hex.decode(String(expected["md"])),
+                msg=hex_decode(String(test["msg"])),
+                digest=hex_decode(String(expected["md"])),
             )
         )
     return vectors^
@@ -66,7 +65,6 @@ def parse_acvp_sha2_mct(
     python_vectors: PythonObject,
 ) raises -> List[MctTestVector]:
     var vectors = List[MctTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         test = v["test"]
@@ -74,12 +72,12 @@ def parse_acvp_sha2_mct(
 
         var checkpoints = List[List[UInt8]]()
         for entry in expected["resultsArray"]:
-            checkpoints.append(hex.decode(String(entry["md"])))
+            checkpoints.append(hex_decode(String(entry["md"])))
 
         vectors.append(
             MctTestVector(
                 count=Int(py=test["tcId"]),
-                seed=hex.decode(String(test["msg"])),
+                seed=hex_decode(String(test["msg"])),
                 checkpoints=checkpoints^,
                 is_alternate=String(group["mctVersion"]) == "alternate",
             )

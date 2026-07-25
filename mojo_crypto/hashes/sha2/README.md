@@ -2,7 +2,7 @@
 
 Mojo implementation of the [SHA-2][1] family as specified in [FIPS 180-4][2].
 
-Only a naive, portable CPU implementation exists so far — no hardware
+Only a naive, portable implementation exists so far — no hardware
 acceleration yet (e.g. ARMv8/x86 SHA extensions).
 
 Two engines share the Merkle-Damgard structure but differ in word size,
@@ -12,12 +12,12 @@ them:
 
 | Algorithm | Engine | Block size | Output size |
 |-----------|--------|------------|-------------|
-| SHA-224 | `Sha2Cpu32` (32-bit words) | 64 bytes | 28 bytes |
-| SHA-256 | `Sha2Cpu32` (32-bit words) | 64 bytes | 32 bytes |
-| SHA-384 | `Sha2Cpu64` (64-bit words) | 128 bytes | 48 bytes |
-| SHA-512 | `Sha2Cpu64` (64-bit words) | 128 bytes | 64 bytes |
-| SHA-512/224 | `Sha2Cpu64` (64-bit words) | 128 bytes | 28 bytes |
-| SHA-512/256 | `Sha2Cpu64` (64-bit words) | 128 bytes | 32 bytes |
+| SHA-224 | `Sha2Naive32` (32-bit words) | 64 bytes | 28 bytes |
+| SHA-256 | `Sha2Naive32` (32-bit words) | 64 bytes | 32 bytes |
+| SHA-384 | `Sha2Naive64` (64-bit words) | 128 bytes | 48 bytes |
+| SHA-512 | `Sha2Naive64` (64-bit words) | 128 bytes | 64 bytes |
+| SHA-512/224 | `Sha2Naive64` (64-bit words) | 128 bytes | 28 bytes |
+| SHA-512/256 | `Sha2Naive64` (64-bit words) | 128 bytes | 32 bytes |
 
 ## References
 

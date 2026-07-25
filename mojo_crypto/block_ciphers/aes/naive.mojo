@@ -7,7 +7,7 @@ from mojo_crypto.block_ciphers.traits import (
 from ._common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
 
 
-struct AesCpu[KEY_SIZE: Int](
+struct AesNaive[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,

@@ -10,9 +10,9 @@ def _bench(backend: str) -> None:
 
 
 @app.command()
-def cpu() -> None:
-    """Benchmark POLYVAL using the portable CPU backend."""
-    _bench("cpu")
+def naive() -> None:
+    """Benchmark POLYVAL using the portable naive backend."""
+    _bench("naive")
 
 @app.command()
 def aarch64() -> None:

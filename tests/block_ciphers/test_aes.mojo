@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -48,24 +48,23 @@ def check_aes[
 # from FIPS 197 Appendix C
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
 def test_aes_fips197_kat() raises:
-    var hex = Hex()
     var vectors: List[AesTestVector] = [
         AesTestVector(
-            key=hex.decode("000102030405060708090a0b0c0d0e0f"),
-            pt=hex.decode("00112233445566778899aabbccddeeff"),
-            ct=hex.decode("69c4e0d86a7b0430d8cdb78070b4c55a"),
+            key=hex_decode("000102030405060708090a0b0c0d0e0f"),
+            pt=hex_decode("00112233445566778899aabbccddeeff"),
+            ct=hex_decode("69c4e0d86a7b0430d8cdb78070b4c55a"),
         ),
         AesTestVector(
-            key=hex.decode("000102030405060708090a0b0c0d0e0f1011121314151617"),
-            pt=hex.decode("00112233445566778899aabbccddeeff"),
-            ct=hex.decode("dda97ca4864cdfe06eaf70a0ec0d7191"),
+            key=hex_decode("000102030405060708090a0b0c0d0e0f1011121314151617"),
+            pt=hex_decode("00112233445566778899aabbccddeeff"),
+            ct=hex_decode("dda97ca4864cdfe06eaf70a0ec0d7191"),
         ),
         AesTestVector(
-            key=hex.decode(
+            key=hex_decode(
                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
             ),
-            pt=hex.decode("00112233445566778899aabbccddeeff"),
-            ct=hex.decode("8ea2b7ca516745bfeafc49904b496089"),
+            pt=hex_decode("00112233445566778899aabbccddeeff"),
+            ct=hex_decode("8ea2b7ca516745bfeafc49904b496089"),
         ),
     ]
     run_aes_checks[AesTestVector, check_aes](vectors)
