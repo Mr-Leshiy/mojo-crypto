@@ -1,6 +1,6 @@
 [workspace]
 authors = ["Mr-Leshiy <leshiy12345678@gmail.com>"]
-channels = ["conda-forge", "https://conda.modular.com/max"]
+channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
 name = "mojo-crypto"
 platforms = ["osx-arm64", "linux-aarch64", "linux-64"]
 version = "0.1.0"
@@ -72,7 +72,7 @@ rm -rf $out
 bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.toml"
 
 [dependencies]
-mojo = ">=1.0.0b1,<2"
+mojo = "*"
 rust = ">=1.80.0,<2"
 hugo = ">=0.163.3,<0.164"
 go = ">=1.26.4,<2"
