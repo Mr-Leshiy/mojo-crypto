@@ -3,7 +3,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -28,7 +28,6 @@ def parse_acvp_aes_cbc_aft(
     python_vectors: PythonObject,
 ) raises -> List[CbcTestVector]:
     var vectors = List[CbcTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         test = v["test"]
@@ -48,10 +47,10 @@ def parse_acvp_aes_cbc_aft(
             CbcTestVector(
                 is_encrypt=is_encrypt,
                 count=Int(py=test["tcId"]),
-                key=hex.decode(String(test["key"])),
-                iv=hex.decode(String(test["iv"])),
-                pt=hex.decode(pt_hex),
-                ct=hex.decode(ct_hex),
+                key=hex_decode(String(test["key"])),
+                iv=hex_decode(String(test["iv"])),
+                pt=hex_decode(pt_hex),
+                ct=hex_decode(ct_hex),
             )
         )
     return vectors^
@@ -61,7 +60,6 @@ def parse_acvp_aes_cbc_mct(
     python_vectors: PythonObject,
 ) raises -> List[CbcTestVector]:
     var vectors = List[CbcTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         expected = v["expected"]
@@ -73,10 +71,10 @@ def parse_acvp_aes_cbc_mct(
                 CbcTestVector(
                     is_encrypt=is_encrypt,
                     count=i,
-                    key=hex.decode(String(entry["key"])),
-                    iv=hex.decode(String(entry["iv"])),
-                    pt=hex.decode(String(entry["pt"])),
-                    ct=hex.decode(String(entry["ct"])),
+                    key=hex_decode(String(entry["key"])),
+                    iv=hex_decode(String(entry["iv"])),
+                    pt=hex_decode(String(entry["pt"])),
+                    ct=hex_decode(String(entry["ct"])),
                 )
             )
             i += 1

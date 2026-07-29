@@ -3,7 +3,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -30,7 +30,6 @@ def parse_acvp_aes_cmac_aft(
     python_vectors: PythonObject,
 ) raises -> List[CmacTestVector]:
     var vectors = List[CmacTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         test = v["test"]
@@ -56,9 +55,9 @@ def parse_acvp_aes_cmac_aft(
             CmacTestVector(
                 is_encrypt=is_encrypt,
                 count=Int(py=test["tcId"]),
-                key=hex.decode(String(test["key"])),
-                pt=hex.decode(String(test["message"])),
-                tag=hex.decode(tag_hex),
+                key=hex_decode(String(test["key"])),
+                pt=hex_decode(String(test["message"])),
+                tag=hex_decode(tag_hex),
                 test_passed=expected.get("testPassed", True).__bool__(),
             )
         )

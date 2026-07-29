@@ -13,7 +13,7 @@ struct GHashGeneric[
     GHASH is the big-endian counterpart of POLYVAL: every input/output block is
     byte-reversed and the key is run through `_mulx` (RFC 8452 Appendix A). This
     struct is parameterized by the underlying POLYVAL backend `P` (e.g.
-    `PolyvalCpu`, `PolyvalAarch64`), so the field arithmetic is shared.
+    `PolyvalNaive`, `PolyvalAarch64`), so the field arithmetic is shared.
     """
 
     # GHASH's block/key/tag sizes are exactly the underlying POLYVAL's, so

@@ -10,9 +10,9 @@ def _bench(backend: str) -> None:
 
 
 @app.command()
-def cpu() -> None:
-    """Benchmark AES-128/192/256 using the portable CPU backend."""
-    _bench("cpu")
+def naive() -> None:
+    """Benchmark AES-128/192/256 using the portable naive backend."""
+    _bench("naive")
 
 
 @app.command()

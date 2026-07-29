@@ -3,7 +3,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
-from mojo_crypto.containers.encoding import Hex
+from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -28,7 +28,6 @@ def parse_acvp_aes_ctr_aft(
     python_vectors: PythonObject,
 ) raises -> List[CtrTestVector]:
     var vectors = List[CtrTestVector]()
-    hex = Hex()
     for v in python_vectors:
         group = v["group"]
         test = v["test"]
@@ -49,10 +48,10 @@ def parse_acvp_aes_ctr_aft(
             CtrTestVector(
                 is_encrypt=is_encrypt,
                 count=Int(py=test["tcId"]),
-                key=hex.decode(String(test["key"])),
-                iv=hex.decode(String(test["iv"])),
-                pt=hex.decode(String(expected["pt"])),
-                ct=hex.decode(String(test["ct"])),
+                key=hex_decode(String(test["key"])),
+                iv=hex_decode(String(test["iv"])),
+                pt=hex_decode(String(expected["pt"])),
+                ct=hex_decode(String(test["ct"])),
             )
         )
     return vectors^
