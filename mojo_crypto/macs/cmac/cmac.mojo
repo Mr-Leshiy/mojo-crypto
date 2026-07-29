@@ -1,4 +1,4 @@
-from std.memory import memcpy
+from std.memory import unsafe_memcpy
 from std.math import min
 
 from mojo_crypto.block_ciphers.traits import BlockCipherEncryptable
@@ -6,8 +6,8 @@ from mojo_crypto.macs.traits import Mac
 
 
 struct Cmac[
-    Cipher: BlockCipherEncryptable & Copyable & Movable & ImplicitlyDestructible
-](Copyable, ImplicitlyDestructible, Mac, Movable):
+    Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable
+](Copyable, ImplicitlyDeletable, Mac, Movable):
     """
     **CMAC** (OMAC1): a cipher-based message authentication code.
 
@@ -75,7 +75,7 @@ struct Cmac[
             var take = min(
                 Self.BLOCK_SIZE - self._last_message_block_len, len(input)
             )
-            memcpy(
+            unsafe_memcpy(
                 dest=self._last_message_block.unsafe_ptr()
                 + self._last_message_block_len,
                 src=input.unsafe_ptr(),
@@ -108,7 +108,7 @@ struct Cmac[
         # Fill `_last_message_block` with the tail, for `finalize` to mask
         # with K1/K2.
         if len(input) > 0:
-            memcpy(
+            unsafe_memcpy(
                 dest=self._last_message_block.unsafe_ptr()
                 + self._last_message_block_len,
                 src=input.unsafe_ptr(),
@@ -134,7 +134,7 @@ struct Cmac[
         # `_last_message_block_len` bytes of `_last_message_block` are
         # meaningful.
         var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
-        memcpy(
+        unsafe_memcpy(
             dest=padded.unsafe_ptr(),
             src=self._last_message_block.unsafe_ptr(),
             count=self._last_message_block_len,

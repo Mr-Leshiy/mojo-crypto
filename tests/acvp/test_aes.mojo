@@ -83,8 +83,7 @@ def check_aes_ecb_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[EcbTestVector]) raises:
@@ -109,8 +108,7 @@ def check_aes_ecb_mct[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[EcbTestVector]) raises:

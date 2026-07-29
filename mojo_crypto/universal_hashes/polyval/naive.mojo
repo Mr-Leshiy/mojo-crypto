@@ -4,7 +4,7 @@ from ._common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
 struct PolyvalNaive(
-    Copyable, ImplicitlyDestructible, Movable, UniversalHashable
+    Copyable, ImplicitlyDeletable, Movable, UniversalHashable
 ):
     """Portable software POLYVAL implementation.
 

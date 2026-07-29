@@ -1,4 +1,4 @@
-from std.memory import memcpy
+from std.memory import unsafe_memcpy
 
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
@@ -19,7 +19,7 @@ comptime C_MAX: UInt64 = (1 << 36) + 16
 
 
 @fieldwise_init
-struct LengthError(ImplicitlyDestructible, Writable):
+struct LengthError(ImplicitlyDeletable, Writable):
     """Raised when GCM-SIV input exceeds the maximum permitted length."""
 
     var aad_len: Int
@@ -49,14 +49,13 @@ struct GcmSiv[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    G: UniversalHashable & Copyable & Movable & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
+    G: UniversalHashable & Copyable & ImplicitlyDeletable,
 ](
     AeadDecryptable,
     AeadEncryptable,
     Copyable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     """
@@ -298,7 +297,7 @@ struct GcmSiv[
 
 
 def _derive_subkey[
-    C: BlockCipherEncryptable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable & ImplicitlyDeletable,
     N: Int,
     NONCE_SIZE: Int,
 ](
@@ -335,14 +334,14 @@ def _derive_subkey[
     for chunk in range(N // 8):
         # block[0:4] = counter as a little-endian u32, host-independent.
         var counter_bytes = counter.as_bytes[big_endian=False]()
-        memcpy(
+        unsafe_memcpy(
             dest=block.unsafe_ptr(),
             src=counter_bytes.unsafe_ptr(),
             count=4,
         )
 
         # block[4:16] = nonce.
-        memcpy(
+        unsafe_memcpy(
             dest=block.unsafe_ptr() + 4,
             src=nonce.unsafe_ptr(),
             count=NONCE_SIZE,
@@ -351,7 +350,7 @@ def _derive_subkey[
         cipher.encrypt(block)
 
         # Keep the low 8 bytes, discard the rest.
-        memcpy(
+        unsafe_memcpy(
             dest=key.unsafe_ptr() + chunk * 8,
             src=block.unsafe_ptr(),
             count=8,

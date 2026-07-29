@@ -1,5 +1,5 @@
 from std.bit import byte_swap
-from std.memory import memcpy
+from std.memory import unsafe_memcpy
 
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
@@ -15,15 +15,14 @@ struct Gcm[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    G: UniversalHashable & Copyable & Movable & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
+    G: UniversalHashable & Copyable & ImplicitlyDeletable,
     NONCE_SIZE: Int,
 ](
     AeadDecryptable,
     AeadEncryptable,
     Copyable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     """
@@ -169,7 +168,7 @@ struct Gcm[
 
         comptime if Self.NONCE_SIZE == 12:
             # J0 = IV || 0^31 || 1
-            memcpy(
+            unsafe_memcpy(
                 dest=j0.unsafe_ptr(),
                 src=self._nonce.unsafe_ptr(),
                 count=Self.NONCE_SIZE,
@@ -254,7 +253,7 @@ struct Gcm[
 
         # GCM permits a truncated tag: return the leading TAG_SIZE bytes.
         var tag = InlineArray[UInt8, TAG_SIZE](uninitialized=True)
-        memcpy(
+        unsafe_memcpy(
             dest=tag.unsafe_ptr(),
             src=full_tag.unsafe_ptr(),
             count=TAG_SIZE,

@@ -61,8 +61,7 @@ def check_aes_ctr_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CtrTestVector]) raises:

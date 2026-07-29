@@ -22,7 +22,7 @@ struct AesX86[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE

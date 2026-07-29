@@ -21,9 +21,8 @@ struct AesTestVector(Copyable, Movable):
 def check_aes[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
-    & Copyable
     & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[AesTestVector]) raises:

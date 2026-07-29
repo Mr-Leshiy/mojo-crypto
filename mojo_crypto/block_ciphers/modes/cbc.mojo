@@ -9,13 +9,12 @@ struct CbcMode[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible
+    & ImplicitlyDeletable
 ](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     """CBC block cipher mode of operation.

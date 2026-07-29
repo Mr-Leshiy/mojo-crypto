@@ -1,4 +1,4 @@
-from std.memory import memcpy
+from std.memory import unsafe_memcpy
 from std.math import min
 
 from mojo_crypto.hashes.traits import Digest
@@ -17,7 +17,7 @@ struct Sha2Naive64[
     H6: UInt64,
     H7: UInt64,
     DigestSize: Int,
-](Copyable, Digest, ImplicitlyDestructible, Movable):
+](Copyable, Digest, ImplicitlyDeletable, Movable):
     """
     Naive, portable **SHA-2 (64-bit word)** engine — FIPS 180-4 §6.4.
 
@@ -63,7 +63,7 @@ struct Sha2Naive64[
         # before deciding whether it is now full.
         if self._buffer_len > 0:
             var take = min(Self.BLOCK_SIZE - self._buffer_len, len(input))
-            memcpy(
+            unsafe_memcpy(
                 dest=self._buffer.unsafe_ptr() + self._buffer_len,
                 src=input.unsafe_ptr(),
                 count=take,
@@ -76,7 +76,7 @@ struct Sha2Naive64[
 
         while len(input) >= Self.BLOCK_SIZE:
             var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
-            memcpy(
+            unsafe_memcpy(
                 dest=block.unsafe_ptr(),
                 src=input.unsafe_ptr(),
                 count=Self.BLOCK_SIZE,
@@ -85,7 +85,7 @@ struct Sha2Naive64[
             input = input[Self.BLOCK_SIZE :]
 
         if len(input) > 0:
-            memcpy(
+            unsafe_memcpy(
                 dest=self._buffer.unsafe_ptr() + self._buffer_len,
                 src=input.unsafe_ptr(),
                 count=len(input),
