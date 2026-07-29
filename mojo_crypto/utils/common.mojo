@@ -36,9 +36,7 @@ def to_inline_array[
 
 
 @always_inline
-def to_list[
-    size: Int, T: Movable
-](data: InlineArray[T, size]) -> List[T]:
+def to_list[size: Int, T: Movable](data: InlineArray[T, size]) -> List[T]:
     """Copy a fixed-size InlineArray into a List.
 
     Copies the underlying buffer in a single `unsafe_memcpy` rather than

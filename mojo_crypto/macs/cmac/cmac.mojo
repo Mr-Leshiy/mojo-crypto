@@ -5,9 +5,9 @@ from mojo_crypto.block_ciphers.traits import BlockCipherEncryptable
 from mojo_crypto.macs.traits import Mac
 
 
-struct Cmac[
-    Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable
-](Copyable, ImplicitlyDeletable, Mac, Movable):
+struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
+    Copyable, ImplicitlyDeletable, Mac, Movable
+):
     """
     **CMAC** (OMAC1): a cipher-based message authentication code.
 
