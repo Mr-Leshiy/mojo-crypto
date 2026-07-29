@@ -1,75 +1,181 @@
-from std.math import ceildiv
+from std.math import ceildiv, round
 from std.sys import has_accelerator
 from std.gpu import block_dim, block_idx, thread_idx
 from std.gpu.host import DeviceContext
 from std.memory import UnsafePointer
+from std.reflection import reflect
 from std.testing import assert_equal
+from std.time import perf_counter_ns
+from std.utils import Variant
 
 comptime BLOCK_DIM = 256
+comptime Size = 256 * 8
 
 
-# Elementwise data[i] *= data[i]
-def _square_kernel(
+def _heavy_kernel(
     data: UnsafePointer[UInt8, MutAnyOrigin],
     size: Int,
 ):
+    comptime ITERS = 50_000
+
     var i = block_idx.x * block_dim.x + thread_idx.x
     if i < size:
-        data[i] = data[i] * data[i]
+        var v = data[i] * data[i]
+        for _ in range(ITERS):
+            v = v * v + UInt8(1)
+            v = v ^ (v >> 3)
+            v = v * UInt8(31) + UInt8(7)
+        data[i] = v
 
 
-# Elementwise data[i] += data[i]
-def _double_kernel(
+def _light_kernel(
     data: UnsafePointer[UInt8, MutAnyOrigin],
     size: Int,
 ):
+    comptime ITERS = 100
+
     var i = block_idx.x * block_dim.x + thread_idx.x
     if i < size:
-        data[i] = data[i] + data[i]
+        var v = data[i] + data[i]
+        for _ in range(ITERS):
+            v = v + v + UInt8(3)
+            v = v ^ (v << 2)
+            v = v * UInt8(17) + UInt8(5)
+        data[i] = v
 
 
-def square_gpu[
-    Size: Int
-](ctx: DeviceContext, input: InlineArray[UInt8, Size]) raises -> InlineArray[
-    UInt8, Size
-]:
-    var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
-    buf.enqueue_copy_from(input.unsafe_ptr())
-
-    ctx.enqueue_function[_square_kernel, _square_kernel](
-        buf,
-        Size,
-        grid_dim=ceildiv(Size, BLOCK_DIM),
-        block_dim=BLOCK_DIM,
-    )
-    ctx.synchronize()
-
-    var output = InlineArray[UInt8, Size](uninitialized=True)
-    buf.enqueue_copy_to(output.unsafe_ptr())
-    ctx.synchronize()
-    return output^
+# A GPU op is any of the kernels above (`_heavy_kernel`, `_light_kernel`, ...),
+# wrapped in a thin functor so it has a concrete, reflectable, storable type
+# — Mojo's `def(...) -> ...` function types can't be stored in a `List`
+# directly, only used as parameter-position bounds.
+trait GpuOp(Copyable, Movable):
+    def __call__(
+        self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
+    ) raises -> InlineArray[UInt8, Size]:
+        ...
 
 
-def double_gpu[
-    Size: Int
-](ctx: DeviceContext, input: InlineArray[UInt8, Size]) raises -> InlineArray[
-    UInt8, Size
-]:
-    var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
-    buf.enqueue_copy_from(input.unsafe_ptr())
+@fieldwise_init
+struct HeavyOp(GpuOp):
+    def __call__(
+        self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
+    ) raises -> InlineArray[UInt8, Size]:
+        var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
+        buf.enqueue_copy_from(input.unsafe_ptr())
 
-    ctx.enqueue_function[_double_kernel, _double_kernel](
-        buf,
-        Size,
-        grid_dim=ceildiv(Size, BLOCK_DIM),
-        block_dim=BLOCK_DIM,
-    )
-    ctx.synchronize()
+        ctx.enqueue_function[_heavy_kernel](
+            buf,
+            Size,
+            grid_dim=ceildiv(Size, BLOCK_DIM),
+            block_dim=BLOCK_DIM,
+        )
 
-    var output = InlineArray[UInt8, Size](uninitialized=True)
-    buf.enqueue_copy_to(output.unsafe_ptr())
-    ctx.synchronize()
-    return output^
+        var output = InlineArray[UInt8, Size](uninitialized=True)
+        buf.enqueue_copy_to(output.unsafe_ptr())
+        return output^
+
+
+@fieldwise_init
+struct LightOp(GpuOp):
+    def __call__(
+        self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
+    ) raises -> InlineArray[UInt8, Size]:
+        var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
+        buf.enqueue_copy_from(input.unsafe_ptr())
+
+        ctx.enqueue_function[_light_kernel](
+            buf,
+            Size,
+            grid_dim=ceildiv(Size, BLOCK_DIM),
+            block_dim=BLOCK_DIM,
+        )
+
+        var output = InlineArray[UInt8, Size](uninitialized=True)
+        buf.enqueue_copy_to(output.unsafe_ptr())
+        return output^
+
+
+# Closed set of GpuOp implementers a Sequential/Parallel can be given. Add
+# new op structs here (and to the Variant) to make them selectable from main().
+comptime GpuOpVariant = Variant[HeavyOp, LightOp]
+
+
+def call_gpu_op(
+    op: GpuOpVariant, ctx: DeviceContext, input: InlineArray[UInt8, Size]
+) raises -> InlineArray[UInt8, Size]:
+    if op.isa[HeavyOp]():
+        return op[HeavyOp](ctx, input)
+    return op[LightOp](ctx, input)
+
+
+trait AsyncGpuDemo:
+    def __call__(
+        self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
+    ) raises -> None:
+        ...
+
+
+@fieldwise_init
+struct Sequential(AsyncGpuDemo, Copyable, Movable):
+    var ops: List[GpuOpVariant]
+
+    def __call__(
+        self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
+    ) raises -> None:
+        for op in self.ops:
+            _ = call_gpu_op(op, ctx, input)
+            ctx.synchronize()
+
+
+@fieldwise_init
+struct Parallel(AsyncGpuDemo, Copyable, Movable):
+    var ops: List[GpuOpVariant]
+
+    def __call__(
+        self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
+    ) raises -> None:
+        for op in self.ops:
+            _ = call_gpu_op(op, ctx, input)
+        ctx.synchronize()
+
+
+# Generic timing wrapper: reflects on `O`'s type to print its name, so any
+# `AsyncGpuDemo` implementer gets timed/labeled without passing a name.
+# Returns the elapsed time in ms so callers can compare runs.
+def timed[
+    O: AsyncGpuDemo
+](op: O, ctx: DeviceContext, input: InlineArray[UInt8, Size]) raises -> Float64:
+    var start = perf_counter_ns()
+    op(ctx, input)
+    var end = perf_counter_ns()
+    var elapsed_ms = Float64(end - start) / 1_000_000.0
+
+    print(reflect[O].name())
+    print("elapsed:", elapsed_ms, "ms")
+    print("-------")
+    return elapsed_ms
+
+
+def compare(
+    label: StaticString,
+    ctx: DeviceContext,
+    input: InlineArray[UInt8, Size],
+    ops: List[GpuOpVariant],
+) raises:
+    print("===", label, "===")
+
+    var sequential_ms = timed(Sequential(ops=ops.copy()), ctx, input)
+    var parallel_ms = timed(Parallel(ops=ops.copy()), ctx, input)
+
+    var diff_ms = round((sequential_ms - parallel_ms) * 100) / 100
+    var diff_pct = round((diff_ms / sequential_ms) * 100.0 * 100) / 100
+    print("difference:", diff_ms, "ms")
+
+    if diff_ms > 0:
+        print("parallel is:", diff_pct, "% faster")
+    else:
+        print("sequential is:", -1 * diff_pct, "% faster")
+    print()
 
 
 def main() raises:
@@ -77,16 +183,20 @@ def main() raises:
         print("No GPU found; skipping async_gpu demo")
     else:
         with DeviceContext() as ctx:
-            comptime Size = 8
             var input = InlineArray[UInt8, Size](uninitialized=True)
             for i in range(Size):
                 input[i] = UInt8(i)
 
-            var squared = square_gpu[Size](ctx, input)
-            var doubled = double_gpu[Size](ctx, input)
+            var light_first = List[GpuOpVariant]()
+            for _ in range(1000):
+                light_first.append(LightOp())
+            for _ in range(1000):
+                light_first.append(HeavyOp())
+            compare("light first", ctx, input, light_first)
 
-            for i in range(Size):
-                assert_equal(squared[i], UInt8(i) * UInt8(i))
-                assert_equal(doubled[i], UInt8(i) + UInt8(i))
-
-            print("square_gpu/double_gpu verified for", Size, "elements")
+            var heavy_first = List[GpuOpVariant]()
+            for _ in range(1000):
+                heavy_first.append(HeavyOp())
+            for _ in range(1000):
+                heavy_first.append(LightOp())
+            compare("heavy first", ctx, input, heavy_first)
