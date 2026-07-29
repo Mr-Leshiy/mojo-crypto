@@ -68,8 +68,7 @@ def check_aes_cmac_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CmacTestVector]) raises:
@@ -77,7 +76,7 @@ def check_aes_cmac_aft[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[Cmac[{}]], count={}".format(reflect[C]().name(), v.count)
+        var msg = "[Cmac[{}]], count={}".format(reflect[C].name(), v.count)
 
         var cmac = Cmac[C](cipher_init(to_inline_array[KeySize](v.key)))
         cmac.update(v.pt[:])

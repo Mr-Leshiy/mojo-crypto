@@ -13,7 +13,7 @@ from mojo_crypto.universal_hashes.ghash.generic import _mulx
 
 
 def check_ghash_test_vector[
-    T: UniversalHashable & Movable & ImplicitlyDestructible
+    T: UniversalHashable & Movable & ImplicitlyDeletable
 ]() raises:
     var h = hex_decode[T.KEY_SIZE]("25629347589242761d31f826ba4b757b")
     var x1 = hex_decode[T.BLOCK_SIZE]("4f4f95668c83dfb6401762bb2d01a262")

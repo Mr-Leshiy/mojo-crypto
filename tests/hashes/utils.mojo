@@ -5,7 +5,7 @@ from mojo_crypto.hashes.traits import Digest
 
 
 def check_hash[
-    T: Digest & Movable & ImplicitlyDestructible
+    T: Digest & Movable & ImplicitlyDeletable
 ](msg: String, expected_hex: String) raises:
     var h = T()
     h.update(msg.as_bytes())

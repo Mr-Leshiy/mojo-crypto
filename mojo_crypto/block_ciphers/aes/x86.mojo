@@ -22,7 +22,7 @@ struct AesX86[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
@@ -104,12 +104,12 @@ def _inv_mix(v: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
 def _cipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], NR + 1]):
-    var s = data.unsafe_ptr().bitcast[UInt64]().load[width=2]()
+    var s = UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().load[width=2]()
     s ^= rks[0]
     comptime for r in range(1, NR):
         s = _aesenc(s, rks[r])
     s = _aesenclast(s, rks[NR])
-    data.unsafe_ptr().bitcast[UInt64]().store(s)
+    UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().store(s)
 
 
 # FIPS 197 §5.3 InvCipher() via AES-NI (equivalent inverse).
@@ -118,12 +118,12 @@ def _cipher[
 def _decipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], NR + 1]):
-    var s = data.unsafe_ptr().bitcast[UInt64]().load[width=2]()
+    var s = UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().load[width=2]()
     s ^= rks[0]
     comptime for r in range(1, NR):
         s = _aesdec(s, rks[r])
     s = _aesdeclast(s, rks[NR])
-    data.unsafe_ptr().bitcast[UInt64]().store(s)
+    UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().store(s)
 
 
 # FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.
@@ -170,7 +170,11 @@ def _expand_enc_rks[
         kb[wi * 4 + 3] = kb[(wi - NK) * 4 + 3] ^ b3
     var rks = InlineArray[SIMD[DType.uint64, 2], NR + 1](uninitialized=True)
     for r in range(NR + 1):
-        rks[r] = (kb.unsafe_ptr() + r * 16).bitcast[UInt64]().load[width=2]()
+        rks[r] = (
+            UnsafePointer(kb.unsafe_ptr())
+            .bitcast[UInt64]()
+            .load[width=2](r * 2)
+        )
     return rks
 
 

@@ -86,10 +86,10 @@ def parse_acvp_sha2_mct(
 
 
 def check_sha2_aft[
-    T: Digest & Movable & ImplicitlyDestructible
+    T: Digest & Movable & ImplicitlyDeletable
 ](vectors: List[HashTestVector]) raises:
     for v in vectors:
-        var msg = "[{}], count={}".format(reflect[T]().name(), v.count)
+        var msg = "[{}], count={}".format(reflect[T].name(), v.count)
 
         var h = T()
         h.update(v.msg[:])
@@ -113,10 +113,10 @@ def check_sha2_aft[
 #       MD = SHA(MSG); A = B; B = C; C = MD
 #     Output MD (checkpoint j); SEED = MD
 def check_sha2_mct[
-    T: Digest & Movable & ImplicitlyDestructible
+    T: Digest & Movable & ImplicitlyDeletable
 ](vectors: List[MctTestVector]) raises:
     for v in vectors:
-        var msg = "[{}], count={}".format(reflect[T]().name(), v.count)
+        var msg = "[{}], count={}".format(reflect[T].name(), v.count)
         var initial_len = len(v.seed)
 
         var seed = v.seed.copy()

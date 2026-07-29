@@ -85,7 +85,7 @@ struct Product32(Copyable, Movable):
         zw[7] = zw[7] ^ lw ^ (lw >> 1) ^ (lw >> 2) ^ (lw >> 7)
         zw[6] = zw[6] ^ ((lw << 31) ^ (lw << 30) ^ (lw << 25))
         var result = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        var out = result.unsafe_ptr().bitcast[UInt32]()
+        var out = UnsafePointer(result.unsafe_ptr()).bitcast[UInt32]()
         out.store(0, zw[4])
         out.store(1, zw[5])
         out.store(2, zw[6])
@@ -101,13 +101,13 @@ def _karatsuba_mul32(
     Decomposes the 128×128 multiply into 9 × 32×32 Karatsuba sub-products;
     with the bit-reversal trick for the high half, 18 × _bmul32 calls total.
     """
-    var ap = a.unsafe_ptr().bitcast[UInt32]()
+    var ap = UnsafePointer(a.unsafe_ptr()).bitcast[UInt32]()
     var yw0 = ap.load(0)
     var yw1 = ap.load(1)
     var yw2 = ap.load(2)
     var yw3 = ap.load(3)
 
-    var bp = b.unsafe_ptr().bitcast[UInt32]()
+    var bp = UnsafePointer(b.unsafe_ptr()).bitcast[UInt32]()
     var hw0 = bp.load(0)
     var hw1 = bp.load(1)
     var hw2 = bp.load(2)

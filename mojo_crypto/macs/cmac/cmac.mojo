@@ -1,13 +1,13 @@
-from std.memory import memcpy
+from std.memory import unsafe_memcpy
 from std.math import min
 
 from mojo_crypto.block_ciphers.traits import BlockCipherEncryptable
 from mojo_crypto.macs.traits import Mac
 
 
-struct Cmac[
-    Cipher: BlockCipherEncryptable & Copyable & Movable & ImplicitlyDestructible
-](Copyable, ImplicitlyDestructible, Mac, Movable):
+struct Cmac[Cipher: BlockCipherEncryptable & Copyable & ImplicitlyDeletable](
+    Copyable, ImplicitlyDeletable, Mac, Movable
+):
     """
     **CMAC** (OMAC1): a cipher-based message authentication code.
 
@@ -56,7 +56,7 @@ struct Cmac[
         self._state ^= block
         self._cipher.encrypt(
             Span[UInt8, origin_of(self._state)](
-                ptr=UnsafePointer(to=self._state).bitcast[UInt8](),
+                unsafe_ptr=UnsafePointer(to=self._state).bitcast[UInt8](),
                 length=Self.BLOCK_SIZE,
             )
         )
@@ -75,8 +75,8 @@ struct Cmac[
             var take = min(
                 Self.BLOCK_SIZE - self._last_message_block_len, len(input)
             )
-            memcpy(
-                dest=self._last_message_block.unsafe_ptr()
+            unsafe_memcpy(
+                dest=UnsafePointer(self._last_message_block.unsafe_ptr())
                 + self._last_message_block_len,
                 src=input.unsafe_ptr(),
                 count=take,
@@ -93,7 +93,7 @@ struct Cmac[
                 and len(input) > 0
             ):
                 self._absorb_block(
-                    self._last_message_block.unsafe_ptr().load[
+                    UnsafePointer(self._last_message_block.unsafe_ptr()).load[
                         width=Self.BLOCK_SIZE, alignment=1
                     ]()
                 )
@@ -101,15 +101,17 @@ struct Cmac[
 
         while len(input) > Self.BLOCK_SIZE:
             self._absorb_block(
-                input.unsafe_ptr().load[width=Self.BLOCK_SIZE, alignment=1]()
+                UnsafePointer(input.unsafe_ptr()).load[
+                    width=Self.BLOCK_SIZE, alignment=1
+                ]()
             )
             input = input[Self.BLOCK_SIZE :]
 
         # Fill `_last_message_block` with the tail, for `finalize` to mask
         # with K1/K2.
         if len(input) > 0:
-            memcpy(
-                dest=self._last_message_block.unsafe_ptr()
+            unsafe_memcpy(
+                dest=UnsafePointer(self._last_message_block.unsafe_ptr())
                 + self._last_message_block_len,
                 src=input.unsafe_ptr(),
                 count=len(input),
@@ -134,7 +136,7 @@ struct Cmac[
         # `_last_message_block_len` bytes of `_last_message_block` are
         # meaningful.
         var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
-        memcpy(
+        unsafe_memcpy(
             dest=padded.unsafe_ptr(),
             src=self._last_message_block.unsafe_ptr(),
             count=self._last_message_block_len,
@@ -142,25 +144,25 @@ struct Cmac[
 
         var last = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
         if self._last_message_block_len == Self.BLOCK_SIZE:
-            var padded_simd = padded.unsafe_ptr().load[
+            var padded_simd = UnsafePointer(padded.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
-            var k1_simd = k1.unsafe_ptr().load[
+            var k1_simd = UnsafePointer(k1.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
-            last.unsafe_ptr().store[alignment=1](
+            UnsafePointer(last.unsafe_ptr()).store[alignment=1](
                 self._state ^ padded_simd ^ k1_simd
             )
         else:
             padded[self._last_message_block_len] ^= 0x80
-            var padded_simd = padded.unsafe_ptr().load[
+            var padded_simd = UnsafePointer(padded.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
             var k2 = _dbl(k1)
-            var k2_simd = k2.unsafe_ptr().load[
+            var k2_simd = UnsafePointer(k2.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
-            last.unsafe_ptr().store[alignment=1](
+            UnsafePointer(last.unsafe_ptr()).store[alignment=1](
                 self._state ^ padded_simd ^ k2_simd
             )
 

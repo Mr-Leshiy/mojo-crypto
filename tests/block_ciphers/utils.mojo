@@ -15,13 +15,12 @@ from mojo_crypto.block_ciphers.traits import (
 
 
 def run_aes_checks[
-    TestVector: Copyable & Movable,
+    TestVector: Copyable,
     check: def[
         C: BlockCipherEncryptable
         & BlockCipherDecryptable
         & Copyable
-        & Movable
-        & ImplicitlyDestructible,
+        & ImplicitlyDeletable,
         KeySize: Int,
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
     ](List[TestVector]) raises capturing[_],

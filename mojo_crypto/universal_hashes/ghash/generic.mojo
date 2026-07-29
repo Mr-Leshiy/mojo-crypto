@@ -1,9 +1,9 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 
-struct GHashGeneric[
-    P: Copyable & ImplicitlyDestructible & Movable & UniversalHashable
-](Copyable, ImplicitlyDestructible, Movable, UniversalHashable):
+struct GHashGeneric[P: Copyable & ImplicitlyDeletable & UniversalHashable](
+    Copyable, ImplicitlyDeletable, Movable, UniversalHashable
+):
     """
     **GHASH**: universal hash over GF(2^128) used by AES-GCM.
 
@@ -44,7 +44,9 @@ def _reverse[
     Reverse this field element at a byte-level of granularity.
     """
     var out = InlineArray[UInt8, SIZE](uninitialized=True)
-    out.unsafe_ptr().store(v.unsafe_ptr().load[width=SIZE]().reversed())
+    UnsafePointer(out.unsafe_ptr()).store(
+        UnsafePointer(v.unsafe_ptr()).load[width=SIZE]().reversed()
+    )
     return out^
 
 
@@ -61,7 +63,7 @@ def _mulx[
     """
     # Interpret the 16-byte element as a 128-bit little-endian integer
     # split across two 64-bit halves: lo = bytes[0..8], hi = bytes[8..16].
-    var ptr = v.unsafe_ptr().bitcast[UInt64]()
+    var ptr = UnsafePointer(v.unsafe_ptr()).bitcast[UInt64]()
     var lo = ptr.load(0)
     var hi = ptr.load(1)
 
@@ -78,7 +80,7 @@ def _mulx[
     hi ^= (v_hi << 57) | (v_hi << 62) | (v_hi << 63)
 
     var result = InlineArray[UInt8, SIZE](uninitialized=True)
-    var out = result.unsafe_ptr().bitcast[UInt64]()
+    var out = UnsafePointer(result.unsafe_ptr()).bitcast[UInt64]()
     out.store(0, lo)
     out.store(1, hi)
     return result^

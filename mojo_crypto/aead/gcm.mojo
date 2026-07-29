@@ -1,5 +1,5 @@
 from std.bit import byte_swap
-from std.memory import memcpy
+from std.memory import unsafe_memcpy
 
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
@@ -15,15 +15,14 @@ struct Gcm[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
-    G: UniversalHashable & Copyable & Movable & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
+    G: UniversalHashable & Copyable & ImplicitlyDeletable,
     NONCE_SIZE: Int,
 ](
     AeadDecryptable,
     AeadEncryptable,
     Copyable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     """
@@ -136,8 +135,12 @@ struct Gcm[
         #     making tag forgery feasible.
         #
         # alignment=1 because the InlineArray[UInt8] bases may be unaligned.
-        var e = expected_tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
-        var t = tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
+        var e = UnsafePointer(expected_tag.unsafe_ptr()).load[
+            width=TAG_SIZE, alignment=1
+        ]()
+        var t = UnsafePointer(tag.unsafe_ptr()).load[
+            width=TAG_SIZE, alignment=1
+        ]()
         if (e ^ t).reduce_or() != 0:
             raise AuthenticationError()
 
@@ -169,7 +172,7 @@ struct Gcm[
 
         comptime if Self.NONCE_SIZE == 12:
             # J0 = IV || 0^31 || 1
-            memcpy(
+            unsafe_memcpy(
                 dest=j0.unsafe_ptr(),
                 src=self._nonce.unsafe_ptr(),
                 count=Self.NONCE_SIZE,
@@ -190,9 +193,9 @@ struct Gcm[
             # block: byte_swap turns the native little-endian u64 into big-endian,
             # then store it as a u64 over those bytes. alignment=1 because the
             # InlineArray[UInt8] base is not guaranteed to be 8-byte aligned.
-            (length_block.unsafe_ptr() + Self.G.BLOCK_SIZE - 8).bitcast[
-                UInt64
-            ]().store[alignment=1](BE_NONCE_BITS)
+            (
+                UnsafePointer(length_block.unsafe_ptr()) + Self.G.BLOCK_SIZE - 8
+            ).bitcast[UInt64]().store[alignment=1](BE_NONCE_BITS)
             ghash.update_block(length_block)
 
             j0 = rebind[InlineArray[UInt8, Self.BLOCK_SIZE]](ghash^.finalize())
@@ -235,12 +238,12 @@ struct Gcm[
         var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
         var aad_bits = UInt64(len(aad)) * 8
         var data_bits = UInt64(len(data)) * 8
-        length_block.unsafe_ptr().bitcast[UInt64]().store[alignment=1](
-            byte_swap(aad_bits)
-        )
-        (length_block.unsafe_ptr() + 8).bitcast[UInt64]().store[alignment=1](
-            byte_swap(data_bits)
-        )
+        UnsafePointer(length_block.unsafe_ptr()).bitcast[UInt64]().store[
+            alignment=1
+        ](byte_swap(aad_bits))
+        (UnsafePointer(length_block.unsafe_ptr()) + 8).bitcast[UInt64]().store[
+            alignment=1
+        ](byte_swap(data_bits))
         ghash.update_block(length_block)
 
         var full_tag = rebind[InlineArray[UInt8, Self.BLOCK_SIZE]](
@@ -248,13 +251,17 @@ struct Gcm[
         )
         # full_tag ^= mask, one SIMD lane per byte. alignment=1 because the
         # InlineArray[UInt8] bases are not guaranteed to be 16-byte aligned.
-        var t = full_tag.unsafe_ptr().load[width=Self.BLOCK_SIZE, alignment=1]()
-        var m = mask.unsafe_ptr().load[width=Self.BLOCK_SIZE, alignment=1]()
-        full_tag.unsafe_ptr().store[alignment=1](t ^ m)
+        var t = UnsafePointer(full_tag.unsafe_ptr()).load[
+            width=Self.BLOCK_SIZE, alignment=1
+        ]()
+        var m = UnsafePointer(mask.unsafe_ptr()).load[
+            width=Self.BLOCK_SIZE, alignment=1
+        ]()
+        UnsafePointer(full_tag.unsafe_ptr()).store[alignment=1](t ^ m)
 
         # GCM permits a truncated tag: return the leading TAG_SIZE bytes.
         var tag = InlineArray[UInt8, TAG_SIZE](uninitialized=True)
-        memcpy(
+        unsafe_memcpy(
             dest=tag.unsafe_ptr(),
             src=full_tag.unsafe_ptr(),
             count=TAG_SIZE,

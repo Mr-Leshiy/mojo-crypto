@@ -78,8 +78,7 @@ def check_aes_gcm_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[GcmTestVector]) raises:
@@ -94,7 +93,7 @@ def check_aes_gcm_aft[
             continue
 
         msg = "[Gcm[{}], nonce={}, tag={}], count={}".format(
-            reflect[C]().name(), NONCE_SIZE, TAG_SIZE, v.count
+            reflect[C].name(), NONCE_SIZE, TAG_SIZE, v.count
         )
         key = to_inline_array[KeySize](v.key)
         nonce = to_inline_array[NONCE_SIZE](v.iv)

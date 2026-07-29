@@ -23,7 +23,7 @@ trait Pmull:
 
 
 struct PolyvalRf[P: Pmull](
-    Copyable, ImplicitlyDestructible, Movable, UniversalHashable
+    Copyable, ImplicitlyDeletable, Movable, UniversalHashable
 ):
     """Optimized POLYVAL implementation using the R/F algorithm.
 
@@ -85,7 +85,7 @@ comptime P1: UInt64 = 0xC200_0000_0000_0000
 
 @fieldwise_init
 struct ExpandedKey[P: Pmull](
-    Copyable, Equatable, ImplicitlyDestructible, Movable, Writable
+    Copyable, Equatable, ImplicitlyDeletable, Movable, Writable
 ):
     """Precomputed key material for POLYVAL using the R/F algorithm.
 
@@ -153,14 +153,14 @@ struct ExpandedKey[P: Pmull](
 @always_inline
 def _load_bytes(bytes: InlineArray[UInt8, 16]) -> SIMD[DType.uint64, 2]:
     """Load 16 bytes as two 64-bit lanes."""
-    return bytes.unsafe_ptr().bitcast[UInt64]().load[width=2]()
+    return UnsafePointer(bytes.unsafe_ptr()).bitcast[UInt64]().load[width=2]()
 
 
 @always_inline
 def _store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
     """Store two 64-bit lanes back into 16 bytes."""
     out = InlineArray[UInt8, 16](uninitialized=True)
-    out.unsafe_ptr().bitcast[UInt64]().store(reg)
+    UnsafePointer(out.unsafe_ptr()).bitcast[UInt64]().store(reg)
     return out^
 
 

@@ -1,16 +1,16 @@
 from std.bit import byte_swap
 from std.sys.info import _current_target, is_little_endian, is_big_endian
-from std.memory import memcpy
+from std.memory import unsafe_memcpy
 
 
 @always_inline
 def to_inline_array[
     size: Int,
-    T: Copyable & Movable,
+    T: Movable,
 ](data: List[T]) raises -> InlineArray[T, size]:
     """Copy a `size`-length List into a fixed-size InlineArray.
 
-    Copies the underlying buffer in a single `memcpy` rather than
+    Copies the underlying buffer in a single `unsafe_memcpy` rather than
     element-by-element.
 
     Parameters:
@@ -31,17 +31,15 @@ def to_inline_array[
             "expected list of length {}; got {}".format(size, len(data))
         )
     var arr = InlineArray[T, size](uninitialized=True)
-    memcpy(dest=arr.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
+    unsafe_memcpy(dest=arr.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
     return arr^
 
 
 @always_inline
-def to_list[
-    size: Int, T: Copyable & Movable
-](data: InlineArray[T, size]) -> List[T]:
+def to_list[size: Int, T: Movable](data: InlineArray[T, size]) -> List[T]:
     """Copy a fixed-size InlineArray into a List.
 
-    Copies the underlying buffer in a single `memcpy` rather than
+    Copies the underlying buffer in a single `unsafe_memcpy` rather than
     element-by-element.
 
     Parameters:
@@ -55,7 +53,7 @@ def to_list[
         A `List[T]` holding a copy of `data`.
     """
     var list = List[T](unsafe_uninit_length=size)
-    memcpy(dest=list.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
+    unsafe_memcpy(dest=list.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
     return list^
 
 

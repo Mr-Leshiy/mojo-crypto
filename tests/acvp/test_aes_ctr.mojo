@@ -61,8 +61,7 @@ def check_aes_ctr_aft[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CtrTestVector]) raises:
@@ -70,7 +69,7 @@ def check_aes_ctr_aft[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[CtrMode[{}]], count={}".format(reflect[C]().name(), v.count)
+        var msg = "[CtrMode[{}]], count={}".format(reflect[C].name(), v.count)
 
         var key = to_inline_array[KeySize](v.key)
         var iv = to_inline_array[C.BLOCK_SIZE](v.iv)

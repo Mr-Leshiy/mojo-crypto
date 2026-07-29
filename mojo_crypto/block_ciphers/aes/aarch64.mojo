@@ -17,7 +17,7 @@ struct AesAarch64[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
@@ -91,19 +91,19 @@ def _inv_mix(v: SIMD[DType.uint8, BLOCK_SIZE]) -> SIMD[DType.uint8, BLOCK_SIZE]:
 def _cipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
-    var s = data.unsafe_ptr().load[width=BLOCK_SIZE]()
+    var s = UnsafePointer(data.unsafe_ptr()).load[width=BLOCK_SIZE]()
     comptime for r in range(NR - 1):
         s = _aesmc(_aese(s, rks[r]))
     s = _aese(s, rks[NR - 1])
     s ^= rks[NR]
-    data.unsafe_ptr().store(s)
+    UnsafePointer(data.unsafe_ptr()).store(s)
 
 
 # FIPS 197 §5.3 InvCipher() via ARMv8 Crypto Extension (equivalent inverse).
 def _decipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
-    var s = data.unsafe_ptr().load[width=BLOCK_SIZE]()
+    var s = UnsafePointer(data.unsafe_ptr()).load[width=BLOCK_SIZE]()
     s = _aesd(s, rks[0])
     s = _inv_mix(s)
     comptime for r in range(1, NR - 1):
@@ -111,7 +111,7 @@ def _decipher[
         s = _inv_mix(s)
     s = _aesd(s, rks[NR - 1])
     s ^= rks[NR]
-    data.unsafe_ptr().store(s)
+    UnsafePointer(data.unsafe_ptr()).store(s)
 
 
 # FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.
@@ -158,7 +158,7 @@ def _expand_enc_rks[
         kb[wi * 4 + 3] = kb[(wi - NK) * 4 + 3] ^ b3
     var rks = InlineArray[SIMD[DType.uint8, 16], NR + 1](uninitialized=True)
     for r in range(NR + 1):
-        rks[r] = (kb.unsafe_ptr() + r * 16).load[width=16]()
+        rks[r] = UnsafePointer(kb.unsafe_ptr()).load[width=16](r * 16)
     return rks
 
 

@@ -8,13 +8,13 @@ struct CtrMode[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Movable
-    & ImplicitlyDestructible,
+    & ImplicitlyDeletable,
     SIZE: Int = C.BLOCK_SIZE,
     BIG_ENDIAN: Bool = True,
 ](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
-    ImplicitlyDestructible,
+    ImplicitlyDeletable,
     Movable,
 ):
     """
@@ -68,7 +68,7 @@ struct CtrMode[
         while offset < len(data):
             var keystream = self._ctr
             var ks = Span[UInt8, origin_of(keystream)](
-                ptr=keystream.unsafe_ptr(), length=Self.BLOCK_SIZE
+                unsafe_ptr=keystream.unsafe_ptr(), length=Self.BLOCK_SIZE
             )
             self._cipher.encrypt(ks)
             var end = min(offset + Self.BLOCK_SIZE, len(data))

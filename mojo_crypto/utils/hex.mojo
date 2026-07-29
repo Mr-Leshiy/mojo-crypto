@@ -2,7 +2,7 @@ comptime HEX_CHARS: StaticString = "0123456789abcdef"
 
 
 @fieldwise_init
-struct HexError(ImplicitlyDestructible, Writable):
+struct HexError(ImplicitlyDeletable, Writable):
     var message: String
 
     def write_to(self, mut writer: Some[Writer]):
@@ -17,8 +17,8 @@ def hex_encode[o: Origin](data: Span[UInt8, o], mut result: String):
     var hex_chars = HEX_CHARS.unsafe_ptr()
     for i in range(len(data)):
         var b = Int(data[i])
-        dest[2 * i] = hex_chars[b >> 4]
-        dest[2 * i + 1] = hex_chars[b & 0xF]
+        dest[unsafe_offset=2 * i] = hex_chars[unsafe_offset=b >> 4]
+        dest[unsafe_offset=2 * i + 1] = hex_chars[unsafe_offset=b & 0xF]
 
 
 @always_inline
@@ -57,7 +57,9 @@ def hex_decode[o: MutOrigin](s: String, result: Span[UInt8, o]) raises:
         )
     var ptr = s.unsafe_ptr()
     for i in range(len(result)):
-        result[i] = _decode_hex_byte(ptr[2 * i], ptr[2 * i + 1], 2 * i)
+        result[i] = _decode_hex_byte(
+            ptr[unsafe_offset=2 * i], ptr[unsafe_offset=2 * i + 1], 2 * i
+        )
 
 
 @always_inline

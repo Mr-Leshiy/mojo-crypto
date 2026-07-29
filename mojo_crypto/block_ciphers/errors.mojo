@@ -1,5 +1,5 @@
 @fieldwise_init
-struct BlockSizeError[Size: Int](ImplicitlyDestructible, Writable):
+struct BlockSizeError[Size: Int](ImplicitlyDeletable, Writable):
     var size: Int
 
     @staticmethod

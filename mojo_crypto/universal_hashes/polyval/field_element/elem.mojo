@@ -33,7 +33,7 @@ from mojo_crypto.universal_hashes.polyval.field_element.mul32 import (
 
 
 struct FieldElement(
-    Copyable, Equatable, ImplicitlyDestructible, Movable, Writable
+    Copyable, Equatable, ImplicitlyDeletable, Movable, Writable
 ):
     """An element in POLYVAL's field.
 
@@ -64,14 +64,14 @@ struct FieldElement(
         In POLYVAL's field, addition is the equivalent operation to XOR.
         """
 
-        var a: SIMD[DType.uint8, BLOCK_SIZE] = self._v.unsafe_ptr().load[
-            width=BLOCK_SIZE
-        ]()
-        var b: SIMD[DType.uint8, BLOCK_SIZE] = rhs._v.unsafe_ptr().load[
-            width=BLOCK_SIZE
-        ]()
+        var a: SIMD[DType.uint8, BLOCK_SIZE] = UnsafePointer(
+            self._v.unsafe_ptr()
+        ).load[width=BLOCK_SIZE]()
+        var b: SIMD[DType.uint8, BLOCK_SIZE] = UnsafePointer(
+            rhs._v.unsafe_ptr()
+        ).load[width=BLOCK_SIZE]()
         var c = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        c.unsafe_ptr().store(a ^ b)
+        UnsafePointer(c.unsafe_ptr()).store(a ^ b)
         return Self(c^)
 
     def __mul__(self, rhs: Self) -> Self:
@@ -93,7 +93,7 @@ struct FieldElement(
         try:
             hex = hex_encode(
                 Span[UInt8, origin_of(self._v)](
-                    ptr=self._v.unsafe_ptr(), length=BLOCK_SIZE
+                    unsafe_ptr=self._v.unsafe_ptr(), length=BLOCK_SIZE
                 )
             )
         except:
