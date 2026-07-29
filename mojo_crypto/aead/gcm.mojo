@@ -194,9 +194,7 @@ struct Gcm[
             # then store it as a u64 over those bytes. alignment=1 because the
             # InlineArray[UInt8] base is not guaranteed to be 8-byte aligned.
             (
-                UnsafePointer(length_block.unsafe_ptr())
-                + Self.G.BLOCK_SIZE
-                - 8
+                UnsafePointer(length_block.unsafe_ptr()) + Self.G.BLOCK_SIZE - 8
             ).bitcast[UInt64]().store[alignment=1](BE_NONCE_BITS)
             ghash.update_block(length_block)
 
@@ -243,9 +241,9 @@ struct Gcm[
         UnsafePointer(length_block.unsafe_ptr()).bitcast[UInt64]().store[
             alignment=1
         ](byte_swap(aad_bits))
-        (UnsafePointer(length_block.unsafe_ptr()) + 8).bitcast[
-            UInt64
-        ]().store[alignment=1](byte_swap(data_bits))
+        (UnsafePointer(length_block.unsafe_ptr()) + 8).bitcast[UInt64]().store[
+            alignment=1
+        ](byte_swap(data_bits))
         ghash.update_block(length_block)
 
         var full_tag = rebind[InlineArray[UInt8, Self.BLOCK_SIZE]](

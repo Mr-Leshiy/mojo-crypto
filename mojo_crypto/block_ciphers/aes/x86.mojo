@@ -170,9 +170,11 @@ def _expand_enc_rks[
         kb[wi * 4 + 3] = kb[(wi - NK) * 4 + 3] ^ b3
     var rks = InlineArray[SIMD[DType.uint64, 2], NR + 1](uninitialized=True)
     for r in range(NR + 1):
-        rks[r] = UnsafePointer(kb.unsafe_ptr()).bitcast[UInt64]().load[
-            width=2
-        ](r * 2)
+        rks[r] = (
+            UnsafePointer(kb.unsafe_ptr())
+            .bitcast[UInt64]()
+            .load[width=2](r * 2)
+        )
     return rks
 
 
