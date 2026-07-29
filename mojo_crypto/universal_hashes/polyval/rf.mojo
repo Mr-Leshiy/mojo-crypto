@@ -153,14 +153,14 @@ struct ExpandedKey[P: Pmull](
 @always_inline
 def _load_bytes(bytes: InlineArray[UInt8, 16]) -> SIMD[DType.uint64, 2]:
     """Load 16 bytes as two 64-bit lanes."""
-    return bytes.unsafe_ptr().bitcast[UInt64]().load[width=2]()
+    return UnsafePointer(bytes.unsafe_ptr()).bitcast[UInt64]().load[width=2]()
 
 
 @always_inline
 def _store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
     """Store two 64-bit lanes back into 16 bytes."""
     out = InlineArray[UInt8, 16](uninitialized=True)
-    out.unsafe_ptr().bitcast[UInt64]().store(reg)
+    UnsafePointer(out.unsafe_ptr()).bitcast[UInt64]().store(reg)
     return out^
 
 

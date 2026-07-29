@@ -5,7 +5,7 @@ from mojo_crypto.block_ciphers.traits import BlockCipherEncryptable
 from mojo_crypto.macs.traits import Mac
 
 
-struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
+struct Cmac[Cipher: BlockCipherEncryptable & Copyable & ImplicitlyDeletable](
     Copyable, ImplicitlyDeletable, Mac, Movable
 ):
     """
@@ -56,7 +56,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
         self._state ^= block
         self._cipher.encrypt(
             Span[UInt8, origin_of(self._state)](
-                ptr=UnsafePointer(to=self._state).bitcast[UInt8](),
+                unsafe_ptr=UnsafePointer(to=self._state).bitcast[UInt8](),
                 length=Self.BLOCK_SIZE,
             )
         )
@@ -76,7 +76,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
                 Self.BLOCK_SIZE - self._last_message_block_len, len(input)
             )
             unsafe_memcpy(
-                dest=self._last_message_block.unsafe_ptr()
+                dest=UnsafePointer(self._last_message_block.unsafe_ptr())
                 + self._last_message_block_len,
                 src=input.unsafe_ptr(),
                 count=take,
@@ -93,7 +93,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
                 and len(input) > 0
             ):
                 self._absorb_block(
-                    self._last_message_block.unsafe_ptr().load[
+                    UnsafePointer(self._last_message_block.unsafe_ptr()).load[
                         width=Self.BLOCK_SIZE, alignment=1
                     ]()
                 )
@@ -101,7 +101,9 @@ struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
 
         while len(input) > Self.BLOCK_SIZE:
             self._absorb_block(
-                input.unsafe_ptr().load[width=Self.BLOCK_SIZE, alignment=1]()
+                UnsafePointer(input.unsafe_ptr()).load[
+                    width=Self.BLOCK_SIZE, alignment=1
+                ]()
             )
             input = input[Self.BLOCK_SIZE :]
 
@@ -109,7 +111,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
         # with K1/K2.
         if len(input) > 0:
             unsafe_memcpy(
-                dest=self._last_message_block.unsafe_ptr()
+                dest=UnsafePointer(self._last_message_block.unsafe_ptr())
                 + self._last_message_block_len,
                 src=input.unsafe_ptr(),
                 count=len(input),
@@ -142,25 +144,25 @@ struct Cmac[Cipher: BlockCipherEncryptable & Movable & ImplicitlyDeletable](
 
         var last = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
         if self._last_message_block_len == Self.BLOCK_SIZE:
-            var padded_simd = padded.unsafe_ptr().load[
+            var padded_simd = UnsafePointer(padded.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
-            var k1_simd = k1.unsafe_ptr().load[
+            var k1_simd = UnsafePointer(k1.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
-            last.unsafe_ptr().store[alignment=1](
+            UnsafePointer(last.unsafe_ptr()).store[alignment=1](
                 self._state ^ padded_simd ^ k1_simd
             )
         else:
             padded[self._last_message_block_len] ^= 0x80
-            var padded_simd = padded.unsafe_ptr().load[
+            var padded_simd = UnsafePointer(padded.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
             var k2 = _dbl(k1)
-            var k2_simd = k2.unsafe_ptr().load[
+            var k2_simd = UnsafePointer(k2.unsafe_ptr()).load[
                 width=Self.BLOCK_SIZE, alignment=1
             ]()
-            last.unsafe_ptr().store[alignment=1](
+            UnsafePointer(last.unsafe_ptr()).store[alignment=1](
                 self._state ^ padded_simd ^ k2_simd
             )
 

@@ -218,8 +218,12 @@ struct GcmSiv[
         # running time does not depend on where the first mismatch occurs (see
         # Gcm.decrypt for why a short-circuiting compare would leak). alignment=1
         # because the InlineArray[UInt8] bases may be unaligned.
-        var e = expected_tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
-        var t = tag.unsafe_ptr().load[width=TAG_SIZE, alignment=1]()
+        var e = UnsafePointer(expected_tag.unsafe_ptr()).load[
+            width=TAG_SIZE, alignment=1
+        ]()
+        var t = UnsafePointer(tag.unsafe_ptr()).load[
+            width=TAG_SIZE, alignment=1
+        ]()
         if (e ^ t).reduce_or() != 0:
             # On verification failure, re-encrypt the recovered plaintext back to
             # the input ciphertext so the tampered plaintext is never exposed.
@@ -342,7 +346,7 @@ def _derive_subkey[
 
         # block[4:16] = nonce.
         unsafe_memcpy(
-            dest=block.unsafe_ptr() + 4,
+            dest=UnsafePointer(block.unsafe_ptr()) + 4,
             src=nonce.unsafe_ptr(),
             count=NONCE_SIZE,
         )
@@ -351,7 +355,7 @@ def _derive_subkey[
 
         # Keep the low 8 bytes, discard the rest.
         unsafe_memcpy(
-            dest=key.unsafe_ptr() + chunk * 8,
+            dest=UnsafePointer(key.unsafe_ptr()) + chunk * 8,
             src=block.unsafe_ptr(),
             count=8,
         )

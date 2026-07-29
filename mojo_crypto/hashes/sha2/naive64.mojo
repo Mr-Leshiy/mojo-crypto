@@ -64,7 +64,7 @@ struct Sha2Naive64[
         if self._buffer_len > 0:
             var take = min(Self.BLOCK_SIZE - self._buffer_len, len(input))
             unsafe_memcpy(
-                dest=self._buffer.unsafe_ptr() + self._buffer_len,
+                dest=UnsafePointer(self._buffer.unsafe_ptr()) + self._buffer_len,
                 src=input.unsafe_ptr(),
                 count=take,
             )
@@ -86,7 +86,7 @@ struct Sha2Naive64[
 
         if len(input) > 0:
             unsafe_memcpy(
-                dest=self._buffer.unsafe_ptr() + self._buffer_len,
+                dest=UnsafePointer(self._buffer.unsafe_ptr()) + self._buffer_len,
                 src=input.unsafe_ptr(),
                 count=len(input),
             )

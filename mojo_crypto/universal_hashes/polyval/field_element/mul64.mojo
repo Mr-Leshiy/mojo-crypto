@@ -70,7 +70,7 @@ struct Product64(Copyable, Movable):
         v3 ^= v1 ^ (v1 >> 1) ^ (v1 >> 2) ^ (v1 >> 7)
         v2 ^= (v1 << 63) ^ (v1 << 62) ^ (v1 << 57)
         var result = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        var out = result.unsafe_ptr().bitcast[UInt64]()
+        var out = UnsafePointer(result.unsafe_ptr()).bitcast[UInt64]()
         out.store(0, v2)
         out.store(1, v3)
         return result^
@@ -84,7 +84,7 @@ def _karatsuba_mul64(
     Uses a Karatsuba decomposition that reduces three 64×64 carryless
     multiplications together with bit-reversal to recover the high half.
     """
-    var ap = a.unsafe_ptr().bitcast[UInt64]()
+    var ap = UnsafePointer(a.unsafe_ptr()).bitcast[UInt64]()
     var h0 = ap.load(0)
     var h1 = ap.load(1)
     var h0r = _rev64(h0)
@@ -92,7 +92,7 @@ def _karatsuba_mul64(
     var h2 = h0 ^ h1
     var h2r = h0r ^ h1r
 
-    var bp = b.unsafe_ptr().bitcast[UInt64]()
+    var bp = UnsafePointer(b.unsafe_ptr()).bitcast[UInt64]()
     var y0 = bp.load(0)
     var y1 = bp.load(1)
     var y0r = _rev64(y0)

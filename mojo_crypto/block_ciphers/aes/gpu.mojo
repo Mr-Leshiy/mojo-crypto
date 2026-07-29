@@ -154,7 +154,7 @@ def _decipher[
 def _add_round_key(
     i: Int,
     state: UnsafePointer[
-        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+        Scalar[DType.uint8], MutUntrackedOrigin, address_space=AddressSpace.SHARED
     ],
     round: Int,
     w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
@@ -169,7 +169,7 @@ def _add_round_key(
 def _sub_bytes(
     i: Int,
     state: UnsafePointer[
-        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+        Scalar[DType.uint8], MutUntrackedOrigin, address_space=AddressSpace.SHARED
     ],
     sbox: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
 ):
@@ -181,7 +181,7 @@ def _sub_bytes(
 def _inv_sub_bytes(
     i: Int,
     state: UnsafePointer[
-        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+        Scalar[DType.uint8], MutUntrackedOrigin, address_space=AddressSpace.SHARED
     ],
     sbox_inv: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
 ):
@@ -195,7 +195,7 @@ def _inv_sub_bytes(
 def _shift_rows(
     i: Int,
     state: UnsafePointer[
-        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+        Scalar[DType.uint8], MutUntrackedOrigin, address_space=AddressSpace.SHARED
     ],
 ):
     var r = i % NB
@@ -211,7 +211,7 @@ def _shift_rows(
 def _inv_shift_rows(
     i: Int,
     state: UnsafePointer[
-        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+        Scalar[DType.uint8], MutUntrackedOrigin, address_space=AddressSpace.SHARED
     ],
 ):
     var r = i % NB
@@ -229,7 +229,7 @@ def _inv_shift_rows(
 def _mix_columns(
     i: Int,
     state: UnsafePointer[
-        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+        Scalar[DType.uint8], MutUntrackedOrigin, address_space=AddressSpace.SHARED
     ],
 ):
     var r = i % NB
@@ -257,7 +257,7 @@ def _mix_columns(
 def _inv_mix_columns(
     i: Int,
     state: UnsafePointer[
-        Scalar[DType.uint8], MutAnyOrigin, address_space=AddressSpace.SHARED
+        Scalar[DType.uint8], MutUntrackedOrigin, address_space=AddressSpace.SHARED
     ],
 ):
     var r = i % NB
