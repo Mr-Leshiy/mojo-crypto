@@ -183,20 +183,22 @@ def main() raises:
         print("No GPU found; skipping async_gpu demo")
     else:
         with DeviceContext() as ctx:
+            comptime OPS_NUMBER: Int = 100
+
             var input = InlineArray[UInt8, Size](uninitialized=True)
             for i in range(Size):
                 input[i] = UInt8(i)
 
             var light_first = List[GpuOpVariant]()
-            for _ in range(1000):
+            for _ in range(OPS_NUMBER):
                 light_first.append(LightOp())
-            for _ in range(1000):
+            for _ in range(OPS_NUMBER):
                 light_first.append(HeavyOp())
             compare("light first", ctx, input, light_first)
 
             var heavy_first = List[GpuOpVariant]()
-            for _ in range(1000):
+            for _ in range(OPS_NUMBER):
                 heavy_first.append(HeavyOp())
-            for _ in range(1000):
+            for _ in range(OPS_NUMBER):
                 heavy_first.append(LightOp())
             compare("heavy first", ctx, input, heavy_first)
