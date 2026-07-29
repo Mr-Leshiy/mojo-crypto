@@ -44,6 +44,17 @@ def _light_kernel(
         data[i] = v
 
 
+# Derive per-op input data from `index`, so no two ops feed the GPU the same
+# bytes. Done host-side, before the data is handed to the kernel.
+def seed_input(
+    input: InlineArray[UInt8, Size], index: Int
+) -> InlineArray[UInt8, Size]:
+    var seeded = InlineArray[UInt8, Size](uninitialized=True)
+    for i in range(Size):
+        seeded[i] = input[i] ^ UInt8(index)
+    return seeded^
+
+
 # A GPU op is any of the kernels above (`_heavy_kernel`, `_light_kernel`, ...),
 # wrapped in a thin functor so it has a concrete, reflectable, storable type
 # — Mojo's `def(...) -> ...` function types can't be stored in a `List`
@@ -57,11 +68,15 @@ trait GpuOp(Copyable, Movable):
 
 @fieldwise_init
 struct HeavyOp(GpuOp):
+    var index: Int
+
     def __call__(
         self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
     ) raises -> InlineArray[UInt8, Size]:
+        var seeded = seed_input(input, self.index)
+
         var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
-        buf.enqueue_copy_from(input.unsafe_ptr())
+        buf.enqueue_copy_from(seeded.unsafe_ptr())
 
         ctx.enqueue_function[_heavy_kernel](
             buf,
@@ -77,11 +92,15 @@ struct HeavyOp(GpuOp):
 
 @fieldwise_init
 struct LightOp(GpuOp):
+    var index: Int
+
     def __call__(
         self, ctx: DeviceContext, input: InlineArray[UInt8, Size]
     ) raises -> InlineArray[UInt8, Size]:
+        var seeded = seed_input(input, self.index)
+
         var buf = ctx.enqueue_create_buffer[DType.uint8](Size)
-        buf.enqueue_copy_from(input.unsafe_ptr())
+        buf.enqueue_copy_from(seeded.unsafe_ptr())
 
         ctx.enqueue_function[_light_kernel](
             buf,
@@ -190,15 +209,15 @@ def main() raises:
                 input[i] = UInt8(i)
 
             var light_first = List[GpuOpVariant]()
-            for _ in range(OPS_NUMBER):
-                light_first.append(LightOp())
-            for _ in range(OPS_NUMBER):
-                light_first.append(HeavyOp())
+            for i in range(OPS_NUMBER):
+                light_first.append(LightOp(i))
+            for i in range(OPS_NUMBER):
+                light_first.append(HeavyOp(i))
             compare("light first", ctx, input, light_first)
 
             var heavy_first = List[GpuOpVariant]()
-            for _ in range(OPS_NUMBER):
-                heavy_first.append(HeavyOp())
-            for _ in range(OPS_NUMBER):
-                heavy_first.append(LightOp())
+            for i in range(OPS_NUMBER):
+                heavy_first.append(HeavyOp(i))
+            for i in range(OPS_NUMBER):
+                heavy_first.append(LightOp(i))
             compare("heavy first", ctx, input, heavy_first)
