@@ -1,4 +1,4 @@
-from .naive import _compress
+from .naive import _compress as naive_compress
 from .common import _Sha2Word32
 
 comptime Sha224Naive = _Sha2Word32[
@@ -11,7 +11,7 @@ comptime Sha224Naive = _Sha2Word32[
     0x64F98FA7,
     0xBEFA4FA4,
     28,
-    _compress,
+    naive_compress,
 ]
 """SHA-224 (FIPS 180-4 §5.3.2 initial hash value)."""
 
@@ -25,6 +25,6 @@ comptime Sha256Naive = _Sha2Word32[
     0x1F83D9AB,
     0x5BE0CD19,
     32,
-    _compress,
+    naive_compress,
 ]
 """SHA-256 (FIPS 180-4 §5.3.3 initial hash value)."""
