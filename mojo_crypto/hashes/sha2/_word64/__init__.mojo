@@ -1,59 +1,20 @@
 from .naive import _compress as naive_compress
-from .common import _Sha2Word64
+from .common import (
+    SHA384_IV,
+    SHA512_IV,
+    SHA512_224_IV,
+    SHA512_256_IV,
+    _Sha2Word64,
+)
 
-comptime Sha384Naive = _Sha2Word64[
-    0xCBBB9D5DC1059ED8,
-    0x629A292A367CD507,
-    0x9159015A3070DD17,
-    0x152FECD8F70E5939,
-    0x67332667FFC00B31,
-    0x8EB44A8768581511,
-    0xDB0C2E0D64F98FA7,
-    0x47B5481DBEFA4FA4,
-    48,
-    naive_compress
-,
-]
+comptime Sha384Naive = _Sha2Word64[SHA384_IV, 48, naive_compress]
 """SHA-384 (FIPS 180-4 §5.3.4 initial hash value)."""
 
-comptime Sha512Naive = _Sha2Word64[
-    0x6A09E667F3BCC908,
-    0xBB67AE8584CAA73B,
-    0x3C6EF372FE94F82B,
-    0xA54FF53A5F1D36F1,
-    0x510E527FADE682D1,
-    0x9B05688C2B3E6C1F,
-    0x1F83D9ABFB41BD6B,
-    0x5BE0CD19137E2179,
-    64,
-    naive_compress,
-]
+comptime Sha512Naive = _Sha2Word64[SHA512_IV, 64, naive_compress]
 """SHA-512 (FIPS 180-4 §5.3.5 initial hash value)."""
 
-comptime Sha512_224Naive = _Sha2Word64[
-    0x8C3D37C819544DA2,
-    0x73E1996689DCD4D6,
-    0x1DFAB7AE32FF9C82,
-    0x679DD514582F9FCF,
-    0x0F6D2B697BD44DA8,
-    0x77E36F7304C48942,
-    0x3F9D85A86A1D36C8,
-    0x1112E6AD91D692A1,
-    28,
-    naive_compress,
-]
+comptime Sha512_224Naive = _Sha2Word64[SHA512_224_IV, 28, naive_compress]
 """SHA-512/224 (FIPS 180-4 §5.3.6.1 initial hash value)."""
 
-comptime Sha512_256Naive = _Sha2Word64[
-    0x22312194FC2BF72C,
-    0x9F555FA3C84C64C2,
-    0x2393B86B6F53B151,
-    0x963877195940EABD,
-    0x96283EE2A88EFFE3,
-    0xBE5E1E2553863992,
-    0x2B0199FC2C85B8AA,
-    0x0EB72DDC81C52CA2,
-    32,
-    naive_compress,
-]
+comptime Sha512_256Naive = _Sha2Word64[SHA512_256_IV, 32, naive_compress]
 """SHA-512/256 (FIPS 180-4 §5.3.6.2 initial hash value)."""

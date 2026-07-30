@@ -6,16 +6,33 @@ from mojo_crypto.utils import load_be
 
 comptime SHA2_WORD32_BLOCK_SIZE: Int = 64
 
+# FIPS 180-4 §5.3.2 — SHA-224 initial hash value.
+comptime SHA224_IV: InlineArray[UInt32, 8] = [
+    0xC1059ED8,
+    0x367CD507,
+    0x3070DD17,
+    0xF70E5939,
+    0xFFC00B31,
+    0x68581511,
+    0x64F98FA7,
+    0xBEFA4FA4,
+]
+
+# FIPS 180-4 §5.3.3 — SHA-256 initial hash value.
+comptime SHA256_IV: InlineArray[UInt32, 8] = [
+    0x6A09E667,
+    0xBB67AE85,
+    0x3C6EF372,
+    0xA54FF53A,
+    0x510E527F,
+    0x9B05688C,
+    0x1F83D9AB,
+    0x5BE0CD19,
+]
+
 
 struct _Sha2Word32[
-    H0: UInt32,
-    H1: UInt32,
-    H2: UInt32,
-    H3: UInt32,
-    H4: UInt32,
-    H5: UInt32,
-    H6: UInt32,
-    H7: UInt32,
+    IV: InlineArray[UInt32, 8],
     DigestSize: Int,
     compress: def(
         mut state: SIMD[DType.uint32, 8],
@@ -26,7 +43,7 @@ struct _Sha2Word32[
     Naive **SHA-2 (32-bit word)** engine — FIPS 180-4 §6.2.
 
     Backs SHA-224 and SHA-256, which differ only in the initial hash value
-    (`H0..H7`) and output truncation (`DigestSize`); the Merkle-Damgard
+    (`IV`) and output truncation (`DigestSize`); the Merkle-Damgard
     structure, message schedule, and compression function are identical.
     """
 
@@ -46,16 +63,10 @@ struct _Sha2Word32[
 
     @staticmethod
     def _iv() -> SIMD[DType.uint32, 8]:
-        return SIMD[DType.uint32, 8](
-            Self.H0,
-            Self.H1,
-            Self.H2,
-            Self.H3,
-            Self.H4,
-            Self.H5,
-            Self.H6,
-            Self.H7,
-        )
+        var iv = SIMD[DType.uint32, 8](0)
+        comptime for i in range(8):
+            iv[i] = Self.IV[i]
+        return iv
 
     def update[o: Origin](mut self, data: Span[UInt8, o]):
         """Absorb more input."""

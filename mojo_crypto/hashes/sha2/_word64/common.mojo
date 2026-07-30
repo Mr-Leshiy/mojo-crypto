@@ -6,16 +6,41 @@ from mojo_crypto.utils import load_be
 
 comptime SHA2_WORD64_BLOCK_SIZE: Int = 128
 
+# FIPS 180-4 §5.3.4 — SHA-384 initial hash value.
+comptime SHA384_IV: InlineArray[UInt64, 8] = [
+    # fmt: off
+    0xCBBB9D5DC1059ED8, 0x629A292A367CD507, 0x9159015A3070DD17, 0x152FECD8F70E5939,
+    0x67332667FFC00B31, 0x8EB44A8768581511, 0xDB0C2E0D64F98FA7, 0x47B5481DBEFA4FA4,
+    # fmt: on
+]
+
+# FIPS 180-4 §5.3.5 — SHA-512 initial hash value.
+comptime SHA512_IV: InlineArray[UInt64, 8] = [
+    # fmt: off
+    0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
+    0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179,
+    # fmt: on
+]
+
+# FIPS 180-4 §5.3.6.1 — SHA-512/224 initial hash value.
+comptime SHA512_224_IV: InlineArray[UInt64, 8] = [
+    # fmt: off
+    0x8C3D37C819544DA2, 0x73E1996689DCD4D6, 0x1DFAB7AE32FF9C82, 0x679DD514582F9FCF,
+    0x0F6D2B697BD44DA8, 0x77E36F7304C48942, 0x3F9D85A86A1D36C8, 0x1112E6AD91D692A1,
+    # fmt: on
+]
+
+# FIPS 180-4 §5.3.6.2 — SHA-512/256 initial hash value.
+comptime SHA512_256_IV: InlineArray[UInt64, 8] = [
+    # fmt: off
+    0x22312194FC2BF72C, 0x9F555FA3C84C64C2, 0x2393B86B6F53B151, 0x963877195940EABD,
+    0x96283EE2A88EFFE3, 0xBE5E1E2553863992, 0x2B0199FC2C85B8AA, 0x0EB72DDC81C52CA2,
+    # fmt: on
+]
+
 
 struct _Sha2Word64[
-    H0: UInt64,
-    H1: UInt64,
-    H2: UInt64,
-    H3: UInt64,
-    H4: UInt64,
-    H5: UInt64,
-    H6: UInt64,
-    H7: UInt64,
+    IV: InlineArray[UInt64, 8],
     DigestSize: Int,
     compress: def(
         mut state: SIMD[DType.uint64, 8],
@@ -26,9 +51,9 @@ struct _Sha2Word64[
     Naive **SHA-2 (64-bit word)** engine — FIPS 180-4 §6.4.
 
     Backs SHA-384, SHA-512, SHA-512/224, and SHA-512/256, which differ only
-    in the initial hash value (`H0..H7`) and output truncation
-    (`DigestSize`); the Merkle-Damgard structure, message schedule, and
-    compression function are identical.
+    in the initial hash value (`IV`) and output truncation (`DigestSize`);
+    the Merkle-Damgard structure, message schedule, and compression function
+    are identical.
     """
 
     comptime BLOCK_SIZE: Int = SHA2_WORD64_BLOCK_SIZE
@@ -47,16 +72,10 @@ struct _Sha2Word64[
 
     @staticmethod
     def _iv() -> SIMD[DType.uint64, 8]:
-        return SIMD[DType.uint64, 8](
-            Self.H0,
-            Self.H1,
-            Self.H2,
-            Self.H3,
-            Self.H4,
-            Self.H5,
-            Self.H6,
-            Self.H7,
-        )
+        var iv = SIMD[DType.uint64, 8](0)
+        comptime for i in range(8):
+            iv[i] = Self.IV[i]
+        return iv
 
     def update[o: Origin](mut self, data: Span[UInt8, o]):
         """Absorb more input."""
