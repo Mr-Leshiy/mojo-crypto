@@ -4,9 +4,9 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.hashes import (
-    Sha224,
-    Sha256,
+from mojo_crypto.hashes.sha2 import (
+    Sha224Naive,
+    Sha256Naive,
     Sha384,
     Sha512,
     Sha512_224,
@@ -163,23 +163,23 @@ def check_sha2_mct[
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-224-1.0
 def test_sha224_aft() raises:
     var raw = load_python_acvp_vectors("tests/acvp/data/SHA2-224-1.0", "AFT")
-    check_sha2_aft[Sha224](parse_acvp_sha2_aft(raw))
+    check_sha2_aft[Sha224Naive](parse_acvp_sha2_aft(raw))
 
 
 def test_sha224_mct() raises:
     var raw = load_python_acvp_vectors("tests/acvp/data/SHA2-224-1.0", "MCT")
-    check_sha2_mct[Sha224](parse_acvp_sha2_mct(raw))
+    check_sha2_mct[Sha224Naive](parse_acvp_sha2_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-256-1.0
 def test_sha256_aft() raises:
     var raw = load_python_acvp_vectors("tests/acvp/data/SHA2-256-1.0", "AFT")
-    check_sha2_aft[Sha256](parse_acvp_sha2_aft(raw))
+    check_sha2_aft[Sha256Naive](parse_acvp_sha2_aft(raw))
 
 
 def test_sha256_mct() raises:
     var raw = load_python_acvp_vectors("tests/acvp/data/SHA2-256-1.0", "MCT")
-    check_sha2_mct[Sha256](parse_acvp_sha2_mct(raw))
+    check_sha2_mct[Sha256Naive](parse_acvp_sha2_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-384-1.0

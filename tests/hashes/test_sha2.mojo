@@ -1,6 +1,6 @@
 from std.testing import TestSuite
 
-from mojo_crypto.hashes import Sha256, Sha384, Sha512
+from mojo_crypto.hashes.sha2 import Sha256Naive, Sha384, Sha512
 
 from tests.hashes.utils import check_hash
 
@@ -9,17 +9,17 @@ from tests.hashes.utils import check_hash
 # https://csrc.nist.gov/files/pubs/fips/180-2/final/docs/fips180-2.pdf
 def test_sha256_fips180_2_vectors() raises:
     # B.1 — one-block message.
-    check_hash[Sha256](
+    check_hash[Sha256Naive](
         "abc",
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
     )
     # B.2 — multi-block message.
-    check_hash[Sha256](
+    check_hash[Sha256Naive](
         "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
         "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
     )
     # B.3 — long message: 1,000,000 repetitions of "a".
-    check_hash[Sha256](
+    check_hash[Sha256Naive](
         String("a" * 1_000_000),
         "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0",
     )
