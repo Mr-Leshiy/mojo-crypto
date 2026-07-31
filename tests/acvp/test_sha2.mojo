@@ -84,6 +84,7 @@ def parse_acvp_sha2_mct(
         )
     return vectors^
 
+
 @parameter
 def check_sha2_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
     for v in vectors:
