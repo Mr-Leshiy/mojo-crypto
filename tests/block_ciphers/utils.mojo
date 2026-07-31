@@ -13,18 +13,23 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
+comptime BlockCipherEngine = (
+    BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Copyable
+    & ImplicitlyDeletable
+)
+
 
 def run_aes_checks[
-    TestVector: Copyable,
+    TestInput: Copyable,
     check: def[
-        C: BlockCipherEncryptable
-        & BlockCipherDecryptable
-        & Copyable
-        & ImplicitlyDeletable,
+        C: BlockCipherEngine,
         KeySize: Int,
+        //,
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-    ](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
+    ](TestInput) raises capturing[_],
+](input: TestInput) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
 
@@ -34,9 +39,9 @@ def run_aes_checks[
             ](key: InlineArray[UInt8, KeySize]) raises -> AesGpu[KeySize]:
                 return AesGpu[KeySize](ctx, key)
 
-            check[AesGpu[16], 16, aes_gpu[16]](vectors)
-            check[AesGpu[24], 24, aes_gpu[24]](vectors)
-            check[AesGpu[32], 32, aes_gpu[32]](vectors)
+            check[aes_gpu[16]](input)
+            check[aes_gpu[24]](input)
+            check[aes_gpu[32]](input)
 
     comptime if target_triple_contains_any(["aarch64", "arm64"]):
 
@@ -46,9 +51,9 @@ def run_aes_checks[
         ](key: InlineArray[UInt8, KeySize]) raises -> AesAarch64[KeySize]:
             return AesAarch64[KeySize](key)
 
-        check[AesAarch64[16], 16, aes_aarch64[16]](vectors)
-        check[AesAarch64[24], 24, aes_aarch64[24]](vectors)
-        check[AesAarch64[32], 32, aes_aarch64[32]](vectors)
+        check[aes_aarch64[16]](input)
+        check[aes_aarch64[24]](input)
+        check[aes_aarch64[32]](input)
 
     comptime if target_triple_contains_any(["x86_64"]):
 
@@ -58,9 +63,9 @@ def run_aes_checks[
         ](key: InlineArray[UInt8, KeySize]) raises -> AesX86[KeySize]:
             return AesX86[KeySize](key)
 
-        check[AesX86[16], 16, aes_x86[16]](vectors)
-        check[AesX86[24], 24, aes_x86[24]](vectors)
-        check[AesX86[32], 32, aes_x86[32]](vectors)
+        check[aes_x86[16]](input)
+        check[aes_x86[24]](input)
+        check[aes_x86[32]](input)
 
     @parameter
     def aes_cpu[
@@ -68,6 +73,6 @@ def run_aes_checks[
     ](key: InlineArray[UInt8, KeySize]) raises -> AesNaive[KeySize]:
         return AesNaive[KeySize](key)
 
-    check[AesNaive[16], 16, aes_cpu[16]](vectors)
-    check[AesNaive[24], 24, aes_cpu[24]](vectors)
-    check[AesNaive[32], 32, aes_cpu[32]](vectors)
+    check[aes_cpu[16]](input)
+    check[aes_cpu[24]](input)
+    check[aes_cpu[32]](input)

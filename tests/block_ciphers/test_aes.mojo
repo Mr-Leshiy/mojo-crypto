@@ -8,7 +8,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
-from tests.block_ciphers.utils import run_aes_checks
+from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
 
 
 @fieldwise_init
@@ -19,11 +19,9 @@ struct AesTestVector(Copyable, Movable):
 
 
 def check_aes[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable,
+    C: BlockCipherEngine,
     KeySize: Int,
+    //,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[AesTestVector]) raises:
     for v in vectors:
@@ -66,7 +64,7 @@ def test_aes_fips197_kat() raises:
             ct=hex_decode("8ea2b7ca516745bfeafc49904b496089"),
         ),
     ]
-    run_aes_checks[AesTestVector, check_aes](vectors)
+    run_aes_checks[List[AesTestVector], check_aes](vectors)
 
 
 def main() raises:
