@@ -4,13 +4,9 @@ from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.traits import (
-    BlockCipherDecryptable,
-    BlockCipherEncryptable,
-)
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks
+from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
 
 
 # Dedicated to the ECB AFT/MCT vectors only: no iv/aad/tag/test_passed
@@ -80,11 +76,9 @@ def parse_acvp_aes_ecb_mct(
 
 
 def check_aes_ecb_aft[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable,
+    C: BlockCipherEngine,
     KeySize: Int,
+    //,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[EcbTestVector]) raises:
     for v in vectors:
@@ -105,11 +99,9 @@ def check_aes_ecb_aft[
 
 
 def check_aes_ecb_mct[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable,
+    C: BlockCipherEngine,
     KeySize: Int,
+    //,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[EcbTestVector]) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
@@ -140,7 +132,7 @@ def test_aes_aft() raises:
     var raw = load_python_acvp_vectors(
         "tests/acvp/data/ACVP-AES-ECB-1.0", "AFT"
     )
-    run_aes_checks[EcbTestVector, check_aes_ecb_aft](
+    run_aes_checks[List[EcbTestVector], check_aes_ecb_aft](
         parse_acvp_aes_ecb_aft(raw)
     )
 
@@ -150,7 +142,7 @@ def test_aes_mct() raises:
     var raw = load_python_acvp_vectors(
         "tests/acvp/data/ACVP-AES-ECB-1.0", "MCT"
     )
-    run_aes_checks[EcbTestVector, check_aes_ecb_mct](
+    run_aes_checks[List[EcbTestVector], check_aes_ecb_mct](
         parse_acvp_aes_ecb_mct(raw)
     )
 
