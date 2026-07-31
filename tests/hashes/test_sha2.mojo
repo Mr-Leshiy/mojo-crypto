@@ -11,7 +11,7 @@ from tests.hashes.utils import (
 
 
 @fieldwise_init
-struct CheckInput(Movable, Copyable):
+struct CheckInput(Copyable, Movable):
     var msg: String
     var expected_hex: String
 

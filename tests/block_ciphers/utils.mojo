@@ -23,7 +23,8 @@ comptime BlockCipherEngine = (
 
 
 def run_aes_checks[
-    TestInput: Copyable, //,
+    TestInput: Copyable,
+    //,
     check: def[
         C: BlockCipherEngine,
         KeySize: Int,

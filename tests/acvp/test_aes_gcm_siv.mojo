@@ -114,9 +114,7 @@ def test_aes_gcm_siv_aft() raises:
     var raw = load_python_acvp_vectors(
         "tests/acvp/data/ACVP-AES-GCM-SIV-1.0", "AFT"
     )
-    run_aes_checks[check_aes_gcm_siv_aft](
-        parse_acvp_aes_gcm_siv_aft(raw)
-    )
+    run_aes_checks[check_aes_gcm_siv_aft](parse_acvp_aes_gcm_siv_aft(raw))
 
 
 def main() raises:
