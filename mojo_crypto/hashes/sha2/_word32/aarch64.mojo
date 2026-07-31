@@ -7,8 +7,7 @@ from std.sys.intrinsics import llvm_intrinsic
 
 from .common import K32, SHA2_WORD32_BLOCK_SIZE
 
-# Every SHA-256 crypto instruction operates on four 32-bit words at a time:
-# half the state (abcd or efgh), or four message-schedule words.
+# Every SHA-256 crypto instruction operates on four 32-bit words at a time
 comptime Words = SIMD[DType.uint32, 4]
 
 
@@ -60,10 +59,6 @@ def _compress(
     state += abcd.join(efgh)
 
 
-# One group of four rounds, starting at round `first`. The round constants are
-# folded into the schedule words first because sha256h/sha256h2 take a single
-# combined addend; `abcd_prev` is required because sha256h2 needs the *input*
-# abcd, which sha256h has already overwritten.
 @always_inline
 def _rounds[first: Int](mut abcd: Words, mut efgh: Words, schedule: Words):
     var wk = schedule + Words(
@@ -72,29 +67,21 @@ def _rounds[first: Int](mut abcd: Words, mut efgh: Words, schedule: Words):
     abcd, efgh = _sha256h(abcd, efgh, wk), _sha256h2(efgh, abcd, wk)
 
 
-# SHA256H: four rounds of the compression function, updating the abcd half.
 @always_inline
 def _sha256h(abcd: Words, efgh: Words, wk: Words) -> Words:
     return llvm_intrinsic["llvm.aarch64.crypto.sha256h", Words](abcd, efgh, wk)
 
 
-# SHA256H2: the same four rounds, updating the efgh half.
 @always_inline
 def _sha256h2(efgh: Words, abcd: Words, wk: Words) -> Words:
-    return llvm_intrinsic["llvm.aarch64.crypto.sha256h2", Words](
-        efgh, abcd, wk
-    )
+    return llvm_intrinsic["llvm.aarch64.crypto.sha256h2", Words](efgh, abcd, wk)
 
 
-# SHA256SU0: the first half of the message-schedule update — the sigma0 term
-# over W[t-15], applied to W[t-16..t-12].
 @always_inline
 def _sha256su0(w0_3: Words, w4_7: Words) -> Words:
     return llvm_intrinsic["llvm.aarch64.crypto.sha256su0", Words](w0_3, w4_7)
 
 
-# SHA256SU1: the second half — the sigma1 term over W[t-2] plus W[t-7],
-# applied to the partial result from sha256su0.
 @always_inline
 def _sha256su1(partial: Words, w8_11: Words, w12_15: Words) -> Words:
     return llvm_intrinsic["llvm.aarch64.crypto.sha256su1", Words](
