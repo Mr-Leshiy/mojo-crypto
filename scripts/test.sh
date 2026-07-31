@@ -12,7 +12,7 @@ set -e
 if [ -z "$MOJO_TEST_FEATURES" ]; then
   case "$(uname -m)" in
     aarch64 | arm64)
-      MOJO_TEST_FEATURES="--target-features=+neon,+aes,+sha2"
+      MOJO_TEST_FEATURES="--target-features=+neon,+aes,+sha2,+sha3"
       ;;
     *)
       MOJO_TEST_FEATURES="--target-features=+aes"
