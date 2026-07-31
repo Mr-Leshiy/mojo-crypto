@@ -84,7 +84,7 @@ def parse_acvp_sha2_mct(
         )
     return vectors^
 
-
+@parameter
 def check_sha2_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -110,6 +110,7 @@ def check_sha2_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
 #         allows byte-granular lengths >= 1720 bits).
 #       MD = SHA(MSG); A = B; B = C; C = MD
 #     Output MD (checkpoint j); SEED = MD
+@parameter
 def check_sha2_mct[T: DigestEngine](vectors: List[MctTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
