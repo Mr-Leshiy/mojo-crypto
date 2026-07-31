@@ -1,6 +1,6 @@
 from std.testing import assert_equal, TestSuite
 
-from mojo_crypto.block_ciphers.aes import AesNaive
+from mojo_crypto.block_ciphers.aes import Aes128Naive
 from mojo_crypto.block_ciphers.modes import CtrMode
 from mojo_crypto.utils.hex import hex_decode
 
@@ -11,7 +11,7 @@ def test_ctr_32_le_aes() raises:
     var key = hex_decode[16]("000102030405060708090A0B0C0D0E0F")
     var iv = hex_decode[16]("11111111111111111111111111111191")
 
-    comptime CTR = CtrMode[AesNaive[16], 4, BIG_ENDIAN=False]
+    comptime CTR = CtrMode[Aes128Naive, 4, BIG_ENDIAN=False]
 
     # `counter_incr`: encrypting 64 zero bytes yields the raw keystream.
     var ks_expected = hex_decode[64](
@@ -22,7 +22,7 @@ def test_ctr_32_le_aes() raises:
     )
 
     var zeros = InlineArray[UInt8, 64](fill=0)
-    var ctr = CTR(AesNaive[16](key), iv)
+    var ctr = CTR(Aes128Naive(key), iv)
     ctr.encrypt(zeros)
     assert_equal(zeros, ks_expected, msg="counter_incr")
 
@@ -34,7 +34,7 @@ def test_ctr_32_le_aes() raises:
         + "81765B83075357B5797CC81D6843B601"
     )
     var ones = InlineArray[UInt8, 64](fill=1)
-    var ctr2 = CTR(AesNaive[16](key), iv)
+    var ctr2 = CTR(Aes128Naive(key), iv)
     ctr2.encrypt(ones)
     assert_equal(ones, xor_expected, msg="keystream_xor")
 
@@ -49,7 +49,7 @@ def test_ctr_32_le_aes() raises:
         + "55DD5B0B130ED87096FE01B59A665A60"
     )
     var wrap = InlineArray[UInt8, 64](fill=0)
-    var ctr3 = CTR(AesNaive[16](key), iv2)
+    var ctr3 = CTR(Aes128Naive(key), iv2)
     ctr3.encrypt(wrap)
     assert_equal(wrap, wrap_expected, msg="counter_wrap")
 
@@ -60,7 +60,7 @@ def test_ctr_32_be_aes() raises:
     var key = hex_decode[16]("000102030405060708090A0B0C0D0E0F")
     var iv = hex_decode[16]("11111111111111111111111111111111")
 
-    comptime CTR = CtrMode[AesNaive[16], 4, BIG_ENDIAN=True]
+    comptime CTR = CtrMode[Aes128Naive, 4, BIG_ENDIAN=True]
 
     # `counter_incr`: encrypting 64 zero bytes yields the raw keystream.
     var ks_expected = hex_decode[64](
@@ -70,7 +70,7 @@ def test_ctr_32_be_aes() raises:
         + "04E96C34CCD2F0A95CDE7321852D90C0"
     )
     var zeros = InlineArray[UInt8, 64](fill=0)
-    var ctr = CTR(AesNaive[16](key), iv)
+    var ctr = CTR(Aes128Naive(key), iv)
     ctr.encrypt(zeros)
     assert_equal(zeros, ks_expected, msg="counter_incr")
 
@@ -82,7 +82,7 @@ def test_ctr_32_be_aes() raises:
         + "05E86D35CDD3F1A85DDF7220842C91C1"
     )
     var ones = InlineArray[UInt8, 64](fill=1)
-    var ctr2 = CTR(AesNaive[16](key), iv)
+    var ctr2 = CTR(Aes128Naive(key), iv)
     ctr2.encrypt(ones)
     assert_equal(ones, xor_expected, msg="keystream_xor")
 
@@ -97,7 +97,7 @@ def test_ctr_32_be_aes() raises:
         + "67548EF896A96E2746D8CA6476D8B183"
     )
     var wrap = InlineArray[UInt8, 64](fill=0)
-    var ctr3 = CTR(AesNaive[16](key), iv2)
+    var ctr3 = CTR(Aes128Naive(key), iv2)
     ctr3.encrypt(wrap)
     assert_equal(wrap, wrap_expected, msg="counter_wrap")
 

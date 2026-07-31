@@ -1,4 +1,9 @@
-from mojo_crypto.block_ciphers.aes import AesNaive
+from mojo_crypto.block_ciphers.aes import (
+    AesNaive,
+    Aes128Naive,
+    Aes192Naive,
+    Aes256Naive,
+)
 
 from benchmarks.block_ciphers.aes.common import bench_cipher
 
@@ -12,6 +17,6 @@ def main() raises:
     ](key: InlineArray[UInt8, KeySize]) raises -> AesNaive[KeySize]:
         return AesNaive[KeySize](key)
 
-    bench_cipher[AesNaive[16], 16, aes[16], "aes128"]()
-    bench_cipher[AesNaive[24], 24, aes[24], "aes192"]()
-    bench_cipher[AesNaive[32], 32, aes[32], "aes256"]()
+    bench_cipher[Aes128Naive, 16, aes[16], "aes128"]()
+    bench_cipher[Aes192Naive, 24, aes[24], "aes192"]()
+    bench_cipher[Aes256Naive, 32, aes[32], "aes256"]()
