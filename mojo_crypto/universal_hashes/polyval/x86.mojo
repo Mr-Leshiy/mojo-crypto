@@ -1,14 +1,14 @@
 from std.sys.intrinsics import llvm_intrinsic
 
 from mojo_crypto.universal_hashes.traits import UniversalHashable
-from ._common import (
+from .common import (
     BLOCK_SIZE,
     KEY_SIZE,
     TAG_SIZE,
 )
-from .rf import PolyvalRf, Pmull
+from .rf import _PolyvalRf, Pmull
 
-comptime PolyvalX86 = PolyvalRf[_Pmull]
+comptime PolyvalX86 = _PolyvalRf[_Pmull]
 """POLYVAL using x86 PCLMULQDQ for the 64×64→128-bit carry-less multiply."""
 
 

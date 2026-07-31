@@ -3,7 +3,7 @@ from mojo_crypto.universal_hashes.polyval import (
     PolyvalAarch64,
     PolyvalX86,
 )
-from ._generic import _GHashGeneric
+from .generic import _GHashGeneric
 
 comptime GHashNaive = _GHashGeneric[PolyvalNaive]
 """GHASH backed by the portable CPU POLYVAL implementation."""

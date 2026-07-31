@@ -1,6 +1,6 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from .field_element import FieldElement
-from ._common import (
+from .common import (
     BLOCK_SIZE,
     KEY_SIZE,
     TAG_SIZE,
@@ -22,7 +22,7 @@ trait Pmull:
         ...
 
 
-struct PolyvalRf[P: Pmull](
+struct _PolyvalRf[P: Pmull](
     Copyable, ImplicitlyDeletable, Movable, UniversalHashable
 ):
     """Optimized POLYVAL implementation using the R/F algorithm.
