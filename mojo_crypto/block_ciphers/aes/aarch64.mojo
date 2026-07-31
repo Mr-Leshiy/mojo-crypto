@@ -10,7 +10,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
     BlockCipherDecryptable,
 )
-from ._common import BLOCK_SIZE, SBOX, _check_key_size
+from .common import BLOCK_SIZE, SBOX, _check_key_size
 
 
 struct AesAarch64[KEY_SIZE: Int](

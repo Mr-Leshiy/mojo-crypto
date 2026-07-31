@@ -1,6 +1,6 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from .field_element import FieldElement
-from ._common import (
+from .common import (
     BLOCK_SIZE,
     KEY_SIZE,
     TAG_SIZE,
@@ -11,7 +11,7 @@ trait Pmull:
     """A 64×64 → 128-bit carry-less multiply backend.
 
     Provided as a type parameter (rather than a `capturing` function value) so
-    that `PolyvalRf`'s methods stay non-capturing and can satisfy the
+    that `_PolyvalRf`'s methods stay non-capturing and can satisfy the
     `UniversalHashable` trait. Backends (`PolyvalAarch64`, `PolyvalX86`) supply
     the platform PMULL/PCLMULQDQ intrinsic as a static method.
     """
@@ -22,7 +22,7 @@ trait Pmull:
         ...
 
 
-struct PolyvalRf[P: Pmull](
+struct _PolyvalRf[P: Pmull](
     Copyable, ImplicitlyDeletable, Movable, UniversalHashable
 ):
     """Optimized POLYVAL implementation using the R/F algorithm.

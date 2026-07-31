@@ -1,7 +1,7 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 
-struct GHashGeneric[P: Copyable & ImplicitlyDeletable & UniversalHashable](
+struct _GHashGeneric[P: Copyable & ImplicitlyDeletable & UniversalHashable](
     Copyable, ImplicitlyDeletable, Movable, UniversalHashable
 ):
     """

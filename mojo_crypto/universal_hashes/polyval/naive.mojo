@@ -1,6 +1,6 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from .field_element import FieldElement
-from ._common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
+from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
 struct PolyvalNaive(Copyable, ImplicitlyDeletable, Movable, UniversalHashable):

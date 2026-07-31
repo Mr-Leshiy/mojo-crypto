@@ -4,14 +4,10 @@ from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.traits import (
-    BlockCipherDecryptable,
-    BlockCipherEncryptable,
-)
 from mojo_crypto.block_ciphers.modes import CtrMode
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks
+from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
 
 
 @fieldwise_init
@@ -58,11 +54,9 @@ def parse_acvp_aes_ctr_aft(
 
 
 def check_aes_ctr_aft[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable,
+    C: BlockCipherEngine,
     KeySize: Int,
+    //,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CtrTestVector]) raises:
     for v in vectors:
@@ -92,7 +86,7 @@ def test_aes_ctr_aft() raises:
     var raw = load_python_acvp_vectors(
         "tests/acvp/data/ACVP-AES-CTR-1.0", "AFT"
     )
-    run_aes_checks[CtrTestVector, check_aes_ctr_aft](
+    run_aes_checks[List[CtrTestVector], check_aes_ctr_aft](
         parse_acvp_aes_ctr_aft(raw)
     )
 

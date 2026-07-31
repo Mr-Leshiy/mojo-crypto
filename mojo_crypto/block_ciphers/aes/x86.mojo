@@ -12,7 +12,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
     BlockCipherDecryptable,
 )
-from ._common import BLOCK_SIZE, SBOX, _check_key_size
+from .common import BLOCK_SIZE, SBOX, _check_key_size
 
 
 # All AES-NI instructions use v2i64 in LLVM IR. Round keys are stored as

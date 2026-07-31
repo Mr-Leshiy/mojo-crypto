@@ -1,13 +1,13 @@
 from std.sys.intrinsics import llvm_intrinsic
 
-from ._common import (
+from .common import (
     BLOCK_SIZE,
     KEY_SIZE,
     TAG_SIZE,
 )
-from .rf import PolyvalRf, Pmull
+from .rf import _PolyvalRf, Pmull
 
-comptime PolyvalAarch64 = PolyvalRf[_Pmull]
+comptime PolyvalAarch64 = _PolyvalRf[_Pmull]
 """POLYVAL using ARMv8 Crypto Extension PMULL for the 64×64→128-bit multiply."""
 
 

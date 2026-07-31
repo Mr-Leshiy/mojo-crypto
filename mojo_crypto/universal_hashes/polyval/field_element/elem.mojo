@@ -23,7 +23,7 @@
 from std.sys.info import is_64bit
 
 from mojo_crypto.utils import hex_encode
-from mojo_crypto.universal_hashes.polyval._common import BLOCK_SIZE
+from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 from mojo_crypto.universal_hashes.polyval.field_element.mul64 import (
     _karatsuba_mul64,
 )

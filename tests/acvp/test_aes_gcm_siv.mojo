@@ -5,14 +5,10 @@ from std.reflection import reflect
 from mojo_crypto.utils import to_inline_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.polyval import PolyvalNaive
-from mojo_crypto.block_ciphers.traits import (
-    BlockCipherDecryptable,
-    BlockCipherEncryptable,
-)
 from mojo_crypto.aead.gcm_siv import GcmSiv
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks
+from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
 
 
 @fieldwise_init
@@ -65,11 +61,9 @@ def parse_acvp_aes_gcm_siv_aft(
 
 
 def check_aes_gcm_siv_aft[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable,
+    C: BlockCipherEngine,
     KeySize: Int,
+    //,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[GcmSivTestVector]) raises:
     # GCM-SIV (RFC 8452) fixes the nonce at 96 bits and the tag at 128 bits.
@@ -121,7 +115,7 @@ def test_aes_gcm_siv_aft() raises:
     var raw = load_python_acvp_vectors(
         "tests/acvp/data/ACVP-AES-GCM-SIV-1.0", "AFT"
     )
-    run_aes_checks[GcmSivTestVector, check_aes_gcm_siv_aft](
+    run_aes_checks[List[GcmSivTestVector], check_aes_gcm_siv_aft](
         parse_acvp_aes_gcm_siv_aft(raw)
     )
 

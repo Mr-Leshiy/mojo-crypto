@@ -15,7 +15,7 @@
 
 from std.sys.intrinsics import llvm_intrinsic
 
-from mojo_crypto.universal_hashes.polyval._common import BLOCK_SIZE
+from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
 
 @always_inline

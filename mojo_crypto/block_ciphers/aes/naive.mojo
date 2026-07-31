@@ -4,7 +4,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
-from ._common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
+from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
 
 
 struct AesNaive[KEY_SIZE: Int](
