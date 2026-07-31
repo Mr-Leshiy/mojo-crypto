@@ -58,7 +58,7 @@ jobs:
           - runner: ubuntu-latest
             features: "--target-features=+aes"
           - runner: ubuntu-24.04-arm
-            features: "--target-features=+neon,+aes"
+            features: "--target-features=+neon,+aes,+sha2"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
