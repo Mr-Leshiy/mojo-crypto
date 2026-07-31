@@ -13,18 +13,23 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
+comptime BlockCipherEngine = (
+    BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Copyable
+    & ImplicitlyDeletable
+)
+"""Bound every AES backend satisfies, and the one `check` is generic over."""
+
 
 def run_aes_checks[
-    TestVector: Copyable,
+    TestInput: Copyable, //,
     check: def[
-        C: BlockCipherEncryptable
-        & BlockCipherDecryptable
-        & Copyable
-        & ImplicitlyDeletable,
+        C: BlockCipherEngine,
         KeySize: Int,
         cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
-    ](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
+    ](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
 

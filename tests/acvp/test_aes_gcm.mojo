@@ -5,14 +5,10 @@ from std.reflection import reflect
 from mojo_crypto.utils import to_inline_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.ghash import GHashNaive
-from mojo_crypto.block_ciphers.traits import (
-    BlockCipherDecryptable,
-    BlockCipherEncryptable,
-)
 from mojo_crypto.aead.gcm import Gcm
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks
+from tests.block_ciphers.utils import BlockCipherEngine, run_aes_checks
 
 
 @fieldwise_init
@@ -75,10 +71,7 @@ def parse_acvp_aes_gcm_aft(
 def check_aes_gcm_aft[
     NONCE_SIZE: Int,
     TAG_SIZE: Int,
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable,
+    C: BlockCipherEngine,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[GcmTestVector]) raises:
@@ -124,8 +117,8 @@ def test_aes_gcm_aft() raises:
     var vectors = parse_acvp_aes_gcm_aft(raw)
     # The ACVP-AES-GCM-1.0 set uses two (nonce, tag) byte-size combinations.
     # `_` unbinds the remaining params (C, KeySize, cipher_init) for run_checks.
-    run_aes_checks[GcmTestVector, check_aes_gcm_aft[12, 16, _, _, _]](vectors)
-    run_aes_checks[GcmTestVector, check_aes_gcm_aft[15, 4, _, _, _]](vectors)
+    run_aes_checks[check_aes_gcm_aft[12, 16, _, _, _]](vectors)
+    run_aes_checks[check_aes_gcm_aft[15, 4, _, _, _]](vectors)
 
 
 def main() raises:

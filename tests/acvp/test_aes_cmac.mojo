@@ -4,14 +4,10 @@ from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.traits import (
-    BlockCipherDecryptable,
-    BlockCipherEncryptable,
-)
 from mojo_crypto.macs import Cmac
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks
+from tests.block_ciphers.utils import BlockCipherEngine, run_aes_checks
 
 
 @fieldwise_init
@@ -65,10 +61,7 @@ def parse_acvp_aes_cmac_aft(
 
 
 def check_aes_cmac_aft[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable,
+    C: BlockCipherEngine,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CmacTestVector]) raises:
@@ -99,7 +92,7 @@ def check_aes_cmac_aft[
 # CMAC only defines AFT groups (no MCT).
 def test_aes_cmac_aft() raises:
     var raw = load_python_acvp_vectors("tests/acvp/data/CMAC-AES-1.0", "AFT")
-    run_aes_checks[CmacTestVector, check_aes_cmac_aft](
+    run_aes_checks[check_aes_cmac_aft](
         parse_acvp_aes_cmac_aft(raw)
     )
 
