@@ -17,13 +17,14 @@ fmt    = "mojo format ."
 #   2. `hugo` renders the static HTML site (theme fetched via Hugo Modules).
 docs = "python -m pymodo build && hugo --source docs/site"
 
-# $MOJO_TEST_FEATURES lets CI enable the crypto instructions used by the hardware
-# backends, so the tests exercise the native backend on each runner. CI always
-# sets this per-runner (see .github/workflows/ci.yml); scripts/test.sh falls
-# back to an arch-appropriate default when it isn't set, since `mojo run`'s
-# host-feature autodetection is unreliable in some environments (e.g.
-# restricted CI containers). The fallback logic needs real `if`/`case`, which
-# pixi's cross-platform task shell doesn't support, hence the wrapper script.
+# $MOJO_TEST_FEATURES enables the crypto instructions used by the hardware
+# backends, so the tests exercise the native backend of the target. CI sets it
+# per-runner (see .github/workflows/ci.yml); set it yourself to test a specific
+# backend locally, e.g.
+#   MOJO_TEST_FEATURES=--target-features=+neon,+aes,+sha2,+sha3 pixi run test
+# Unset, the tests build for whatever `mojo run` autodetects on the host. The
+# runner loop needs a real shell, which pixi's cross-platform task shell isn't,
+# hence the wrapper script.
 test   = "bash scripts/test.sh"
 
 bench  = "python -m benchmarks.cli"

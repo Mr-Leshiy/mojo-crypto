@@ -1,5 +1,6 @@
 from .naive import _compress as naive_compress
 from .aarch64 import _compress as aarch64_compress
+from .x86 import _compress as x86_compress
 from .common import (
     SHA384_IV,
     SHA512_IV,
@@ -31,3 +32,15 @@ comptime Sha512_224Aarch64 = _Sha2Word64[SHA512_224_IV, 28, aarch64_compress]
 
 comptime Sha512_256Aarch64 = _Sha2Word64[SHA512_256_IV, 32, aarch64_compress]
 """SHA-512/256 via the ARMv8.2 SHA-512 Crypto Extension."""
+
+comptime Sha384X86 = _Sha2Word64[SHA384_IV, 48, x86_compress]
+"""SHA-384 via the x86 SHA512 extension."""
+
+comptime Sha512X86 = _Sha2Word64[SHA512_IV, 64, x86_compress]
+"""SHA-512 via the x86 SHA512 extension."""
+
+comptime Sha512_224X86 = _Sha2Word64[SHA512_224_IV, 28, x86_compress]
+"""SHA-512/224 via the x86 SHA512 extension."""
+
+comptime Sha512_256X86 = _Sha2Word64[SHA512_256_IV, 32, x86_compress]
+"""SHA-512/256 via the x86 SHA512 extension."""

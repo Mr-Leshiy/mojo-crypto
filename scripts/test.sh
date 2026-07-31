@@ -1,43 +1,30 @@
 #!/usr/bin/env bash
-# Runs the Mojo test suite. Wrapped in a real shell (rather than inlined in
-# pixi.toml) because pixi's cross-platform task shell doesn't support `if`/
-# `case`, which this script needs to pick a MOJO_TEST_FEATURES default.
+# Runs the Mojo test suite: every tests/**/test_*.mojo file, in sorted order.
 #
-# CI always sets MOJO_TEST_FEATURES explicitly per-runner (see
-# .github/workflows/ci.yml), so the fallback below never triggers there; it
-# only kicks in for local/sandboxed runs where `mojo run`'s host-feature
-# autodetection is unreliable (e.g. restricted containers).
-set -e
+# The hardware backends are compiled in only when their CPU features are
+# enabled, so the caller decides which ones to build via $MOJO_TEST_FEATURES: a
+# space-separated list of `mojo run` flags, e.g.
+# "--target-features=+neon,+aes,+sha2". CI sets it per-runner (see
+# .github/workflows/ci.yml). Nothing is defaulted here — when it is unset the
+# tests build for whatever `mojo run` autodetects on the host, which still
+# covers the naive backends.
+set -e -o pipefail
 
-if [ -z "$MOJO_TEST_FEATURES" ]; then
-  case "$(uname -m)" in
-    aarch64 | arm64)
-      MOJO_TEST_FEATURES="--target-features=+neon,+aes,+sha2,+sha3"
-      ;;
-    *)
-      MOJO_TEST_FEATURES="--target-features=+aes"
-      ;;
-  esac
+# Word-split into an array so multiple flags work and an unset/empty value
+# contributes no arguments at all.
+read -r -a features <<<"${MOJO_TEST_FEATURES-}"
+
+failed=()
+while IFS= read -r test; do
+  echo "==> mojo run ${MOJO_TEST_FEATURES-} -I . $test"
+  if ! mojo run "${features[@]}" -I . "$test"; then
+    failed+=("$test")
+  fi
+done < <(find tests -name 'test_*.mojo' | sort)
+
+if [ ${#failed[@]} -ne 0 ]; then
+  echo
+  echo "${#failed[@]} test file(s) failed:"
+  printf '  %s\n' "${failed[@]}"
+  exit 1
 fi
-
-mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_cbc.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_ctr.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_gcm.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_gcm_siv.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_aes_cmac.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/acvp/test_sha2.mojo
-
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/test_aes.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/block_ciphers/test_ctr.mojo
-
-mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_field_element.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_polyval.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/universal_hashes/test_ghash.mojo
-
-mojo run $MOJO_TEST_FEATURES -I . tests/macs/test_cmac.mojo
-
-mojo run $MOJO_TEST_FEATURES -I . tests/hashes/test_sha2.mojo
-
-mojo run $MOJO_TEST_FEATURES -I . tests/utils/test_hex.mojo
-mojo run $MOJO_TEST_FEATURES -I . tests/utils/test_common.mojo

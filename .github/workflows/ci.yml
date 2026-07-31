@@ -50,13 +50,25 @@ jobs:
         # ubuntu-latest -> x86-64 (exercises the AES-NI backend),
         # ubuntu-24.04-arm -> aarch64 (exercises the AES+PMULL backends).
         # Both are free GitHub-hosted runners for public repositories.
-        # `features` is passed as MOJO_TEST_FEATURES to enable the crypto
-        # instructions; --target-features replaces the feature set, so the
-        # aarch64 value must keep +neon (otherwise has_neon() turns false and the
-        # aarch64 backend tests are skipped).
+        #
+        # `features` becomes MOJO_TEST_FEATURES for scripts/test.sh, enabling
+        # the crypto instructions the hardware backends compile down to.
+        # --target-features *replaces* the feature set rather than adding to it,
+        # so each value must be self-contained: the aarch64 one has to keep
+        # +neon, otherwise has_neon() turns false and the aarch64 backends are
+        # never built.
+        #
+        # Only list features the runner's CPU actually has — the tests run the
+        # instructions, so anything enabled here but missing on the hardware
+        # faults. Notably x86 omits +sha512 (the SHA-2 64-bit-word extension,
+        # Intel Arrow Lake / Lunar Lake and later), which leaves
+        # mojo_crypto/hashes/sha2/word64/x86.mojo uncovered in CI; add it by
+        # hand on a CPU that has it to exercise that backend locally.
         include:
           - runner: ubuntu-latest
+            features: "--target-features=+aes,+sha"
           - runner: ubuntu-24.04-arm
+            features: "--target-features=+neon,+aes,+sha2,+sha3"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,4 +81,6 @@ jobs:
 
       - name: Run tests
         run: pixi run test
+        env:
+          MOJO_TEST_FEATURES: ${{ matrix.features }}
 
