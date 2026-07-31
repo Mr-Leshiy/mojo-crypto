@@ -1,10 +1,10 @@
-from ._word32 import (
+from .word32 import (
     Sha224Aarch64,
     Sha224Naive,
     Sha256Aarch64,
     Sha256Naive,
 )
-from ._word64 import (
+from .word64 import (
     Sha384Aarch64,
     Sha384Naive,
     Sha512Aarch64,
