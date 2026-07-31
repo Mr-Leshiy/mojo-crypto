@@ -3,8 +3,12 @@ from std.reflection import reflect
 
 from mojo_crypto.utils import to_inline_array
 from mojo_crypto.utils.hex import hex_decode
+from mojo_crypto.block_ciphers.traits import (
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+)
 
-from tests.block_ciphers.utils import BlockCipherEngine, run_aes_checks
+from tests.block_ciphers.utils import run_aes_checks
 
 
 @fieldwise_init
@@ -15,7 +19,10 @@ struct AesTestVector(Copyable, Movable):
 
 
 def check_aes[
-    C: BlockCipherEngine,
+    C: BlockCipherEncryptable
+    & BlockCipherDecryptable
+    & Copyable
+    & ImplicitlyDeletable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[AesTestVector]) raises:
@@ -59,7 +66,7 @@ def test_aes_fips197_kat() raises:
             ct=hex_decode("8ea2b7ca516745bfeafc49904b496089"),
         ),
     ]
-    run_aes_checks[check_aes](vectors)
+    run_aes_checks[AesTestVector, check_aes](vectors)
 
 
 def main() raises:
