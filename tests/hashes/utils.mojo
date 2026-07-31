@@ -39,7 +39,7 @@ def _run_sha2_checks[
 ](vectors: TestInput) raises:
     comptime if target_triple_contains_any(["aarch64", "arm64"]):
         check[Aarch64](vectors)
-    
+
     comptime if target_triple_contains_any(["x86_64"]):
         check[X86](vectors)
 
@@ -51,9 +51,9 @@ def run_sha224_checks[
     //,
     check: def[T: DigestEngine](TestInput) raises capturing[_],
 ](vectors: TestInput) raises:
-    _run_sha2_checks[
-        Sha224Naive, Sha224Aarch64, Sha224X86, TestInput, check
-    ](vectors)
+    _run_sha2_checks[Sha224Naive, Sha224Aarch64, Sha224X86, TestInput, check](
+        vectors
+    )
 
 
 def run_sha256_checks[
@@ -61,9 +61,9 @@ def run_sha256_checks[
     //,
     check: def[T: DigestEngine](TestInput) raises capturing[_],
 ](vectors: TestInput) raises:
-    _run_sha2_checks[
-        Sha256Naive, Sha256Aarch64, Sha256X86, TestInput, check
-    ](vectors)
+    _run_sha2_checks[Sha256Naive, Sha256Aarch64, Sha256X86, TestInput, check](
+        vectors
+    )
 
 
 def run_sha384_checks[
@@ -71,9 +71,9 @@ def run_sha384_checks[
     //,
     check: def[T: DigestEngine](TestInput) raises capturing[_],
 ](vectors: TestInput) raises:
-    _run_sha2_checks[
-        Sha384Naive, Sha384Aarch64, Sha384X86, TestInput, check
-    ](vectors)
+    _run_sha2_checks[Sha384Naive, Sha384Aarch64, Sha384X86, TestInput, check](
+        vectors
+    )
 
 
 def run_sha512_checks[
@@ -81,9 +81,9 @@ def run_sha512_checks[
     //,
     check: def[T: DigestEngine](TestInput) raises capturing[_],
 ](vectors: TestInput) raises:
-    _run_sha2_checks[
-        Sha512Naive, Sha512Aarch64, Sha512X86, TestInput, check
-    ](vectors)
+    _run_sha2_checks[Sha512Naive, Sha512Aarch64, Sha512X86, TestInput, check](
+        vectors
+    )
 
 
 def run_sha512_224_checks[
