@@ -25,9 +25,9 @@ comptime DigestEngine = Digest & Movable & ImplicitlyDeletable
 def _run_sha2_checks[
     Naive: DigestEngine,
     Aarch64: DigestEngine,
-    TestVector: Copyable,
-    check: def[T: DigestEngine](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
+    TestInput: Copyable,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
     comptime if target_triple_contains_any(["aarch64", "arm64"]):
         check[Aarch64](vectors)
 
@@ -35,46 +35,46 @@ def _run_sha2_checks[
 
 
 def run_sha224_checks[
-    TestVector: Copyable,
-    check: def[T: DigestEngine](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
-    _run_sha2_checks[Sha224Naive, Sha224Aarch64, TestVector, check](vectors)
+    TestInput: Copyable, //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    _run_sha2_checks[Sha224Naive, Sha224Aarch64, TestInput, check](vectors)
 
 
 def run_sha256_checks[
-    TestVector: Copyable,
-    check: def[T: DigestEngine](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
-    _run_sha2_checks[Sha256Naive, Sha256Aarch64, TestVector, check](vectors)
+    TestInput: Copyable, //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    _run_sha2_checks[Sha256Naive, Sha256Aarch64, TestInput, check](vectors)
 
 
 def run_sha384_checks[
-    TestVector: Copyable,
-    check: def[T: DigestEngine](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
-    _run_sha2_checks[Sha384Naive, Sha384Aarch64, TestVector, check](vectors)
+    TestInput: Copyable, //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    _run_sha2_checks[Sha384Naive, Sha384Aarch64, TestInput, check](vectors)
 
 
 def run_sha512_checks[
-    TestVector: Copyable,
-    check: def[T: DigestEngine](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
-    _run_sha2_checks[Sha512Naive, Sha512Aarch64, TestVector, check](vectors)
+    TestInput: Copyable, //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    _run_sha2_checks[Sha512Naive, Sha512Aarch64, TestInput, check](vectors)
 
 
 def run_sha512_224_checks[
-    TestVector: Copyable,
-    check: def[T: DigestEngine](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
-    _run_sha2_checks[Sha512_224Naive, Sha512_224Aarch64, TestVector, check](
+    TestInput: Copyable, //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    _run_sha2_checks[Sha512_224Naive, Sha512_224Aarch64, TestInput, check](
         vectors
     )
 
 
 def run_sha512_256_checks[
-    TestVector: Copyable,
-    check: def[T: DigestEngine](List[TestVector]) raises capturing[_],
-](vectors: List[TestVector]) raises:
-    _run_sha2_checks[Sha512_256Naive, Sha512_256Aarch64, TestVector, check](
+    TestInput: Copyable, //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    _run_sha2_checks[Sha512_256Naive, Sha512_256Aarch64, TestInput, check](
         vectors
     )
