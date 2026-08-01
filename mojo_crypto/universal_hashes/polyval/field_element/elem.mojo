@@ -89,13 +89,9 @@ struct FieldElement(
         self = self * rhs
 
     def write_to(self, mut writer: Some[Writer]):
-        var hex = String()
-        try:
-            hex = hex_encode(
-                Span[UInt8, origin_of(self._v)](
-                    unsafe_ptr=self._v.unsafe_ptr(), length=BLOCK_SIZE
-                )
+        var hex = hex_encode(
+            Span[UInt8, origin_of(self._v)](
+                unsafe_ptr=self._v.unsafe_ptr(), length=BLOCK_SIZE
             )
-        except:
-            pass
+        )
         writer.write(hex)

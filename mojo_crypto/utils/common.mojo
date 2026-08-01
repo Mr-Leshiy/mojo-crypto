@@ -118,4 +118,3 @@ def target_triple_contains_any(needles: List[StaticString]) -> Bool:
         if needle in triple:
             return True
     return False
-

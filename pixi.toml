@@ -23,9 +23,9 @@ docs = "python -m pymodo build && hugo --source docs/site"
 # backend locally, e.g.
 #   MOJO_TEST_FEATURES=--target-features=+neon,+aes,+sha2,+sha3 pixi run test
 # Unset, the tests build for whatever `mojo run` autodetects on the host. The
-# runner loop needs a real shell, which pixi's cross-platform task shell isn't,
-# hence the wrapper script.
-test   = "bash scripts/test.sh"
+# runner loop lives in a script because pixi's cross-platform task shell has no
+# loops.
+test   = "python scripts/test.py"
 
 bench  = "python -m benchmarks.cli"
 bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
@@ -34,7 +34,7 @@ bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
 # (running requires a GPU / specific host CPU).
 bench-build = { depends-on = ["bench-build-mojo", "bench-build-rust"] }
 
-bench-build-mojo = "bash scripts/bench-build-mojo.sh"
+bench-build-mojo = "python scripts/bench_build_mojo.py"
 
 bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.toml"
 

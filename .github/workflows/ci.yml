@@ -51,7 +51,7 @@ jobs:
         # ubuntu-24.04-arm -> aarch64 (exercises the AES+PMULL backends).
         # Both are free GitHub-hosted runners for public repositories.
         #
-        # `features` becomes MOJO_TEST_FEATURES for scripts/test.sh, enabling
+        # `features` becomes MOJO_TEST_FEATURES for scripts/test.py, enabling
         # the crypto instructions the hardware backends compile down to.
         # --target-features *replaces* the feature set rather than adding to it,
         # so each value must be self-contained: the aarch64 one has to keep
