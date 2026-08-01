@@ -31,6 +31,7 @@ comptime DigestEngine = Digest & Movable & ImplicitlyDeletable
 # and SHA-512/t, +sha for x86 SHA-224/256, +sha512 for x86 SHA-384/512 and
 # SHA-512/t (see .github/workflows/ci.yml for the per-runner feature sets).
 #
+# TODO: After fixing running x86 sha-512 in CI remove x86: Bool flag
 # `x86` says whether the x86 backend is exercised at all. It is False for the
 # 64-bit-word digests: their backend emits VSHA512* from the x86 SHA512
 # extension, which no CI runner has (Intel Arrow Lake / Lunar Lake and later),
