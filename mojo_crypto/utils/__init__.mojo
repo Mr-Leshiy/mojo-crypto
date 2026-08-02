@@ -4,5 +4,6 @@ from .common import (
     load_be,
     target_triple,
     target_triple_contains_any,
+    has_target_feature,
 )
 from .hex import hex_encode, hex_decode, HexError
