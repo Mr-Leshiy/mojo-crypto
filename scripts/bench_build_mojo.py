@@ -20,6 +20,18 @@ X86_PCLMUL = [
     "--target-triple=x86_64-unknown-linux-gnu",
     "--target-features=+pclmul,+sse2",
 ]
+# The SHA-2 benchmarks cover both engines in one binary, so each target needs
+# the 32-bit-word *and* 64-bit-word extension: on AArch64 +sha2 (SHA-256
+# instructions) plus +sha3 (ARMv8.2 SHA-512 ones), on x86 +sha (SHA-NI) plus
+# +sha512 — the much newer, YMM-based extension, hence +avx.
+AARCH64_SHA2 = [
+    "--target-triple=aarch64-unknown-linux-gnu",
+    "--target-features=+neon,+sha2,+sha3",
+]
+X86_SHA2 = [
+    "--target-triple=x86_64-unknown-linux-gnu",
+    "--target-features=+sha,+sha512,+avx,+sse2",
+]
 GPU = ["--target-accelerator=sm_80"]
 
 # (output name, source file, extra `mojo build` flags)
@@ -34,6 +46,9 @@ TARGETS = [
     ("polyval_naive", "benchmarks/universal_hashes/polyval/naive.mojo", []),
     ("polyval_aarch64", "benchmarks/universal_hashes/polyval/aarch64.mojo", AARCH64),
     ("polyval_x86", "benchmarks/universal_hashes/polyval/x86.mojo", X86_PCLMUL),
+    ("sha2_naive", "benchmarks/hashes/sha2/naive.mojo", []),
+    ("sha2_aarch64", "benchmarks/hashes/sha2/aarch64.mojo", AARCH64_SHA2),
+    ("sha2_x86", "benchmarks/hashes/sha2/x86.mojo", X86_SHA2),
 ]
 
 
