@@ -53,7 +53,7 @@ struct Hmac[H: Digest & Movable & ImplicitlyDeletable](
         """
         self._k0 = _k0[Self.BLOCK_SIZE, H=Self.H](key)
         self._inner = Self.H()
-        self._inner.update(Span(Self._padded_key(self._k0, Self.IPAD)))
+        self._inner.update(Span(_xor_to_array(self._k0, Self.IPAD)))
 
     def update[o: Origin](mut self, data: Span[UInt8, o]) raises:
         """Absorb more input."""
@@ -70,7 +70,7 @@ struct Hmac[H: Digest & Movable & ImplicitlyDeletable](
         step 7), then runs a fresh outer hash over
         `(K0 ^ opad) || H((K0 ^ ipad) || text)` (steps 8-9).
         """
-        var outer_block = Self._padded_key(self._k0, Self.OPAD)
+        var outer_block = _xor_to_array(self._k0, Self.OPAD)
 
         # `Digest.finalize` consumes its hash, so the inner hash has to be
         # moved out of `self`. Mojo rejects a partial move out of a `var self`
@@ -94,17 +94,7 @@ struct Hmac[H: Digest & Movable & ImplicitlyDeletable](
         re-deriving `K0`.
         """
         self._inner.reset()
-        self._inner.update(Span(Self._padded_key(self._k0, Self.IPAD)))
-
-    @staticmethod
-    def _padded_key(
-        k0: SIMD[DType.uint8, Self.BLOCK_SIZE],
-        pad: SIMD[DType.uint8, Self.BLOCK_SIZE],
-    ) -> InlineArray[UInt8, Self.BLOCK_SIZE]:
-        """`K0 ^ pad` as a byte block, ready to feed to a hash."""
-        var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
-        UnsafePointer(block.unsafe_ptr()).store[alignment=1](k0 ^ pad)
-        return block^
+        self._inner.update(Span(_xor_to_array(self._k0, Self.IPAD)))
 
 
 def _k0[
@@ -152,3 +142,16 @@ def _k0[
         )
 
     return UnsafePointer(k0.unsafe_ptr()).load[width=size, alignment=1]()
+
+
+def _xor_to_array[
+    size: Int
+](
+    a: SIMD[DType.uint8, size],
+    b: SIMD[DType.uint8, size],
+) -> InlineArray[
+    UInt8, size
+]:
+    var c = InlineArray[UInt8, size](uninitialized=True)
+    UnsafePointer(c.unsafe_ptr()).store[alignment=1](a ^ b)
+    return c^
