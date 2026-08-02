@@ -51,7 +51,7 @@ struct Hmac[H: Digest & Movable & ImplicitlyDeletable](
         Derives `K0` (FIPS 198-1 §4 steps 1-3) and primes the inner hash with
         `K0 ^ ipad` (step 4-5), leaving it ready to absorb the message.
         """
-        self._k0 = _k0[Self.BLOCK_SIZE, H = Self.H](key)
+        self._k0 = _k0[Self.BLOCK_SIZE, H=Self.H](key)
         self._inner = Self.H()
         self._inner.update(Span(Self._padded_key(self._k0, Self.IPAD)))
 
