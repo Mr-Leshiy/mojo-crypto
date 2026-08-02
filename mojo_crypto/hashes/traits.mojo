@@ -1,5 +1,11 @@
 trait Digest:
+    comptime BLOCK_SIZE: Int
+    """Size of the compression function's input block, in bytes."""
+
     comptime OUTPUT_SIZE: Int
+    """
+    Size of the digest `finalize` returns, in bytes.
+    """
 
     def __init__(out self):
         """Initialize the hash to its initial state."""
