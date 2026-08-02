@@ -20,22 +20,17 @@ X86_PCLMUL = [
     "--target-triple=x86_64-unknown-linux-gnu",
     "--target-features=+pclmul,+sse2",
 ]
-# The AArch64 SHA-2 extensions: +sha2 covers the SHA-256 instructions
-# (32-bit word engine), +sha3 the ARMv8.2 SHA-512 ones (64-bit word engine).
+# The SHA-2 benchmarks cover both engines in one binary, so each target needs
+# the 32-bit-word *and* 64-bit-word extension: on AArch64 +sha2 (SHA-256
+# instructions) plus +sha3 (ARMv8.2 SHA-512 ones), on x86 +sha (SHA-NI) plus
+# +sha512 — the much newer, YMM-based extension, hence +avx.
 AARCH64_SHA2 = [
-    "--target-triple=aarch64-unknown-linux-gnu",
-    "--target-features=+neon,+sha2",
-]
-AARCH64_SHA512 = [
     "--target-triple=aarch64-unknown-linux-gnu",
     "--target-features=+neon,+sha2,+sha3",
 ]
-# The x86 SHA-2 extensions: +sha is SHA-NI (32-bit word engine), +sha512 the
-# much newer, YMM-based (hence +avx) SHA512 extension (64-bit word engine).
-X86_SHA = ["--target-triple=x86_64-unknown-linux-gnu", "--target-features=+sha,+sse2"]
-X86_SHA512 = [
+X86_SHA2 = [
     "--target-triple=x86_64-unknown-linux-gnu",
-    "--target-features=+sha512,+avx,+sse2",
+    "--target-features=+sha,+sha512,+avx,+sse2",
 ]
 GPU = ["--target-accelerator=sm_80"]
 
@@ -51,20 +46,9 @@ TARGETS = [
     ("polyval_naive", "benchmarks/universal_hashes/polyval/naive.mojo", []),
     ("polyval_aarch64", "benchmarks/universal_hashes/polyval/aarch64.mojo", AARCH64),
     ("polyval_x86", "benchmarks/universal_hashes/polyval/x86.mojo", X86_PCLMUL),
-    ("sha2_word32_naive", "benchmarks/hashes/sha2/word32/naive.mojo", []),
-    (
-        "sha2_word32_aarch64",
-        "benchmarks/hashes/sha2/word32/aarch64.mojo",
-        AARCH64_SHA2,
-    ),
-    ("sha2_word32_x86", "benchmarks/hashes/sha2/word32/x86.mojo", X86_SHA),
-    ("sha2_word64_naive", "benchmarks/hashes/sha2/word64/naive.mojo", []),
-    (
-        "sha2_word64_aarch64",
-        "benchmarks/hashes/sha2/word64/aarch64.mojo",
-        AARCH64_SHA512,
-    ),
-    ("sha2_word64_x86", "benchmarks/hashes/sha2/word64/x86.mojo", X86_SHA512),
+    ("sha2_naive", "benchmarks/hashes/sha2/naive.mojo", []),
+    ("sha2_aarch64", "benchmarks/hashes/sha2/aarch64.mojo", AARCH64_SHA2),
+    ("sha2_x86", "benchmarks/hashes/sha2/x86.mojo", X86_SHA2),
 ]
 
 
