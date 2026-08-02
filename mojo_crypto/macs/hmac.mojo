@@ -2,7 +2,6 @@ from std.memory import unsafe_memcpy
 
 from mojo_crypto.hashes.traits import Digest
 from mojo_crypto.macs.traits import Mac
-from mojo_crypto.utils.common import to_inline_array
 
 
 struct Hmac[H: Digest & Movable & ImplicitlyDeletable](
@@ -48,38 +47,64 @@ struct Hmac[H: Digest & Movable & ImplicitlyDeletable](
     def __init__[o: Origin](out self, key: Span[UInt8, o]):
         """
         Initialize HMAC from a key of any length.
+
+        Derives `K0` (FIPS 198-1 §4 steps 1-3) and primes the inner hash with
+        `K0 ^ ipad` (step 4-5), leaving it ready to absorb the message.
         """
-        # TODO: derive K0 into `_key_block`, then absorb `K0 ^ IPAD` into
-        # `_inner`.
-        self._k0 = _k0[Self.BLOCK_SIZE, H=Self.H](key)
+        self._k0 = _k0[Self.BLOCK_SIZE, H = Self.H](key)
         self._inner = Self.H()
+        self._inner.update(Span(Self._padded_key(self._k0, Self.IPAD)))
 
     def update[o: Origin](mut self, data: Span[UInt8, o]) raises:
         """Absorb more input."""
-        # TODO: forward to the inner hash — HMAC adds no buffering of its own,
-        # since `K0 ^ ipad` is exactly one block and the message follows it
-        # unpadded.
-        ...
+        # Step 6, `(K0 ^ ipad) || text`. HMAC adds no buffering of its own:
+        # `K0 ^ ipad` is exactly one block, so the message follows it at a
+        # block boundary and the inner hash's own buffer handles the rest.
+        self._inner.update(data)
 
     def finalize(var self) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
         """
         Consume self and return the TAG_SIZE-byte authentication tag.
 
-        Closes the inner hash over `K0 ^ ipad || message`, then runs a fresh
-        outer hash over `K0 ^ opad || inner_digest`.
+        Closes the inner hash over `(K0 ^ ipad) || text` (FIPS 198-1 §4
+        step 7), then runs a fresh outer hash over
+        `(K0 ^ opad) || H((K0 ^ ipad) || text)` (steps 8-9).
         """
-        # TODO
-        raise Error("Hmac.finalize is not implemented")
+        var outer_block = Self._padded_key(self._k0, Self.OPAD)
+
+        # `Digest.finalize` consumes its hash, so the inner hash has to be
+        # moved out of `self`. Mojo rejects a partial move out of a `var self`
+        # whose remaining fields still need destroying, hence the fresh hash
+        # put back in its place.
+        var inner = self._inner^
+        self._inner = Self.H()
+        var inner_digest = inner^.finalize()
+
+        var outer = Self.H()
+        outer.update(Span(outer_block))
+        outer.update(Span(inner_digest))
+        return outer^.finalize()
 
     def reset(mut self):
         """
         Reset the accumulator to its initial state while keeping the key.
 
         Restores the inner hash to the just-absorbed-`K0 ^ ipad` state, so
-        another message can be authenticated under the same key.
+        another message can be authenticated under the same key without
+        re-deriving `K0`.
         """
-        # TODO: reset `_inner`, then re-absorb `K0 ^ IPAD`.
         self._inner.reset()
+        self._inner.update(Span(Self._padded_key(self._k0, Self.IPAD)))
+
+    @staticmethod
+    def _padded_key(
+        k0: SIMD[DType.uint8, Self.BLOCK_SIZE],
+        pad: SIMD[DType.uint8, Self.BLOCK_SIZE],
+    ) -> InlineArray[UInt8, Self.BLOCK_SIZE]:
+        """`K0 ^ pad` as a byte block, ready to feed to a hash."""
+        var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+        UnsafePointer(block.unsafe_ptr()).store[alignment=1](k0 ^ pad)
+        return block^
 
 
 def _k0[
@@ -110,8 +135,8 @@ def _k0[
     # the copy below would overrun `k0`.
 
     comptime assert (
-        H.BLOCK_SIZE <= size
-    ), "digest is wider than the hash block; K0 cannot hold H(K)"
+        H.OUTPUT_SIZE <= size
+    ), "digest is wider than K0; H(K) does not fit"
 
     var k0 = InlineArray[UInt8, size](fill=0)
     if len(key) > size:
