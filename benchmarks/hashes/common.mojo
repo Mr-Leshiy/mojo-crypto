@@ -1,0 +1,33 @@
+from std.benchmark import run, keep
+
+from mojo_crypto.hashes.traits import Digest
+
+comptime BYTES_1K: Int = 1_024
+comptime BYTES_16K: Int = 16_384
+
+
+def bench_hash[
+    H: Digest & ImplicitlyDeletable & Movable,
+    prefix: StringLiteral,
+]() raises:
+    @parameter
+    def bench[N: Int, suffix: StringLiteral]() raises:
+        # Heap-allocate the input so it isn't a stack constant. `keep` then
+        # forces the optimizer to treat the buffer as opaque and to observe the
+        # digest — without this the all-zero input is constant-folded and the
+        # whole hash is dead-code-eliminated, producing meaningless (~1e-17 s)
+        # timings.
+        var data = List[UInt8](length=N, fill=0)
+
+        @parameter
+        def do_hash() raises:
+            keep(data.unsafe_ptr())
+            var hash = H()
+            hash.update(Span(data))
+            var digest = hash^.finalize()
+            keep(digest.unsafe_ptr())
+
+        run[do_hash]().print(prefix + "_" + suffix)
+
+    bench[BYTES_1K, "1kb"]()
+    bench[BYTES_16K, "16kb"]()
