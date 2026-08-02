@@ -1,7 +1,7 @@
 # ACVP tests
 
-Tests in this directory validate the AES implementation against test vectors
-from NIST's [Automated Cryptographic Validation Protocol (ACVP)](https://pages.nist.gov/ACVP/),
+Tests in this directory validate the implementations in `mojo_crypto/` against
+test vectors from NIST's [Automated Cryptographic Validation Protocol (ACVP)](https://pages.nist.gov/ACVP/),
 sourced from the [usnistgov/ACVP-Server](https://github.com/usnistgov/ACVP-Server)
 `gen-val/json-files` reference vectors.
 
@@ -35,8 +35,21 @@ corresponding `test_*.mojo` file.
 | `SHA2-512-1.0` | SHA-512 | `test_sha2.mojo` |
 | `SHA2-512-224-1.0` | SHA-512/224 | `test_sha2.mojo` |
 | `SHA2-512-256-1.0` | SHA-512/256 | `test_sha2.mojo` |
+| `HMAC-SHA2-224-1.0` | HMAC-SHA-224 | `test_hmac.mojo` |
+| `HMAC-SHA2-256-1.0` | HMAC-SHA-256 | `test_hmac.mojo` |
+| `HMAC-SHA2-384-1.0` | HMAC-SHA-384 | `test_hmac.mojo` |
+| `HMAC-SHA2-512-1.0` | HMAC-SHA-512 | `test_hmac.mojo` |
+| `HMAC-SHA2-512-224-1.0` | HMAC-SHA-512/224 | `test_hmac.mojo` |
+| `HMAC-SHA2-512-256-1.0` | HMAC-SHA-512/256 | `test_hmac.mojo` |
 
 SHA-2 AFT vectors with a non-byte-aligned bit length (allowed for
 SHA-224/384/512-224, whose registration permits bit-granular
 `messageLength`) are skipped: `Digest.update` only consumes whole bytes, so
 there's no way to feed a message ending mid-byte.
+
+The HMAC sets define AFT groups only, all byte-aligned. Their `macLen` runs
+80..160 bits — always shorter than the digest — so `test_hmac.mojo` compares
+only that many leading bytes of the computed tag, as `test_aes_cmac.mojo`
+does for CMAC. Keys run 8..2048 bits, covering both `K0` derivations: keys
+shorter than the hash block (zero-padded) and longer than it (hashed down
+first).
