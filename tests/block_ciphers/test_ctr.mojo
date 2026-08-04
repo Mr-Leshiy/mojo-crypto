@@ -22,7 +22,7 @@ def test_ctr_32_le_aes() raises:
     )
 
     var zeros = InlineArray[UInt8, 64](fill=0)
-    var ctr = CTR(Aes128Naive(key), iv^)
+    var ctr = CTR(Aes128Naive(key), iv.copy())
     ctr.encrypt(zeros)
     assert_equal(zeros, ks_expected, msg="counter_incr")
 
