@@ -62,15 +62,12 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
         In POLYVAL's field, addition is the equivalent operation to XOR.
         """
 
-        var a: SIMD[DType.uint8, BLOCK_SIZE] = UnsafePointer(
-            self._v.unsafe_ptr()
-        ).load[width=BLOCK_SIZE]()
-        var b: SIMD[DType.uint8, BLOCK_SIZE] = UnsafePointer(
-            rhs._v.unsafe_ptr()
-        ).load[width=BLOCK_SIZE]()
-        var c = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        UnsafePointer(c.unsafe_ptr()).store(a ^ b)
-        return Self(c^)
+        var a = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(self._v)
+        var b = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(rhs._v)
+        # `as_bytes` is typed `Array[UInt8, size_of[Self]()]`; the size
+        # expression is not folded at parse time, so rebind it to BLOCK_SIZE.
+        var c = (a ^ b).as_bytes()
+        return Self(rebind[InlineArray[UInt8, BLOCK_SIZE]](c).copy())
 
     def __mul__(self, rhs: Self) -> Self:
         """Multiply two POLYVAL field elements mod `x^128 + x^127 + x^126 + x^121 + 1`.

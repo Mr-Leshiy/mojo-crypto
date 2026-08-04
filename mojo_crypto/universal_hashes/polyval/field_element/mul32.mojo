@@ -45,15 +45,6 @@ def _bmul32(x: UInt32, y: UInt32) -> UInt32:
     var z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0)
     return (z0 & m0) | (z1 & m1) | (z2 & m2) | (z3 & m3)
 
-
-@always_inline
-def _rev32[
-    width: Int, //
-](x: SIMD[DType.uint32, width]) -> SIMD[DType.uint32, width]:
-    """Bit-reverse each 32-bit lane; `width=1` covers the scalar call sites."""
-    return bit_reverse(x)
-
-
 struct Product32(Copyable, Movable):
     """Unreduced 256-bit carryless product stored as eight 32-bit limbs (lo … hi).
     """
@@ -101,6 +92,7 @@ def _karatsuba_mul32(
     Decomposes the 128×128 multiply into 9 × 32×32 Karatsuba sub-products;
     with the bit-reversal trick for the high half, 18 × _bmul32 calls total.
     """
+
     var yw = SIMD[DType.uint32, 4].from_bytes(a)
     var hw = SIMD[DType.uint32, 4].from_bytes(b)
 
