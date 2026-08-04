@@ -5,7 +5,6 @@
 assembles a big-endian word out of a byte span.
 """
 
-from std.memory import unsafe_memcpy
 from std.sys import size_of, is_big_endian
 
 
@@ -51,11 +50,11 @@ def to_bytes[
 @always_inline
 def to_inline_array[
     size: Int,
-    T: Movable,
+    T: Copyable & Deinitable,
 ](data: List[T]) raises -> InlineArray[T, size]:
     """Copy a `size`-length List into a fixed-size InlineArray.
 
-    Copies the underlying buffer in a single `unsafe_memcpy` rather than
+    Copies the underlying buffer in a single `Span.copy_from` rather than
     element-by-element.
 
     Parameters:
@@ -76,15 +75,17 @@ def to_inline_array[
             "expected list of length {}; got {}".format(size, len(data))
         )
     var arr = InlineArray[T, size](uninitialized=True)
-    unsafe_memcpy(dest=arr.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
+    Span(arr).copy_from(Span(data))
     return arr^
 
 
 @always_inline
-def to_list[size: Int, T: Movable](data: InlineArray[T, size]) -> List[T]:
+def to_list[
+    size: Int, T: Copyable & Deinitable
+](data: InlineArray[T, size]) -> List[T]:
     """Copy a fixed-size InlineArray into a List.
 
-    Copies the underlying buffer in a single `unsafe_memcpy` rather than
+    Copies the underlying buffer in a single `Span.copy_from` rather than
     element-by-element.
 
     Parameters:
@@ -98,7 +99,7 @@ def to_list[size: Int, T: Movable](data: InlineArray[T, size]) -> List[T]:
         A `List[T]` holding a copy of `data`.
     """
     var list = List[T](unsafe_uninit_length=size)
-    unsafe_memcpy(dest=list.unsafe_ptr(), src=data.unsafe_ptr(), count=size)
+    Span(list).copy_from(Span(data))
     return list^
 
 

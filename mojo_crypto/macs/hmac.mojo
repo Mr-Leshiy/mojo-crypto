@@ -1,5 +1,6 @@
 from std.memory import unsafe_memcpy
 
+from mojo_crypto.utils import to_bytes
 from mojo_crypto.hashes.traits import Digest
 from mojo_crypto.macs.traits import Mac
 
@@ -51,7 +52,10 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
         """
         self._k0 = _k0[Self.BLOCK_SIZE, H=Self.H](key)
         self._inner = Self.H()
-        self._inner.update(Span(_xor_to_array(self._k0, Self.IPAD)))
+        var inner = to_bytes[
+            input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
+        ](self._k0 ^ Self.IPAD)
+        self._inner.update(Span(inner))
 
     def update[o: Origin](mut self, data: Span[UInt8, o]) raises:
         """Absorb more input."""
@@ -68,7 +72,10 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
         step 7), then runs a fresh outer hash over
         `(K0 ^ opad) || H((K0 ^ ipad) || text)` (steps 8-9).
         """
-        var outer_block = _xor_to_array(self._k0, Self.OPAD)
+
+        var outer_block = to_bytes[
+            input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
+        ](self._k0 ^ Self.OPAD)
 
         # `Digest.finalize` consumes its hash, so the inner hash has to be
         # moved out of `self`. Mojo rejects a partial move out of a `var self`
@@ -92,7 +99,10 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
         re-deriving `K0`.
         """
         self._inner.reset()
-        self._inner.update(Span(_xor_to_array(self._k0, Self.IPAD)))
+        var inner = to_bytes[
+            input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
+        ](self._k0 ^ Self.IPAD)
+        self._inner.update(Span(inner))
 
 
 def _k0[
@@ -139,9 +149,10 @@ def _k0[
             dest=k0.unsafe_ptr(), src=key.unsafe_ptr(), count=len(key)
         )
 
-    return UnsafePointer(k0.unsafe_ptr()).load[width=size, alignment=1]()
+    return SIMD[DType.uint8, size].from_bytes(k0)
 
 
+@always_inline
 def _xor_to_array[
     size: Int
 ](
@@ -150,6 +161,4 @@ def _xor_to_array[
 ) -> InlineArray[
     UInt8, size
 ]:
-    var c = InlineArray[UInt8, size](uninitialized=True)
-    UnsafePointer(c.unsafe_ptr()).store[alignment=1](a ^ b)
-    return c^
+    return to_bytes[input_size=size, output_size=size](a ^ b)

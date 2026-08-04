@@ -122,7 +122,9 @@ struct _Sha2Word32[
             self._buffer_len += len(input)
 
     @always_inline
-    def _buffer_span(mut self, count: Int) -> Span[UInt8, origin_of(self._buffer)]:
+    def _buffer_span(
+        mut self, count: Int
+    ) -> Span[UInt8, origin_of(self._buffer)]:
         """The `count` free buffer bytes starting at the buffered prefix."""
         return Span(self._buffer)[self._buffer_len : self._buffer_len + count]
 
