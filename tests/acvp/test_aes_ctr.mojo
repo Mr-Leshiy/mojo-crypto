@@ -70,12 +70,12 @@ def check_aes_ctr_aft[
 
         if v.is_encrypt:
             var pt = v.pt.copy()
-            var ctr = CtrMode[C](cipher_init(key), iv)
+            var ctr = CtrMode[C](cipher_init(key), iv^)
             ctr.encrypt(pt[:])
             assert_equal(pt, v.ct, msg=msg)
         else:
             var ct = v.ct.copy()
-            var ctr = CtrMode[C](cipher_init(key), iv)
+            var ctr = CtrMode[C](cipher_init(key), iv^)
             ctr.decrypt(ct[:])
             assert_equal(ct, v.pt, msg=msg)
 
