@@ -51,6 +51,11 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
     def __init__(out self, var v: InlineArray[UInt8, BLOCK_SIZE]):
         self._v = v^
 
+    def __init__(out self, reg: SIMD[DType.uint64, 2]):
+        """Build an element from two 64-bit limbs (low limb first)."""
+        var v = reg.as_bytes()
+        self._v = rebind[InlineArray[UInt8, BLOCK_SIZE]](v).copy()
+
     @staticmethod
     def zeros() -> Self:
         return Self(InlineArray[UInt8, BLOCK_SIZE](fill=0))
