@@ -81,11 +81,20 @@ struct _Sha2Word32[
         self._total_len = 0
 
     @staticmethod
+    @always_inline
     def _iv() -> SIMD[DType.uint32, 8]:
-        var iv = SIMD[DType.uint32, 8](0)
-        comptime for i in range(8):
-            iv[i] = Self.IV[i]
-        return iv
+        return comptime (
+            SIMD[DType.uint32, 8](
+                Self.IV[0],
+                Self.IV[1],
+                Self.IV[2],
+                Self.IV[3],
+                Self.IV[4],
+                Self.IV[5],
+                Self.IV[6],
+                Self.IV[7],
+            )
+        )
 
     def update[o: Origin](mut self, data: Span[UInt8, o]):
         """Absorb more input."""

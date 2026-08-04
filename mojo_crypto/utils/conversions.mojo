@@ -39,9 +39,9 @@ def to_bytes[
     Returns:
         The `output_size` bytes of `input`.
     """
-    comptime assert size_of[SIMD[dtype, input_size]]() == output_size, (
-        "to_bytes: output_size must equal the byte width of the input vector"
-    )
+    comptime assert (
+        size_of[SIMD[dtype, input_size]]() == output_size
+    ), "to_bytes: output_size must equal the byte width of the input vector"
 
     return rebind_var[InlineArray[UInt8, output_size]](
         input.as_bytes[big_endian=big_endian]()
