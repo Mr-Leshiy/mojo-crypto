@@ -1,3 +1,4 @@
+from mojo_crypto.utils.conversions import to_bytes
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 
@@ -44,8 +45,10 @@ def _reverse[
     Reverse this field element at a byte-level of granularity.
     """
 
-    var out = SIMD[DType.uint8, SIZE].from_bytes(v).reversed().as_bytes()
-    return rebind_var[InlineArray[UInt8, SIZE]](out^)
+    return to_bytes[output_size=SIZE](
+        SIMD[DType.uint8, SIZE].from_bytes(v).reversed()
+    )
+
 
 def _mulx[
     SIZE: Int
@@ -74,5 +77,4 @@ def _mulx[
     reg[0] ^= v_hi
     reg[1] ^= (v_hi << 57) | (v_hi << 62) | (v_hi << 63)
 
-    var out = reg.as_bytes()
-    return rebind_var[InlineArray[UInt8, SIZE]](out^)
+    return to_bytes[input_size=2, output_size=SIZE](reg)

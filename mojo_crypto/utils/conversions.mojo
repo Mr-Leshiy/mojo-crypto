@@ -9,6 +9,13 @@ from std.memory import unsafe_memcpy
 
 
 @always_inline
+def to_bytes[
+    dtype: DType, output_size: Int, input_size: Int
+](input: SIMD[dtype, input_size]) -> InlineArray[UInt8, output_size]:
+    return rebind_var[InlineArray[UInt8, output_size]](input.as_bytes())
+
+
+@always_inline
 def to_inline_array[
     size: Int,
     T: Movable,
