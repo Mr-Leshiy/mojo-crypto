@@ -84,13 +84,10 @@ struct Product32(Copyable, Movable):
         lw = zw[3]
         zw[7] = zw[7] ^ lw ^ (lw >> 1) ^ (lw >> 2) ^ (lw >> 7)
         zw[6] = zw[6] ^ ((lw << 31) ^ (lw << 30) ^ (lw << 25))
-        var result = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        var out = UnsafePointer(result.unsafe_ptr()).bitcast[UInt32]()
-        out.store(0, zw[4])
-        out.store(1, zw[5])
-        out.store(2, zw[6])
-        out.store(3, zw[7])
-        return result^
+        # `as_bytes` is typed `Array[UInt8, size_of[Self]()]`; the size expression
+        # is not folded at parse time, so rebind it to the declared BLOCK_SIZE.
+        var out = SIMD[DType.uint32, 4](zw[4], zw[5], zw[6], zw[7]).as_bytes()
+        return rebind[InlineArray[UInt8, BLOCK_SIZE]](out).copy()
 
 
 def _karatsuba_mul32(
@@ -101,37 +98,28 @@ def _karatsuba_mul32(
     Decomposes the 128×128 multiply into 9 × 32×32 Karatsuba sub-products;
     with the bit-reversal trick for the high half, 18 × _bmul32 calls total.
     """
-    var ap = UnsafePointer(a.unsafe_ptr()).bitcast[UInt32]()
-    var yw0 = ap.load(0)
-    var yw1 = ap.load(1)
-    var yw2 = ap.load(2)
-    var yw3 = ap.load(3)
+    var yw = SIMD[DType.uint32, 4].from_bytes(a)
+    var hw = SIMD[DType.uint32, 4].from_bytes(b)
 
-    var bp = UnsafePointer(b.unsafe_ptr()).bitcast[UInt32]()
-    var hw0 = bp.load(0)
-    var hw1 = bp.load(1)
-    var hw2 = bp.load(2)
-    var hw3 = bp.load(3)
-
-    var hwr0 = _rev32(hw0)
-    var hwr1 = _rev32(hw1)
-    var hwr2 = _rev32(hw2)
-    var hwr3 = _rev32(hw3)
+    var hwr0 = _rev32(hw[0])
+    var hwr1 = _rev32(hw[1])
+    var hwr2 = _rev32(hw[2])
+    var hwr3 = _rev32(hw[3])
 
     # Karatsuba decomposition for a (yw limbs)
-    var a0 = yw0
-    var a1 = yw1
-    var a2 = yw2
-    var a3 = yw3
+    var a0 = yw[0]
+    var a1 = yw[1]
+    var a2 = yw[2]
+    var a3 = yw[3]
     var a4 = a0 ^ a1
     var a5 = a2 ^ a3
     var a6 = a0 ^ a2
     var a7 = a1 ^ a3
     var a8 = a6 ^ a7
-    var a9 = _rev32(yw0)
-    var a10 = _rev32(yw1)
-    var a11 = _rev32(yw2)
-    var a12 = _rev32(yw3)
+    var a9 = _rev32(yw[0])
+    var a10 = _rev32(yw[1])
+    var a11 = _rev32(yw[2])
+    var a12 = _rev32(yw[3])
     var a13 = a9 ^ a10
     var a14 = a11 ^ a12
     var a15 = a9 ^ a11
@@ -139,10 +127,10 @@ def _karatsuba_mul32(
     var a17 = a15 ^ a16
 
     # Karatsuba decomposition for b (hw limbs)
-    var b0 = hw0
-    var b1 = hw1
-    var b2 = hw2
-    var b3 = hw3
+    var b0 = hw[0]
+    var b1 = hw[1]
+    var b2 = hw[2]
+    var b3 = hw[3]
     var b4 = b0 ^ b1
     var b5 = b2 ^ b3
     var b6 = b0 ^ b2

@@ -88,6 +88,15 @@ struct FieldElement(
     def __imul__(mut self, rhs: Self):
         self = self * rhs
 
+    def into_bytes(deinit self) -> InlineArray[UInt8, BLOCK_SIZE]:
+        """Consume the element and return its BLOCK_SIZE-byte representation.
+
+        Takes `deinit self`, not `var self`: transferring `_v` out dismantles
+        the element, which is only permitted when the callee also takes over
+        responsibility for destroying it.
+        """
+        return self._v^
+
     def write_to(self, mut writer: Some[Writer]):
         var hex = hex_encode(
             Span[UInt8, origin_of(self._v)](

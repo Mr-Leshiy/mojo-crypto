@@ -25,14 +25,15 @@ trait UniversalHashable:
         """
 
         UhashSizeError[Self.BLOCK_SIZE].check(len(data))
-        block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+        
         for i in range(len(data) // Self.BLOCK_SIZE):
+            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             UnsafePointer(block.unsafe_ptr()).store(
                 UnsafePointer(data.unsafe_ptr()).load[width=Self.BLOCK_SIZE](
                     i * Self.BLOCK_SIZE
                 )
             )
-            self.update_block(block)
+            self.update_block(block^)
 
     def update_padded[o: Origin](mut self, data: Span[UInt8, o]) raises:
         """
@@ -48,13 +49,13 @@ trait UniversalHashable:
         n_full = len(data) - tail_len
         self.update(data[:n_full])
         if tail_len > 0:
-            padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
+            var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
             unsafe_memcpy(
                 dest=padded.unsafe_ptr(),
                 src=UnsafePointer(data.unsafe_ptr()) + n_full,
                 count=tail_len,
             )
-            self.update_block(padded)
+            self.update_block(padded^)
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         """Consume self and return the TAG_SIZE-byte authentication tag."""

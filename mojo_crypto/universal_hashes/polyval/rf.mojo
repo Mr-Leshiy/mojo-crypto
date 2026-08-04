@@ -72,8 +72,8 @@ struct _PolyvalRf[P: Pmull](
         # Multiply by H using R/F algorithm
         self._y = FieldElement(_store_bytes(_gf128_mul_rf[Self.P](acc, h1, d1)))
 
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-        return self._y._v^
+    def finalize(deinit self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+        return self._y^.into_bytes()
 
     def reset(mut self):
         self._y = FieldElement.zeros()
