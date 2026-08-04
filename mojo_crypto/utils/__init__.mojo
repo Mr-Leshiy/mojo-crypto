@@ -1,4 +1,11 @@
-from .conversions import to_inline_array, to_list, load_be, to_bytes
+from .conversions import (
+    to_inline_array,
+    to_list,
+    load_be,
+    load_bytes,
+    store_bytes,
+    to_bytes,
+)
 from .target import (
     target_triple,
     target_triple_contains_any,

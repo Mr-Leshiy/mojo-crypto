@@ -1,11 +1,82 @@
 """Conversions between the container and word representations of key material.
 
 `to_inline_array`/`to_list` move a fixed-size buffer between `InlineArray` and
-`List` (test vectors arrive as lists, the primitives take arrays); `load_be`
-assembles a big-endian word out of a byte span.
+`List` (test vectors arrive as lists, the primitives take arrays);
+`load_bytes`/`store_bytes` reinterpret a byte span as a vector and back;
+`load_be` assembles a big-endian word out of a byte span.
 """
 
 from std.sys import size_of, is_big_endian
+
+
+@always_inline
+def load_bytes[
+    dtype: DType, width: SIMDLength, o: Origin
+](data: Span[UInt8, o]) -> SIMD[dtype, width]:
+    """Reinterpret the first `width` lanes' worth of `data` as a vector.
+
+    The counterpart of `SIMD.from_bytes`, for the case that one needs a
+    fixed-size `InlineArray` and `data` does not have one: a span with a
+    runtime length. Reading through the span's pointer avoids the copy that
+    staging the bytes into an array would cost, which matters in the
+    block-cipher inner loops this exists for.
+
+    Byte order is the target's own — this is a raw memory reinterpretation,
+    so it round-trips with `store_bytes` but is not endianness-neutral. Use
+    `SIMD.from_bytes[big_endian=...]` or `load_be` where the wire order
+    matters.
+
+    Parameters:
+        dtype: The lane type of the returned vector.
+        width: The number of lanes to read.
+        o: The origin of the byte span.
+
+    Args:
+        data: The bytes to reinterpret; must hold at least
+            `width * size_of[dtype]()` of them.
+
+    Returns:
+        The first `width * size_of[dtype]()` bytes of `data` as a vector.
+    """
+    debug_assert(
+        len(data) >= width * size_of[dtype](),
+        "load_bytes: span shorter than the vector being read",
+    )
+    return (
+        data.unsafe_ptr()
+        .unsafe_bitcast[Scalar[dtype]]()
+        .unsafe_load[width=width, alignment=1]()
+    )
+
+
+@always_inline
+def store_bytes[
+    dtype: DType, width: SIMDLength, o: MutOrigin, //
+](data: Span[UInt8, o], value: SIMD[dtype, width]):
+    """Write `value` over the leading bytes of `data`.
+
+    The inverse of `load_bytes`, and the in-place counterpart of `to_bytes`:
+    it writes through the span rather than returning a fresh `InlineArray`,
+    so the caller pays no copy. Byte order is the target's own, as in
+    `load_bytes`.
+
+    Parameters:
+        dtype: The lane type of the vector being written.
+        width: The number of lanes in the vector.
+        o: The (mutable) origin of the byte span.
+
+    Args:
+        data: The bytes to overwrite; must hold at least
+            `width * size_of[dtype]()` of them.
+        value: The vector to write.
+    """
+    debug_assert(
+        len(data) >= width * size_of[dtype](),
+        "store_bytes: span shorter than the vector being written",
+    )
+    data.unsafe_ptr().unsafe_bitcast[Scalar[dtype]]().unsafe_store[alignment=1](
+        value
+    )
 
 
 @always_inline
