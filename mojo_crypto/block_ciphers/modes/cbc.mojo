@@ -31,10 +31,10 @@ struct CbcMode[
     def __init__(
         out self,
         var cipher: Self.Cipher,
-        iv: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE],
+        var iv: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE],
     ):
         self._cipher = cipher^
-        self._iv = iv
+        self._iv = iv^
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))

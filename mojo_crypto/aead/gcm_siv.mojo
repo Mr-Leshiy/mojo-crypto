@@ -1,5 +1,4 @@
-from std.memory import unsafe_memcpy
-
+from mojo_crypto.utils import load_bytes
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
 from mojo_crypto.block_ciphers.traits import (
@@ -118,7 +117,7 @@ struct GcmSiv[
         )
 
         # POLYVAL is keyed with mac_key; `_cipher` is keyed with enc_key.
-        return Self(cipher_init(enc_key), Self.G(mac_key), nonce)
+        return Self(cipher_init(enc_key^), Self.G(mac_key^), nonce.copy())
 
     @staticmethod
     def _assert_valid_params():
@@ -172,7 +171,7 @@ struct GcmSiv[
         var ctr = self._init_ctr(tag)
         ctr.encrypt(data)
 
-        return rebind[InlineArray[UInt8, TAG_SIZE]](tag)
+        return rebind_var[InlineArray[UInt8, TAG_SIZE]](tag^)
 
     def decrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
@@ -195,7 +194,9 @@ struct GcmSiv[
 
         LengthError.check_decrypt(len(aad), len(data))
 
-        var tag_block = rebind[InlineArray[UInt8, Self.TAG_SIZE]](tag)
+        var tag_block = rebind_var[InlineArray[UInt8, Self.TAG_SIZE]](
+            tag.copy()
+        )
 
         # POLYVAL absorbs the AAD (padded) first.
         self._polyval.update_padded(aad)
@@ -213,14 +214,9 @@ struct GcmSiv[
 
         # Constant-time comparison: XOR all bytes at once and OR-reduce so the
         # running time does not depend on where the first mismatch occurs (see
-        # Gcm.decrypt for why a short-circuiting compare would leak). alignment=1
-        # because the InlineArray[UInt8] bases may be unaligned.
-        var e = UnsafePointer(expected_tag.unsafe_ptr()).load[
-            width=TAG_SIZE, alignment=1
-        ]()
-        var t = UnsafePointer(tag.unsafe_ptr()).load[
-            width=TAG_SIZE, alignment=1
-        ]()
+        # Gcm.decrypt for why a short-circuiting compare would leak).
+        var e = load_bytes[DType.uint8, TAG_SIZE](Span(expected_tag))
+        var t = load_bytes[DType.uint8, TAG_SIZE](Span(tag))
         if (e ^ t).reduce_or() != 0:
             # On verification failure, re-encrypt the recovered plaintext back to
             # the input ciphertext so the tampered plaintext is never exposed.
@@ -253,9 +249,9 @@ struct GcmSiv[
         ).as_bytes[big_endian=False]()
 
         self._polyval.update_block(
-            rebind[InlineArray[UInt8, Self.G.BLOCK_SIZE]](length_block)
+            rebind_var[InlineArray[UInt8, Self.G.BLOCK_SIZE]](length_block^)
         )
-        var tag = rebind[InlineArray[UInt8, Self.TAG_SIZE]](
+        var tag = rebind_var[InlineArray[UInt8, Self.TAG_SIZE]](
             self._polyval.copy().finalize()
         )
         # Reset the live accumulator (it still holds this message's AAD and
@@ -293,7 +289,7 @@ struct GcmSiv[
         counter_block[Self.BLOCK_SIZE - 1] |= 0x80
         return CtrMode[Self.C, 4, BIG_ENDIAN=False](
             self._cipher.copy(),
-            rebind[InlineArray[UInt8, Self.BLOCK_SIZE]](counter_block),
+            rebind_var[InlineArray[UInt8, Self.BLOCK_SIZE]](counter_block^),
         )
 
 
@@ -335,27 +331,15 @@ def _derive_subkey[
     for chunk in range(N // 8):
         # block[0:4] = counter as a little-endian u32, host-independent.
         var counter_bytes = counter.as_bytes[big_endian=False]()
-        unsafe_memcpy(
-            dest=block.unsafe_ptr(),
-            src=counter_bytes.unsafe_ptr(),
-            count=4,
-        )
+        Span(block)[:4].copy_from(Span(counter_bytes))
 
         # block[4:16] = nonce.
-        unsafe_memcpy(
-            dest=UnsafePointer(block.unsafe_ptr()) + 4,
-            src=nonce.unsafe_ptr(),
-            count=NONCE_SIZE,
-        )
+        Span(block)[4 : 4 + NONCE_SIZE].copy_from(Span(nonce))
 
         cipher.encrypt(block)
 
         # Keep the low 8 bytes, discard the rest.
-        unsafe_memcpy(
-            dest=UnsafePointer(key.unsafe_ptr()) + chunk * 8,
-            src=block.unsafe_ptr(),
-            count=8,
-        )
+        Span(key)[chunk * 8 : chunk * 8 + 8].copy_from(Span(block)[:8])
 
         counter += 1
 

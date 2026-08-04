@@ -45,14 +45,14 @@ struct CtrMode[
     def __init__(
         out self,
         var cipher: Self.C,
-        ctr: InlineArray[UInt8, Self.BLOCK_SIZE],
+        var ctr: InlineArray[UInt8, Self.BLOCK_SIZE],
     ):
         """Initialize from a fully-assembled initial counter block."""
 
         Self._assert_valid_params()
 
         self._cipher = cipher^
-        self._ctr = ctr
+        self._ctr = ctr^
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         self._apply(data)
@@ -63,11 +63,8 @@ struct CtrMode[
     def _apply[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         var offset = 0
         while offset < len(data):
-            var keystream = self._ctr
-            var ks = Span[UInt8, origin_of(keystream)](
-                unsafe_ptr=keystream.unsafe_ptr(), length=Self.BLOCK_SIZE
-            )
-            self._cipher.encrypt(ks)
+            var keystream = self._ctr.copy()
+            self._cipher.encrypt(Span(keystream))
             var end = min(offset + Self.BLOCK_SIZE, len(data))
             for j in range(end - offset):
                 data[offset + j] ^= keystream[j]
