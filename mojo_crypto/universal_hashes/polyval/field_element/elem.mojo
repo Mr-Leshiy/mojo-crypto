@@ -54,7 +54,7 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
     def __init__(out self, reg: SIMD[DType.uint64, 2]):
         """Build an element from two 64-bit limbs (low limb first)."""
         var v = reg.as_bytes()
-        self._v = rebind[InlineArray[UInt8, BLOCK_SIZE]](v).copy()
+        self._v = rebind_var[InlineArray[UInt8, BLOCK_SIZE]](v^)
 
     @staticmethod
     def zeros() -> Self:
@@ -69,10 +69,9 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
 
         var a = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(self._v)
         var b = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(rhs._v)
-        # `as_bytes` is typed `Array[UInt8, size_of[Self]()]`; the size
-        # expression is not folded at parse time, so rebind it to BLOCK_SIZE.
+
         var c = (a ^ b).as_bytes()
-        return Self(rebind[InlineArray[UInt8, BLOCK_SIZE]](c).copy())
+        return Self(rebind_var[InlineArray[UInt8, BLOCK_SIZE]](c^))
 
     def __mul__(self, rhs: Self) -> Self:
         """Multiply two POLYVAL field elements mod `x^128 + x^127 + x^126 + x^121 + 1`.

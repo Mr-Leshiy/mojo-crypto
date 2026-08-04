@@ -19,7 +19,7 @@ def check_ghash_test_vector[
     var x1 = hex_decode[T.BLOCK_SIZE]("4f4f95668c83dfb6401762bb2d01a262")
     var x2 = hex_decode[T.BLOCK_SIZE]("d1a24ddd2721d006bbe45f20d3c9f362")
 
-    var ghash = T(h)
+    var ghash = T(h^)
     ghash.update(x1)
     ghash.update(x2)
 
@@ -53,7 +53,7 @@ def test_mulx_rfc8452_vector() raises:
     expected = hex_decode[GHashNaive.BLOCK_SIZE](
         "3931819bf271fada0503eb52574ca572"
     )
-    assert_equal(expected, _mulx(input))
+    assert_equal(expected, _mulx(input^))
 
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element/mulx.rs
@@ -191,7 +191,7 @@ def test_fe_mulx() raises:
     r = hex_decode[GHashNaive.BLOCK_SIZE]("01000000000000000000000000000000")
 
     for vec in MULX_TEST_VECTORS:
-        r = _mulx(r)
+        r = _mulx(r.copy())
         assert_equal(vec, r)
 
 

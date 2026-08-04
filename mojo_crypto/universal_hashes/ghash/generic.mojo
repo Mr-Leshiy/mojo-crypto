@@ -24,11 +24,11 @@ struct _GHashGeneric[P: Copyable & Deinitable & UniversalHashable](
 
     var _poly: Self.P
 
-    def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
-        self._poly = Self.P(_mulx(_reverse(h)))
+    def __init__(out self, var h: InlineArray[UInt8, Self.KEY_SIZE]):
+        self._poly = Self.P(_mulx(_reverse(h^)))
 
-    def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
-        self._poly.update_block(_reverse(block))
+    def update_block(mut self, var block: InlineArray[UInt8, Self.BLOCK_SIZE]):
+        self._poly.update_block(_reverse(block^))
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
         return _reverse(self._poly.copy().finalize())
@@ -43,12 +43,9 @@ def _reverse[
     """
     Reverse this field element at a byte-level of granularity.
     """
-    var out = InlineArray[UInt8, SIZE](uninitialized=True)
-    UnsafePointer(out.unsafe_ptr()).store(
-        UnsafePointer(v.unsafe_ptr()).load[width=SIZE]().reversed()
-    )
-    return out^
 
+    var out = SIMD[DType.uint8, SIZE].from_bytes(v).reversed().as_bytes()
+    return rebind_var[InlineArray[UInt8, SIZE]](out^)
 
 def _mulx[
     SIZE: Int
@@ -63,24 +60,19 @@ def _mulx[
     """
     # Interpret the 16-byte element as a 128-bit little-endian integer
     # split across two 64-bit halves: lo = bytes[0..8], hi = bytes[8..16].
-    var ptr = UnsafePointer(v.unsafe_ptr()).bitcast[UInt64]()
-    var lo = ptr.load(0)
-    var hi = ptr.load(1)
+    var reg = SIMD[DType.uint64, 2].from_bytes(v)
 
-    var v_hi = hi >> 63  # save the high bit (0 or 1) before shifting
+    var v_hi = reg[1] >> 63  # save the high bit (0 or 1) before shifting
 
     # Shift the 128-bit value left by 1 (multiply by x)
-    hi = (hi << 1) | (lo >> 63)
-    lo = lo << 1
+    reg[1] = (reg[1] << 1) | (reg[0] >> 63)
+    reg[0] = reg[0] << 1
 
     # Reduce mod x^128 + x^127 + x^126 + x^121 + 1:
     # if the high bit was set, XOR with 1 (bit 0) and bits 121, 126, 127.
     # Bits 121/126/127 all live in `hi` at positions 57/62/63 (offset by 64).
-    lo ^= v_hi
-    hi ^= (v_hi << 57) | (v_hi << 62) | (v_hi << 63)
+    reg[0] ^= v_hi
+    reg[1] ^= (v_hi << 57) | (v_hi << 62) | (v_hi << 63)
 
-    var result = InlineArray[UInt8, SIZE](uninitialized=True)
-    var out = UnsafePointer(result.unsafe_ptr()).bitcast[UInt64]()
-    out.store(0, lo)
-    out.store(1, hi)
-    return result^
+    var out = reg.as_bytes()
+    return rebind_var[InlineArray[UInt8, SIZE]](out^)

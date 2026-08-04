@@ -79,10 +79,9 @@ struct Product32(Copyable, Movable):
         lw = zw[3]
         zw[7] = zw[7] ^ lw ^ (lw >> 1) ^ (lw >> 2) ^ (lw >> 7)
         zw[6] = zw[6] ^ ((lw << 31) ^ (lw << 30) ^ (lw << 25))
-        # `as_bytes` is typed `Array[UInt8, size_of[Self]()]`; the size expression
-        # is not folded at parse time, so rebind it to the declared BLOCK_SIZE.
+
         var out = SIMD[DType.uint32, 4](zw[4], zw[5], zw[6], zw[7]).as_bytes()
-        return rebind[InlineArray[UInt8, BLOCK_SIZE]](out).copy()
+        return rebind_var[InlineArray[UInt8, BLOCK_SIZE]](out^)
 
 
 def _karatsuba_mul32(

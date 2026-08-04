@@ -73,10 +73,9 @@ struct Product64(Copyable, Movable):
         v3 ^= v1 ^ (v1 >> 1) ^ (v1 >> 2) ^ (v1 >> 7)
         v2 ^= (v1 << 63) ^ (v1 << 62) ^ (v1 << 57)
 
-        # `as_bytes` is typed `Array[UInt8, size_of[Self]()]`; the size
-        # expression is not folded at parse time, so rebind it to BLOCK_SIZE.
+
         var out = SIMD[DType.uint64, 2](v2, v3).as_bytes()
-        return rebind[InlineArray[UInt8, BLOCK_SIZE]](out).copy()
+        return rebind_var[InlineArray[UInt8, BLOCK_SIZE]](out^)
 
 
 def _karatsuba_mul64(
