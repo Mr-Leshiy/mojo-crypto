@@ -10,6 +10,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
     BlockCipherDecryptable,
 )
+from mojo_crypto.utils import to_bytes
 from .common import BLOCK_SIZE, SBOX, _check_key_size
 
 
@@ -91,19 +92,19 @@ def _inv_mix(v: SIMD[DType.uint8, BLOCK_SIZE]) -> SIMD[DType.uint8, BLOCK_SIZE]:
 def _cipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
-    var s = UnsafePointer(data.unsafe_ptr()).load[width=BLOCK_SIZE]()
+    var s = _load(data)
     comptime for r in range(NR - 1):
         s = _aesmc(_aese(s, rks[r]))
     s = _aese(s, rks[NR - 1])
     s ^= rks[NR]
-    UnsafePointer(data.unsafe_ptr()).store(s)
+    _store(data, s)
 
 
 # FIPS 197 §5.3 InvCipher() via ARMv8 Crypto Extension (equivalent inverse).
 def _decipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
-    var s = UnsafePointer(data.unsafe_ptr()).load[width=BLOCK_SIZE]()
+    var s = _load(data)
     s = _aesd(s, rks[0])
     s = _inv_mix(s)
     comptime for r in range(1, NR - 1):
@@ -111,7 +112,25 @@ def _decipher[
         s = _inv_mix(s)
     s = _aesd(s, rks[NR - 1])
     s ^= rks[NR]
-    UnsafePointer(data.unsafe_ptr()).store(s)
+    _store(data, s)
+
+
+# One AES block as the vector the intrinsics take, and back. `data` has a
+# runtime length, so `SIMD.from_bytes`/`to_bytes` — which need a fixed-size
+# array — work through a BLOCK_SIZE-byte copy at each end.
+@always_inline
+def _load[o: Origin](data: Span[UInt8, o]) -> SIMD[DType.uint8, BLOCK_SIZE]:
+    var block = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
+    Span(block).copy_from(data)
+    return SIMD[DType.uint8, BLOCK_SIZE].from_bytes(block)
+
+
+@always_inline
+def _store[
+    o: MutOrigin
+](data: Span[UInt8, o], s: SIMD[DType.uint8, BLOCK_SIZE]):
+    var block = to_bytes[input_size=BLOCK_SIZE, output_size=BLOCK_SIZE](s)
+    data.copy_from(Span(block))
 
 
 # FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.

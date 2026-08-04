@@ -1,7 +1,7 @@
 from max.gpu.host import DeviceContext, DeviceBuffer
 from max.gpu.memory import AddressSpace
 from std.gpu import thread_idx, block_idx, barrier
-from std.memory import UnsafePointer, stack_allocation
+from std.memory import stack_allocation
 
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
@@ -101,9 +101,9 @@ struct AesGpu[KEY_SIZE: Int](
 def _cipher[
     NR: Int
 ](
-    in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
-    w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
-    sbox: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    in_out: Pointer[Scalar[DType.uint8], MutAnyOrigin],
+    w: Pointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    sbox: Pointer[Scalar[DType.uint32], ImmutAnyOrigin],
 ):
     var state = stack_allocation[
         BLOCK_SIZE, Scalar[DType.uint8], address_space=AddressSpace.SHARED
@@ -112,7 +112,7 @@ def _cipher[
     var local_i = thread_idx.x
     var global_i = block_idx.x * BLOCK_SIZE + local_i
 
-    state[local_i] = in_out[global_i]
+    state[unsafe_offset=local_i] = in_out[unsafe_offset=global_i]
 
     _add_round_key(local_i, state, 0, w)
     for r in range(1, NR):
@@ -124,16 +124,16 @@ def _cipher[
     _shift_rows(local_i, state)
     _add_round_key(local_i, state, NR, w)
 
-    in_out[global_i] = state[local_i]
+    in_out[unsafe_offset=global_i] = state[unsafe_offset=local_i]
 
 
 # FIPS 197 §5.3 InvCipher()
 def _decipher[
     NR: Int
 ](
-    in_out: UnsafePointer[Scalar[DType.uint8], MutAnyOrigin],
-    w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
-    sbox_inv: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    in_out: Pointer[Scalar[DType.uint8], MutAnyOrigin],
+    w: Pointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    sbox_inv: Pointer[Scalar[DType.uint8], ImmutAnyOrigin],
 ):
     var state = stack_allocation[
         BLOCK_SIZE, Scalar[DType.uint8], address_space=AddressSpace.SHARED
@@ -142,7 +142,7 @@ def _decipher[
     var local_i = thread_idx.x
     var global_i = block_idx.x * BLOCK_SIZE + local_i
 
-    state[local_i] = in_out[global_i]
+    state[unsafe_offset=local_i] = in_out[unsafe_offset=global_i]
 
     _add_round_key(local_i, state, NR, w)
     for r in range(NR - 1, 0, -1):
@@ -154,52 +154,54 @@ def _decipher[
     _inv_sub_bytes(local_i, state, sbox_inv)
     _add_round_key(local_i, state, 0, w)
 
-    in_out[global_i] = state[local_i]
+    in_out[unsafe_offset=global_i] = state[unsafe_offset=local_i]
 
 
 # FIPS 197 §5.1.4 AddRoundKey()
 @always_inline
 def _add_round_key(
     i: Int,
-    state: UnsafePointer[
+    state: Pointer[
         Scalar[DType.uint8],
         MutUntrackedOrigin,
         address_space=AddressSpace.SHARED,
     ],
     round: Int,
-    w: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    w: Pointer[Scalar[DType.uint32], ImmutAnyOrigin],
 ):
     var w_idx = NB * round + i // NB
     var offset = UInt32(24 - (i % NB) * 8)
-    state[i] ^= UInt8(w[w_idx] >> offset)
+    state[unsafe_offset=i] ^= UInt8(w[unsafe_offset=w_idx] >> offset)
 
 
 # FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
 @always_inline
 def _sub_bytes(
     i: Int,
-    state: UnsafePointer[
+    state: Pointer[
         Scalar[DType.uint8],
         MutUntrackedOrigin,
         address_space=AddressSpace.SHARED,
     ],
-    sbox: UnsafePointer[Scalar[DType.uint32], ImmutAnyOrigin],
+    sbox: Pointer[Scalar[DType.uint32], ImmutAnyOrigin],
 ):
-    state[i] = UInt8(sbox[Int(state[i])])
+    state[unsafe_offset=i] = UInt8(
+        sbox[unsafe_offset=Int(state[unsafe_offset=i])]
+    )
 
 
 # FIPS 197 §5.3.2 InvSubBytes() — apply inverse S-box to every byte
 @always_inline
 def _inv_sub_bytes(
     i: Int,
-    state: UnsafePointer[
+    state: Pointer[
         Scalar[DType.uint8],
         MutUntrackedOrigin,
         address_space=AddressSpace.SHARED,
     ],
-    sbox_inv: UnsafePointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    sbox_inv: Pointer[Scalar[DType.uint8], ImmutAnyOrigin],
 ):
-    state[i] = sbox_inv[Int(state[i])]
+    state[unsafe_offset=i] = sbox_inv[unsafe_offset=Int(state[unsafe_offset=i])]
 
 
 # FIPS 197 §5.1.2 ShiftRows() — cyclic left shift of row r by r positions
@@ -208,7 +210,7 @@ def _inv_sub_bytes(
 @always_inline
 def _shift_rows(
     i: Int,
-    state: UnsafePointer[
+    state: Pointer[
         Scalar[DType.uint8],
         MutUntrackedOrigin,
         address_space=AddressSpace.SHARED,
@@ -216,9 +218,9 @@ def _shift_rows(
 ):
     var r = i % NB
     var c = i // NB
-    var tmp = state[r + 4 * ((c + r) % NB)]
+    var tmp = state[unsafe_offset=r + 4 * ((c + r) % NB)]
     barrier()
-    state[i] = tmp
+    state[unsafe_offset=i] = tmp
     barrier()
 
 
@@ -226,7 +228,7 @@ def _shift_rows(
 @always_inline
 def _inv_shift_rows(
     i: Int,
-    state: UnsafePointer[
+    state: Pointer[
         Scalar[DType.uint8],
         MutUntrackedOrigin,
         address_space=AddressSpace.SHARED,
@@ -234,9 +236,9 @@ def _inv_shift_rows(
 ):
     var r = i % NB
     var c = i // NB
-    var tmp = state[r + 4 * ((c - r + NB) % NB)]
+    var tmp = state[unsafe_offset=r + 4 * ((c - r + NB) % NB)]
     barrier()
-    state[i] = tmp
+    state[unsafe_offset=i] = tmp
     barrier()
 
 
@@ -246,7 +248,7 @@ def _inv_shift_rows(
 @always_inline
 def _mix_columns(
     i: Int,
-    state: UnsafePointer[
+    state: Pointer[
         Scalar[DType.uint8],
         MutUntrackedOrigin,
         address_space=AddressSpace.SHARED,
@@ -254,19 +256,27 @@ def _mix_columns(
 ):
     var r = i % NB
     var c = i // NB
-    var s0 = state[4 * c]
-    var s1 = state[1 + 4 * c]
-    var s2 = state[2 + 4 * c]
-    var s3 = state[3 + 4 * c]
+    var s0 = state[unsafe_offset=4 * c]
+    var s1 = state[unsafe_offset=1 + 4 * c]
+    var s2 = state[unsafe_offset=2 + 4 * c]
+    var s3 = state[unsafe_offset=3 + 4 * c]
     barrier()
     if r == 0:
-        state[i] = _multiply(0x02, s0) ^ _multiply(0x03, s1) ^ s2 ^ s3
+        state[unsafe_offset=i] = (
+            _multiply(0x02, s0) ^ _multiply(0x03, s1) ^ s2 ^ s3
+        )
     elif r == 1:
-        state[i] = s0 ^ _multiply(0x02, s1) ^ _multiply(0x03, s2) ^ s3
+        state[unsafe_offset=i] = (
+            s0 ^ _multiply(0x02, s1) ^ _multiply(0x03, s2) ^ s3
+        )
     elif r == 2:
-        state[i] = s0 ^ s1 ^ _multiply(0x02, s2) ^ _multiply(0x03, s3)
+        state[unsafe_offset=i] = (
+            s0 ^ s1 ^ _multiply(0x02, s2) ^ _multiply(0x03, s3)
+        )
     else:
-        state[i] = _multiply(0x03, s0) ^ s1 ^ s2 ^ _multiply(0x02, s3)
+        state[unsafe_offset=i] = (
+            _multiply(0x03, s0) ^ s1 ^ s2 ^ _multiply(0x02, s3)
+        )
     barrier()
 
 
@@ -276,7 +286,7 @@ def _mix_columns(
 @always_inline
 def _inv_mix_columns(
     i: Int,
-    state: UnsafePointer[
+    state: Pointer[
         Scalar[DType.uint8],
         MutUntrackedOrigin,
         address_space=AddressSpace.SHARED,
@@ -284,34 +294,34 @@ def _inv_mix_columns(
 ):
     var r = i % NB
     var c = i // NB
-    var s0 = state[4 * c]
-    var s1 = state[1 + 4 * c]
-    var s2 = state[2 + 4 * c]
-    var s3 = state[3 + 4 * c]
+    var s0 = state[unsafe_offset=4 * c]
+    var s1 = state[unsafe_offset=1 + 4 * c]
+    var s2 = state[unsafe_offset=2 + 4 * c]
+    var s3 = state[unsafe_offset=3 + 4 * c]
     barrier()
     if r == 0:
-        state[i] = (
+        state[unsafe_offset=i] = (
             _multiply(0x0E, s0)
             ^ _multiply(0x0B, s1)
             ^ _multiply(0x0D, s2)
             ^ _multiply(0x09, s3)
         )
     elif r == 1:
-        state[i] = (
+        state[unsafe_offset=i] = (
             _multiply(0x09, s0)
             ^ _multiply(0x0E, s1)
             ^ _multiply(0x0B, s2)
             ^ _multiply(0x0D, s3)
         )
     elif r == 2:
-        state[i] = (
+        state[unsafe_offset=i] = (
             _multiply(0x0D, s0)
             ^ _multiply(0x09, s1)
             ^ _multiply(0x0E, s2)
             ^ _multiply(0x0B, s3)
         )
     else:
-        state[i] = (
+        state[unsafe_offset=i] = (
             _multiply(0x0B, s0)
             ^ _multiply(0x0D, s1)
             ^ _multiply(0x09, s2)
