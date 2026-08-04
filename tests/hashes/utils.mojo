@@ -1,7 +1,7 @@
 from mojo_crypto.utils import target_triple_contains_any, has_target_feature
 from mojo_crypto.hashes.traits import Digest
 
-comptime DigestEngine = Digest & Movable & ImplicitlyDeletable
+comptime DigestEngine = Digest & Movable & Deinitable
 """Bound every SHA-2 backend satisfies, and the one `check` is generic over."""
 
 

@@ -1,3 +1,4 @@
+from std.memory import bitcast
 from std.sys.intrinsics import llvm_intrinsic
 
 from .common import (
@@ -23,4 +24,4 @@ struct _Pmull(Pmull):
         var result = llvm_intrinsic[
             "llvm.aarch64.neon.pmull64", SIMD[DType.uint8, 16]
         ](a, b)
-        return UnsafePointer(to=result).bitcast[UInt64]().load[width=2]()
+        return bitcast[DType.uint64, 2](result)

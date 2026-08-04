@@ -3,7 +3,7 @@ from .field_element import FieldElement
 from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
-struct PolyvalNaive(Copyable, ImplicitlyDeletable, Movable, UniversalHashable):
+struct PolyvalNaive(Copyable, Deinitable, Movable, UniversalHashable):
     """Portable software POLYVAL implementation.
 
     Reference: <https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/backend/soft.rs>
@@ -16,15 +16,15 @@ struct PolyvalNaive(Copyable, ImplicitlyDeletable, Movable, UniversalHashable):
     var _h: FieldElement
     var _y: FieldElement
 
-    def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
-        self._h = FieldElement(h)
+    def __init__(out self, var h: InlineArray[UInt8, Self.KEY_SIZE]):
+        self._h = FieldElement(h^)
         self._y = FieldElement.zeros()
 
-    def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
-        self._y = (self._y + FieldElement(block)) * self._h
+    def update_block(mut self, var block: InlineArray[UInt8, Self.BLOCK_SIZE]):
+        self._y = (self._y + FieldElement(block^)) * self._h
 
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-        return self._y._v
+    def finalize(deinit self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+        return self._y^.into_bytes()
 
     def reset(mut self):
         self._y = FieldElement.zeros()

@@ -7,7 +7,7 @@ comptime BYTES_16K: Int = 16_384
 
 
 def bench_uhash[
-    H: UniversalHashable & ImplicitlyDestructible,
+    H: UniversalHashable & Deinitable,
     prefix: StringLiteral,
 ]() raises:
     var key = InlineArray[UInt8, H.KEY_SIZE](fill=0)
@@ -23,7 +23,7 @@ def bench_uhash[
         @parameter
         def do_hash() raises:
             keep(data.unsafe_ptr())
-            var hash = H(key)
+            var hash = H(key.copy())
             hash.update(Span(data))
             var tag = hash^.finalize()
             keep(tag.unsafe_ptr())

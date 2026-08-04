@@ -12,6 +12,7 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
     BlockCipherDecryptable,
 )
+from mojo_crypto.utils import load_bytes, store_bytes
 from .common import BLOCK_SIZE, SBOX, _check_key_size
 
 
@@ -22,7 +23,7 @@ struct AesX86[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,
-    ImplicitlyDeletable,
+    Deinitable,
     Movable,
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
@@ -104,12 +105,12 @@ def _inv_mix(v: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
 def _cipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], NR + 1]):
-    var s = UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().load[width=2]()
+    var s = load_bytes[DType.uint64, 2](data)
     s ^= rks[0]
     comptime for r in range(1, NR):
         s = _aesenc(s, rks[r])
     s = _aesenclast(s, rks[NR])
-    UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().store(s)
+    store_bytes(data, s)
 
 
 # FIPS 197 §5.3 InvCipher() via AES-NI (equivalent inverse).
@@ -118,12 +119,12 @@ def _cipher[
 def _decipher[
     NR: Int, o: MutOrigin
 ](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint64, 2], NR + 1]):
-    var s = UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().load[width=2]()
+    var s = load_bytes[DType.uint64, 2](data)
     s ^= rks[0]
     comptime for r in range(1, NR):
         s = _aesdec(s, rks[r])
     s = _aesdeclast(s, rks[NR])
-    UnsafePointer(data.unsafe_ptr()).bitcast[UInt64]().store(s)
+    store_bytes(data, s)
 
 
 # FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.
@@ -143,6 +144,11 @@ def _expand_enc_rks[
 ](key: InlineArray[UInt8, KEY_SIZE]) -> InlineArray[
     SIMD[DType.uint64, 2], NR + 1
 ]:
+    # Both tables are comptime values, so materialize them once here rather
+    # than at every lookup inside the loop below.
+    var sbox = materialize[SBOX]()
+    var rcon = materialize[RCON]()
+
     var kb = InlineArray[UInt8, (NR + 1) * 16](uninitialized=True)
     for i in range(KEY_SIZE):
         kb[i] = key[i]
@@ -153,29 +159,27 @@ def _expand_enc_rks[
         var b3 = kb[(wi - 1) * 4 + 3]
         if wi % NK == 0:
             # RotWord: [b0,b1,b2,b3] → [b1,b2,b3,b0]; SubWord; XOR Rcon (MSB only).
-            var t = UInt8(SBOX[b0])
-            b0 = UInt8(SBOX[b1]) ^ RCON[wi // NK - 1]
-            b1 = UInt8(SBOX[b2])
-            b2 = UInt8(SBOX[b3])
+            var t = UInt8(sbox[b0])
+            b0 = UInt8(sbox[b1]) ^ rcon[wi // NK - 1]
+            b1 = UInt8(sbox[b2])
+            b2 = UInt8(sbox[b3])
             b3 = t
         comptime if NK > 6:
             if wi % NK == 4:
-                b0 = UInt8(SBOX[b0])
-                b1 = UInt8(SBOX[b1])
-                b2 = UInt8(SBOX[b2])
-                b3 = UInt8(SBOX[b3])
+                b0 = UInt8(sbox[b0])
+                b1 = UInt8(sbox[b1])
+                b2 = UInt8(sbox[b2])
+                b3 = UInt8(sbox[b3])
         kb[wi * 4] = kb[(wi - NK) * 4] ^ b0
         kb[wi * 4 + 1] = kb[(wi - NK) * 4 + 1] ^ b1
         kb[wi * 4 + 2] = kb[(wi - NK) * 4 + 2] ^ b2
         kb[wi * 4 + 3] = kb[(wi - NK) * 4 + 3] ^ b3
     var rks = InlineArray[SIMD[DType.uint64, 2], NR + 1](uninitialized=True)
     for r in range(NR + 1):
-        rks[r] = (
-            UnsafePointer(kb.unsafe_ptr())
-            .bitcast[UInt64]()
-            .load[width=2](r * 2)
-        )
-    return rks
+        var block = InlineArray[UInt8, 16](uninitialized=True)
+        Span(block).copy_from(Span(kb)[r * 16 : r * 16 + 16])
+        rks[r] = SIMD[DType.uint64, 2].from_bytes(block)
+    return rks^
 
 
 # Convert encrypt round keys to the equivalent-inverse schedule for _decipher().
@@ -190,4 +194,4 @@ def _dec_from_enc_rks[
     comptime for r in range(1, NR):
         rks[r] = _inv_mix(enc_rks[NR - r])
     rks[NR] = enc_rks[0]
-    return rks
+    return rks^

@@ -95,7 +95,7 @@ def _compress(
 def _round[
     first: Int
 ](w: Words, mut x: Words, y: Words, mut z: Words, schedule: Words):
-    var initial_sum = schedule + Words(K64[first], K64[first + 1])
+    var initial_sum = schedule + comptime (Words(K64[first], K64[first + 1]))
     var sum = _ext(initial_sum, initial_sum) + z
     var intermed = _sha512h(sum, _ext(y, z), _ext(x, y))
     z = _sha512h2(intermed, x, w)

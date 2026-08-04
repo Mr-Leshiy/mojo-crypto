@@ -22,7 +22,7 @@
 
 from std.sys.info import is_64bit
 
-from mojo_crypto.utils import hex_encode
+from mojo_crypto.utils import hex_encode, to_bytes
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 from mojo_crypto.universal_hashes.polyval.field_element.mul64 import (
     _karatsuba_mul64,
@@ -32,9 +32,7 @@ from mojo_crypto.universal_hashes.polyval.field_element.mul32 import (
 )
 
 
-struct FieldElement(
-    Copyable, Equatable, ImplicitlyDeletable, Movable, Writable
-):
+struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
     """An element in POLYVAL's field.
 
     This type represents an element of the binary field GF(2^128) modulo the irreducible polynomial
@@ -50,8 +48,12 @@ struct FieldElement(
 
     var _v: InlineArray[UInt8, BLOCK_SIZE]
 
-    def __init__(out self, v: InlineArray[UInt8, BLOCK_SIZE]):
-        self._v = v
+    def __init__(out self, var v: InlineArray[UInt8, BLOCK_SIZE]):
+        self._v = v^
+
+    def __init__(out self, v: SIMD[DType.uint64, 2]):
+        """Build an element from two 64-bit limbs (low limb first)."""
+        self._v = to_bytes[input_size=2, output_size=BLOCK_SIZE](v)
 
     @staticmethod
     def zeros() -> Self:
@@ -64,15 +66,12 @@ struct FieldElement(
         In POLYVAL's field, addition is the equivalent operation to XOR.
         """
 
-        var a: SIMD[DType.uint8, BLOCK_SIZE] = UnsafePointer(
-            self._v.unsafe_ptr()
-        ).load[width=BLOCK_SIZE]()
-        var b: SIMD[DType.uint8, BLOCK_SIZE] = UnsafePointer(
-            rhs._v.unsafe_ptr()
-        ).load[width=BLOCK_SIZE]()
-        var c = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        UnsafePointer(c.unsafe_ptr()).store(a ^ b)
-        return Self(c^)
+        var a = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(self._v)
+        var b = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(rhs._v)
+
+        return Self(
+            to_bytes[input_size=BLOCK_SIZE, output_size=BLOCK_SIZE](a ^ b)
+        )
 
     def __mul__(self, rhs: Self) -> Self:
         """Multiply two POLYVAL field elements mod `x^128 + x^127 + x^126 + x^121 + 1`.
@@ -88,10 +87,15 @@ struct FieldElement(
     def __imul__(mut self, rhs: Self):
         self = self * rhs
 
+    def into_bytes(deinit self) -> InlineArray[UInt8, BLOCK_SIZE]:
+        """Consume the element and return its BLOCK_SIZE-byte representation.
+
+        Takes `deinit self`, not `var self`: transferring `_v` out dismantles
+        the element, which is only permitted when the callee also takes over
+        responsibility for destroying it.
+        """
+        return self._v^
+
     def write_to(self, mut writer: Some[Writer]):
-        var hex = hex_encode(
-            Span[UInt8, origin_of(self._v)](
-                unsafe_ptr=self._v.unsafe_ptr(), length=BLOCK_SIZE
-            )
-        )
+        var hex = hex_encode(Span(self._v))
         writer.write(hex)

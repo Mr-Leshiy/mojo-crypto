@@ -13,8 +13,9 @@
 # The 128×128 multiplication is decomposed into 9 × 32×32 sub-products via
 # Karatsuba; with the bit-reversal twin we perform 18 × 32-bit bmul calls.
 
-from std.sys.intrinsics import llvm_intrinsic
+from std.bit import bit_reverse
 
+from mojo_crypto.utils import to_bytes
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
 
@@ -46,19 +47,14 @@ def _bmul32(x: UInt32, y: UInt32) -> UInt32:
     return (z0 & m0) | (z1 & m1) | (z2 & m2) | (z3 & m3)
 
 
-@always_inline
-def _rev32(x: UInt32) -> UInt32:
-    return llvm_intrinsic["llvm.bitreverse.i32", UInt32](x)
-
-
 struct Product32(Copyable, Movable):
     """Unreduced 256-bit carryless product stored as eight 32-bit limbs (lo … hi).
     """
 
     var _zw: InlineArray[UInt32, 8]
 
-    def __init__(out self, zw: InlineArray[UInt32, 8]):
-        self._zw = zw
+    def __init__(out self, var zw: InlineArray[UInt32, 8]):
+        self._zw = zw^
 
     def mont_reduce(self) -> InlineArray[UInt8, BLOCK_SIZE]:
         """Reduce mod `x^128 + x^127 + x^126 + x^121 + 1` using shift/XOR folding.
@@ -67,7 +63,7 @@ struct Product32(Copyable, Movable):
         zw[3] is updated in i=0 and read back as `lw` in i=3 — the sequential
         dependency is load-bearing, so the loop is unrolled.
         """
-        var zw = self._zw
+        var zw = self._zw.copy()
         # i=0
         var lw = zw[0]
         zw[4] = zw[4] ^ lw ^ (lw >> 1) ^ (lw >> 2) ^ (lw >> 7)
@@ -84,13 +80,10 @@ struct Product32(Copyable, Movable):
         lw = zw[3]
         zw[7] = zw[7] ^ lw ^ (lw >> 1) ^ (lw >> 2) ^ (lw >> 7)
         zw[6] = zw[6] ^ ((lw << 31) ^ (lw << 30) ^ (lw << 25))
-        var result = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        var out = UnsafePointer(result.unsafe_ptr()).bitcast[UInt32]()
-        out.store(0, zw[4])
-        out.store(1, zw[5])
-        out.store(2, zw[6])
-        out.store(3, zw[7])
-        return result^
+
+        return to_bytes[input_size=4, output_size=BLOCK_SIZE](
+            SIMD[DType.uint32, 4](zw[4], zw[5], zw[6], zw[7])
+        )
 
 
 def _karatsuba_mul32(
@@ -101,37 +94,26 @@ def _karatsuba_mul32(
     Decomposes the 128×128 multiply into 9 × 32×32 Karatsuba sub-products;
     with the bit-reversal trick for the high half, 18 × _bmul32 calls total.
     """
-    var ap = UnsafePointer(a.unsafe_ptr()).bitcast[UInt32]()
-    var yw0 = ap.load(0)
-    var yw1 = ap.load(1)
-    var yw2 = ap.load(2)
-    var yw3 = ap.load(3)
 
-    var bp = UnsafePointer(b.unsafe_ptr()).bitcast[UInt32]()
-    var hw0 = bp.load(0)
-    var hw1 = bp.load(1)
-    var hw2 = bp.load(2)
-    var hw3 = bp.load(3)
+    var yw = SIMD[DType.uint32, 4].from_bytes(a)
+    var hw = SIMD[DType.uint32, 4].from_bytes(b)
 
-    var hwr0 = _rev32(hw0)
-    var hwr1 = _rev32(hw1)
-    var hwr2 = _rev32(hw2)
-    var hwr3 = _rev32(hw3)
+    var hwr = bit_reverse(hw)
 
     # Karatsuba decomposition for a (yw limbs)
-    var a0 = yw0
-    var a1 = yw1
-    var a2 = yw2
-    var a3 = yw3
+    var a0 = yw[0]
+    var a1 = yw[1]
+    var a2 = yw[2]
+    var a3 = yw[3]
     var a4 = a0 ^ a1
     var a5 = a2 ^ a3
     var a6 = a0 ^ a2
     var a7 = a1 ^ a3
     var a8 = a6 ^ a7
-    var a9 = _rev32(yw0)
-    var a10 = _rev32(yw1)
-    var a11 = _rev32(yw2)
-    var a12 = _rev32(yw3)
+    var a9 = bit_reverse(yw[0])
+    var a10 = bit_reverse(yw[1])
+    var a11 = bit_reverse(yw[2])
+    var a12 = bit_reverse(yw[3])
     var a13 = a9 ^ a10
     var a14 = a11 ^ a12
     var a15 = a9 ^ a11
@@ -139,19 +121,19 @@ def _karatsuba_mul32(
     var a17 = a15 ^ a16
 
     # Karatsuba decomposition for b (hw limbs)
-    var b0 = hw0
-    var b1 = hw1
-    var b2 = hw2
-    var b3 = hw3
+    var b0 = hw[0]
+    var b1 = hw[1]
+    var b2 = hw[2]
+    var b3 = hw[3]
     var b4 = b0 ^ b1
     var b5 = b2 ^ b3
     var b6 = b0 ^ b2
     var b7 = b1 ^ b3
     var b8 = b6 ^ b7
-    var b9 = hwr0
-    var b10 = hwr1
-    var b11 = hwr2
-    var b12 = hwr3
+    var b9 = hwr[0]
+    var b10 = hwr[1]
+    var b11 = hwr[2]
+    var b12 = hwr[3]
     var b13 = b9 ^ b10
     var b14 = b11 ^ b12
     var b15 = b9 ^ b11
@@ -190,11 +172,11 @@ def _karatsuba_mul32(
 
     var zw = InlineArray[UInt32, 8](uninitialized=True)
     zw[0] = c0
-    zw[1] = c4 ^ (_rev32(c9) >> 1)
-    zw[2] = c1 ^ c0 ^ c2 ^ c6 ^ (_rev32(c13) >> 1)
-    zw[3] = c4 ^ c5 ^ c8 ^ (_rev32(c10 ^ c9 ^ c11 ^ c15) >> 1)
-    zw[4] = c2 ^ c1 ^ c3 ^ c7 ^ (_rev32(c13 ^ c14 ^ c17) >> 1)
-    zw[5] = c5 ^ (_rev32(c11 ^ c10 ^ c12 ^ c16) >> 1)
-    zw[6] = c3 ^ (_rev32(c14) >> 1)
-    zw[7] = _rev32(c12) >> 1
-    return Product32(zw)
+    zw[1] = c4 ^ (bit_reverse(c9) >> 1)
+    zw[2] = c1 ^ c0 ^ c2 ^ c6 ^ (bit_reverse(c13) >> 1)
+    zw[3] = c4 ^ c5 ^ c8 ^ (bit_reverse(c10 ^ c9 ^ c11 ^ c15) >> 1)
+    zw[4] = c2 ^ c1 ^ c3 ^ c7 ^ (bit_reverse(c13 ^ c14 ^ c17) >> 1)
+    zw[5] = c5 ^ (bit_reverse(c11 ^ c10 ^ c12 ^ c16) >> 1)
+    zw[6] = c3 ^ (bit_reverse(c14) >> 1)
+    zw[7] = bit_reverse(c12) >> 1
+    return Product32(zw^)

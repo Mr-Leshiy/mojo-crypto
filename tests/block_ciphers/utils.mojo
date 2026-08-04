@@ -1,7 +1,7 @@
 from std.sys import has_accelerator
-from std.gpu.host import DeviceContext
+from max.gpu.host import DeviceContext
 
-from mojo_crypto.utils import target_triple_contains_any
+from mojo_crypto.utils import target_triple_contains_any, has_target_feature
 from mojo_crypto.block_ciphers.aes import (
     AesNaive,
     AesAarch64,
@@ -14,10 +14,7 @@ from mojo_crypto.block_ciphers.traits import (
 )
 
 comptime BlockCipherEngine = (
-    BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & ImplicitlyDeletable
+    BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable
 )
 
 
@@ -43,7 +40,9 @@ def run_aes_checks[
             check[aes_gpu[24]](input)
             check[aes_gpu[32]](input)
 
-    comptime if target_triple_contains_any(["aarch64", "arm64"]):
+    comptime if target_triple_contains_any(
+        ["aarch64", "arm64"]
+    ) and has_target_feature["aes"]():
 
         @parameter
         def aes_aarch64[
@@ -55,7 +54,9 @@ def run_aes_checks[
         check[aes_aarch64[24]](input)
         check[aes_aarch64[32]](input)
 
-    comptime if target_triple_contains_any(["x86_64"]):
+    comptime if target_triple_contains_any(["x86_64"]) and has_target_feature[
+        "aes"
+    ]():
 
         @parameter
         def aes_x86[

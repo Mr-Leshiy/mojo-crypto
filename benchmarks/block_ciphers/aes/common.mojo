@@ -11,7 +11,7 @@ comptime BLOCKS_16K: Int = 16_384
 
 
 def bench_cipher[
-    C: BlockCipherEncryptable & BlockCipherDecryptable & ImplicitlyDestructible,
+    C: BlockCipherEncryptable & BlockCipherDecryptable & Deinitable,
     KeySize: Int,
     cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
     prefix: StringLiteral,

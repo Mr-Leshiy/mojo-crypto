@@ -1,5 +1,5 @@
 @fieldwise_init
-struct AuthenticationError(ImplicitlyDeletable, Writable):
+struct AuthenticationError(Deinitable, Writable):
     """Raised when AEAD tag verification fails during decryption."""
 
     def write_to(self, mut writer: Some[Writer]):

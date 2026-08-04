@@ -9,12 +9,12 @@ struct CbcMode[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & ImplicitlyDeletable
+    & Deinitable
 ](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,
-    ImplicitlyDeletable,
+    Deinitable,
     Movable,
 ):
     """CBC block cipher mode of operation.
@@ -31,10 +31,10 @@ struct CbcMode[
     def __init__(
         out self,
         var cipher: Self.Cipher,
-        iv: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE],
+        var iv: InlineArray[UInt8, Self.Cipher.BLOCK_SIZE],
     ):
         self._cipher = cipher^
-        self._iv = iv
+        self._iv = iv^
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
@@ -42,6 +42,7 @@ struct CbcMode[
         for i in range(num_blocks):
             var offset = i * Self.BLOCK_SIZE
             for j in range(Self.BLOCK_SIZE):
+                # TODO: revise to use SIMD
                 data[offset + j] ^= self._iv[j]
             self._cipher.encrypt(data[offset : offset + Self.BLOCK_SIZE])
             for j in range(Self.BLOCK_SIZE):

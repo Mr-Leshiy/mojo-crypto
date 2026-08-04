@@ -1,6 +1,6 @@
 from std.bit import byte_swap
-from std.memory import unsafe_memcpy
 
+from mojo_crypto.utils import load_bytes, store_bytes
 from mojo_crypto.aead.traits import AeadDecryptable, AeadEncryptable
 from mojo_crypto.aead.errors import AuthenticationError
 from mojo_crypto.block_ciphers.traits import (
@@ -15,14 +15,14 @@ struct Gcm[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & ImplicitlyDeletable,
-    G: UniversalHashable & Copyable & ImplicitlyDeletable,
+    & Deinitable,
+    G: UniversalHashable & Copyable & Deinitable,
     NONCE_SIZE: Int,
 ](
     AeadDecryptable,
     AeadEncryptable,
     Copyable,
-    ImplicitlyDeletable,
+    Deinitable,
     Movable,
 ):
     """
@@ -56,9 +56,9 @@ struct Gcm[
 
         cipher.encrypt(ghash_key)
 
-        self._ghash = Self.G(ghash_key)
+        self._ghash = Self.G(ghash_key^)
         self._cipher = cipher^
-        self._nonce = nonce
+        self._nonce = nonce.copy()
 
     @staticmethod
     def _assert_valid_params():
@@ -134,13 +134,8 @@ struct Gcm[
         #   - Brute-force one byte at a time (256 tries each) instead of 2^128,
         #     making tag forgery feasible.
         #
-        # alignment=1 because the InlineArray[UInt8] bases may be unaligned.
-        var e = UnsafePointer(expected_tag.unsafe_ptr()).load[
-            width=TAG_SIZE, alignment=1
-        ]()
-        var t = UnsafePointer(tag.unsafe_ptr()).load[
-            width=TAG_SIZE, alignment=1
-        ]()
+        var e = load_bytes[DType.uint8, TAG_SIZE](Span(expected_tag))
+        var t = load_bytes[DType.uint8, TAG_SIZE](Span(tag))
         if (e ^ t).reduce_or() != 0:
             raise AuthenticationError()
 
@@ -172,11 +167,7 @@ struct Gcm[
 
         comptime if Self.NONCE_SIZE == 12:
             # J0 = IV || 0^31 || 1
-            unsafe_memcpy(
-                dest=j0.unsafe_ptr(),
-                src=self._nonce.unsafe_ptr(),
-                count=Self.NONCE_SIZE,
-            )
+            Span(j0)[: Self.NONCE_SIZE].copy_from(Span(self._nonce))
             j0[Self.BLOCK_SIZE - 1] = 1
         else:
             comptime BE_NONCE_BITS: UInt64 = byte_swap(
@@ -191,14 +182,15 @@ struct Gcm[
             var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
             # Write nonce_bits as 8 big-endian bytes into the last 8 bytes of the
             # block: byte_swap turns the native little-endian u64 into big-endian,
-            # then store it as a u64 over those bytes. alignment=1 because the
-            # InlineArray[UInt8] base is not guaranteed to be 8-byte aligned.
-            (
-                UnsafePointer(length_block.unsafe_ptr()) + Self.G.BLOCK_SIZE - 8
-            ).bitcast[UInt64]().store[alignment=1](BE_NONCE_BITS)
-            ghash.update_block(length_block)
+            # then store it as a u64 over those bytes.
+            store_bytes(
+                Span(length_block)[Self.G.BLOCK_SIZE - 8 :], BE_NONCE_BITS
+            )
+            ghash.update_block(length_block^)
 
-            j0 = rebind[InlineArray[UInt8, Self.BLOCK_SIZE]](ghash^.finalize())
+            j0 = rebind_var[InlineArray[UInt8, Self.BLOCK_SIZE]](
+                ghash^.finalize()
+            )
 
         # CtrMode starts at J0; consuming the first keystream block yields the
         # tag mask E(J0) and advances the counter to inc32(J0) for the data.
@@ -206,7 +198,7 @@ struct Gcm[
         tag_mask = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
         ctr.encrypt(tag_mask)
 
-        return (ctr^, tag_mask)
+        return (ctr^, tag_mask^)
 
     def _compute_tag[
         TAG_SIZE: Int, aad_o: Origin, data_o: Origin
@@ -233,37 +225,23 @@ struct Gcm[
 
         # Final block: [len(aad)]_64 || [len(data)]_64, both big-endian bit
         # counts. byte_swap converts the native little-endian u64 to big-endian
-        # before the store; alignment=1 because the InlineArray[UInt8] base may
-        # be unaligned.
+        # before the store.
         var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
         var aad_bits = UInt64(len(aad)) * 8
         var data_bits = UInt64(len(data)) * 8
-        UnsafePointer(length_block.unsafe_ptr()).bitcast[UInt64]().store[
-            alignment=1
-        ](byte_swap(aad_bits))
-        (UnsafePointer(length_block.unsafe_ptr()) + 8).bitcast[UInt64]().store[
-            alignment=1
-        ](byte_swap(data_bits))
-        ghash.update_block(length_block)
+        store_bytes(Span(length_block)[:8], byte_swap(aad_bits))
+        store_bytes(Span(length_block)[8:], byte_swap(data_bits))
+        ghash.update_block(length_block^)
 
-        var full_tag = rebind[InlineArray[UInt8, Self.BLOCK_SIZE]](
+        var full_tag = rebind_var[InlineArray[UInt8, Self.BLOCK_SIZE]](
             ghash^.finalize()
         )
-        # full_tag ^= mask, one SIMD lane per byte. alignment=1 because the
-        # InlineArray[UInt8] bases are not guaranteed to be 16-byte aligned.
-        var t = UnsafePointer(full_tag.unsafe_ptr()).load[
-            width=Self.BLOCK_SIZE, alignment=1
-        ]()
-        var m = UnsafePointer(mask.unsafe_ptr()).load[
-            width=Self.BLOCK_SIZE, alignment=1
-        ]()
-        UnsafePointer(full_tag.unsafe_ptr()).store[alignment=1](t ^ m)
+        # full_tag ^= mask, one SIMD lane per byte.
+        var t = load_bytes[DType.uint8, Self.BLOCK_SIZE](Span(full_tag))
+        var m = load_bytes[DType.uint8, Self.BLOCK_SIZE](Span(mask))
+        store_bytes(Span(full_tag), t ^ m)
 
         # GCM permits a truncated tag: return the leading TAG_SIZE bytes.
         var tag = InlineArray[UInt8, TAG_SIZE](uninitialized=True)
-        unsafe_memcpy(
-            dest=tag.unsafe_ptr(),
-            src=full_tag.unsafe_ptr(),
-            count=TAG_SIZE,
-        )
+        Span(tag).copy_from(Span(full_tag)[:TAG_SIZE])
         return tag^

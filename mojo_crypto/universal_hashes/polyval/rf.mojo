@@ -22,9 +22,7 @@ trait Pmull:
         ...
 
 
-struct _PolyvalRf[P: Pmull](
-    Copyable, ImplicitlyDeletable, Movable, UniversalHashable
-):
+struct _PolyvalRf[P: Pmull](Copyable, Deinitable, Movable, UniversalHashable):
     """Optimized POLYVAL implementation using the R/F algorithm.
 
     Adapted from the implementation in the Apache 2.0 + MIT-licensed HPCrypt
@@ -61,19 +59,19 @@ struct _PolyvalRf[P: Pmull](
 
     def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
         """Absorb one block into the accumulator: y = (y ⊕ block) × H."""
-        data = _load_bytes(block)
-        y = _load_bytes(self._y._v)
-        h1 = _load_bytes(self._h.h1._v)
-        d1 = _load_bytes(self._h.d1._v)
+        data = SIMD[DType.uint64, 2].from_bytes(block)
+        y = SIMD[DType.uint64, 2].from_bytes(self._y._v)
+        h1 = SIMD[DType.uint64, 2].from_bytes(self._h.h1._v)
+        d1 = SIMD[DType.uint64, 2].from_bytes(self._h.d1._v)
 
         # XOR with accumulator
         acc = y ^ data
 
         # Multiply by H using R/F algorithm
-        self._y = FieldElement(_store_bytes(_gf128_mul_rf[Self.P](acc, h1, d1)))
+        self._y = FieldElement(_gf128_mul_rf[Self.P](acc, h1, d1))
 
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-        return self._y._v
+    def finalize(deinit self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+        return self._y^.into_bytes()
 
     def reset(mut self):
         self._y = FieldElement.zeros()
@@ -85,7 +83,7 @@ comptime P1: UInt64 = 0xC200_0000_0000_0000
 
 @fieldwise_init
 struct ExpandedKey[P: Pmull](
-    Copyable, Equatable, ImplicitlyDeletable, Movable, Writable
+    Copyable, Deinitable, Equatable, Movable, Writable
 ):
     """Precomputed key material for POLYVAL using the R/F algorithm.
 
@@ -115,7 +113,7 @@ struct ExpandedKey[P: Pmull](
     var d4: FieldElement
 
     def __init__(out self, h: InlineArray[UInt8, KEY_SIZE]):
-        h1 = _load_bytes(h)
+        h1 = SIMD[DType.uint64, 2].from_bytes(h)
         d1 = _compute_d[Self.P](h1)
 
         h2 = _gf128_mul_rf[Self.P](h1, h1, d1)
@@ -127,14 +125,14 @@ struct ExpandedKey[P: Pmull](
         h4 = _gf128_mul_rf[Self.P](h2, h2, d2)
         d4 = _compute_d[Self.P](h4)
 
-        self.h1 = FieldElement(_store_bytes(h1))
-        self.d1 = FieldElement(_store_bytes(d1))
-        self.h2 = FieldElement(_store_bytes(h2))
-        self.d2 = FieldElement(_store_bytes(d2))
-        self.h3 = FieldElement(_store_bytes(h3))
-        self.d3 = FieldElement(_store_bytes(d3))
-        self.h4 = FieldElement(_store_bytes(h4))
-        self.d4 = FieldElement(_store_bytes(d4))
+        self.h1 = FieldElement(h1)
+        self.d1 = FieldElement(d1)
+        self.h2 = FieldElement(h2)
+        self.d2 = FieldElement(d2)
+        self.h3 = FieldElement(h3)
+        self.d3 = FieldElement(d3)
+        self.h4 = FieldElement(h4)
+        self.d4 = FieldElement(d4)
 
     @staticmethod
     def zeros() -> Self:
@@ -148,20 +146,6 @@ struct ExpandedKey[P: Pmull](
             h4=FieldElement.zeros(),
             d4=FieldElement.zeros(),
         )
-
-
-@always_inline
-def _load_bytes(bytes: InlineArray[UInt8, 16]) -> SIMD[DType.uint64, 2]:
-    """Load 16 bytes as two 64-bit lanes."""
-    return UnsafePointer(bytes.unsafe_ptr()).bitcast[UInt64]().load[width=2]()
-
-
-@always_inline
-def _store_bytes(reg: SIMD[DType.uint64, 2]) -> InlineArray[UInt8, 16]:
-    """Store two 64-bit lanes back into 16 bytes."""
-    out = InlineArray[UInt8, 16](uninitialized=True)
-    UnsafePointer(out.unsafe_ptr()).bitcast[UInt64]().store(reg)
-    return out^
 
 
 @always_inline

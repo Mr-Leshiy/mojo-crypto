@@ -76,8 +76,8 @@ def _compress(
 # the new `cdgh`, hence the rotate rather than a plain assignment.
 @always_inline
 def _rounds[first: Int](mut abef: Words, mut cdgh: Words, schedule: Words):
-    var wk = schedule + Words(
-        K32[first], K32[first + 1], K32[first + 2], K32[first + 3]
+    var wk = schedule + comptime (
+        Words(K32[first], K32[first + 1], K32[first + 2], K32[first + 3])
     )
     abef, cdgh = _sha256rnds2(cdgh, abef, wk), abef
 

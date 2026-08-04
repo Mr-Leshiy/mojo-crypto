@@ -10,7 +10,9 @@
 # `x^128 + x^127 + x^126 + x^121 + 1` (the POLYVAL irreducible polynomial).
 
 from std.sys.intrinsics import llvm_intrinsic
+from std.bit import bit_reverse
 
+from mojo_crypto.utils import to_bytes
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
 
@@ -55,25 +57,26 @@ struct Product64(Copyable, Movable):
 
     var _zw: InlineArray[UInt64, 4]
 
-    def __init__(out self, zw: InlineArray[UInt64, 4]):
-        self._zw = zw
+    def __init__(out self, var zw: InlineArray[UInt64, 4]):
+        self._zw = zw^
 
     def mont_reduce(self) -> InlineArray[UInt8, BLOCK_SIZE]:
         """Reduce mod `x^128 + x^127 + x^126 + x^121 + 1` using shift/XOR folding.
         """
+
         var v0 = self._zw[0]
         var v1 = self._zw[1]
         var v2 = self._zw[2]
         var v3 = self._zw[3]
+
         v2 ^= v0 ^ (v0 >> 1) ^ (v0 >> 2) ^ (v0 >> 7)
         v1 ^= (v0 << 63) ^ (v0 << 62) ^ (v0 << 57)
         v3 ^= v1 ^ (v1 >> 1) ^ (v1 >> 2) ^ (v1 >> 7)
         v2 ^= (v1 << 63) ^ (v1 << 62) ^ (v1 << 57)
-        var result = InlineArray[UInt8, BLOCK_SIZE](uninitialized=True)
-        var out = UnsafePointer(result.unsafe_ptr()).bitcast[UInt64]()
-        out.store(0, v2)
-        out.store(1, v3)
-        return result^
+
+        return to_bytes[input_size=2, output_size=BLOCK_SIZE](
+            SIMD[DType.uint64, 2](v2, v3)
+        )
 
 
 def _karatsuba_mul64(
@@ -84,28 +87,24 @@ def _karatsuba_mul64(
     Uses a Karatsuba decomposition that reduces three 64×64 carryless
     multiplications together with bit-reversal to recover the high half.
     """
-    var ap = UnsafePointer(a.unsafe_ptr()).bitcast[UInt64]()
-    var h0 = ap.load(0)
-    var h1 = ap.load(1)
-    var h0r = _rev64(h0)
-    var h1r = _rev64(h1)
-    var h2 = h0 ^ h1
-    var h2r = h0r ^ h1r
 
-    var bp = UnsafePointer(b.unsafe_ptr()).bitcast[UInt64]()
-    var y0 = bp.load(0)
-    var y1 = bp.load(1)
-    var y0r = _rev64(y0)
-    var y1r = _rev64(y1)
-    var y2 = y0 ^ y1
-    var y2r = y0r ^ y1r
+    var h = SIMD[DType.uint64, 2].from_bytes(a)
+    var hr = bit_reverse(h)
+    var h2 = h[0] ^ h[1]
+    var hr2 = hr[0] ^ hr[1]
 
-    var z0 = _bmul64(y0, h0)
-    var z1 = _bmul64(y1, h1)
+    var y = SIMD[DType.uint64, 2].from_bytes(b)
+    var yr = bit_reverse(y)
+    var y2 = y[0] ^ y[1]
+    var yr2 = yr[0] ^ yr[1]
+
+    var z0 = _bmul64(y[0], h[0])
+    var z1 = _bmul64(y[1], h[1])
     var z2 = _bmul64(y2, h2)
-    var z0h = _bmul64(y0r, h0r)
-    var z1h = _bmul64(y1r, h1r)
-    var z2h = _bmul64(y2r, h2r)
+
+    var z0h = _bmul64(yr[0], hr[0])
+    var z1h = _bmul64(yr[1], hr[1])
+    var z2h = _bmul64(yr2, hr2)
 
     z2 ^= z0 ^ z1
     z2h ^= z0h ^ z1h
@@ -118,4 +117,4 @@ def _karatsuba_mul64(
     zw[1] = z0h ^ z2
     zw[2] = z1 ^ z2h
     zw[3] = z1h
-    return Product64(zw)
+    return Product64(zw^)
