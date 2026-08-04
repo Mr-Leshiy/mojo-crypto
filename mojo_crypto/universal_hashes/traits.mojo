@@ -1,5 +1,3 @@
-from std.memory import unsafe_memcpy
-
 from .errors import UhashSizeError
 
 
@@ -52,11 +50,7 @@ trait UniversalHashable:
         self.update(data[:n_full])
         if tail_len > 0:
             var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
-            unsafe_memcpy(
-                dest=padded.unsafe_ptr(),
-                src=data[n_full:].unsafe_ptr(),
-                count=tail_len,
-            )
+            Span(padded)[:tail_len].copy_from(data[n_full:])
             self.update_block(padded^)
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:

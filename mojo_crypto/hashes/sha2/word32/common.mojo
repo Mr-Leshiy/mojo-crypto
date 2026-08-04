@@ -1,4 +1,3 @@
-from std.memory import unsafe_memcpy
 from std.math import min
 
 from mojo_crypto.hashes.traits import Digest
@@ -105,12 +104,7 @@ struct _Sha2Word32[
         # before deciding whether it is now full.
         if self._buffer_len > 0:
             var take = min(Self.BLOCK_SIZE - self._buffer_len, len(input))
-            unsafe_memcpy(
-                dest=UnsafePointer(self._buffer.unsafe_ptr())
-                + self._buffer_len,
-                src=input.unsafe_ptr(),
-                count=take,
-            )
+            self._buffer_span(take).copy_from(input[:take])
             self._buffer_len += take
             input = input[take:]
             if self._buffer_len == Self.BLOCK_SIZE:
@@ -119,22 +113,18 @@ struct _Sha2Word32[
 
         while len(input) >= Self.BLOCK_SIZE:
             var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
-            unsafe_memcpy(
-                dest=block.unsafe_ptr(),
-                src=input.unsafe_ptr(),
-                count=Self.BLOCK_SIZE,
-            )
+            Span(block).copy_from(input[: Self.BLOCK_SIZE])
             Self.compress(self._state, block)
             input = input[Self.BLOCK_SIZE :]
 
         if len(input) > 0:
-            unsafe_memcpy(
-                dest=UnsafePointer(self._buffer.unsafe_ptr())
-                + self._buffer_len,
-                src=input.unsafe_ptr(),
-                count=len(input),
-            )
+            self._buffer_span(len(input)).copy_from(input)
             self._buffer_len += len(input)
+
+    @always_inline
+    def _buffer_span(mut self, count: Int) -> Span[UInt8, origin_of(self._buffer)]:
+        """The `count` free buffer bytes starting at the buffered prefix."""
+        return Span(self._buffer)[self._buffer_len : self._buffer_len + count]
 
     def finalize(var self) -> InlineArray[UInt8, Self.OUTPUT_SIZE]:
         """Consume self and return the OUTPUT_SIZE-byte digest."""

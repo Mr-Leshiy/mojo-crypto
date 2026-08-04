@@ -1,4 +1,3 @@
-from std.memory import unsafe_memcpy
 from std.math import min
 
 from mojo_crypto.hashes.traits import Digest
