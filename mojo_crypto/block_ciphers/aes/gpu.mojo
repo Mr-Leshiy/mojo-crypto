@@ -1,5 +1,5 @@
-from std.gpu.host import DeviceContext, DeviceBuffer
-from std.gpu.memory import AddressSpace
+from max.gpu.host import DeviceContext, DeviceBuffer
+from max.gpu.memory import AddressSpace
 from std.gpu import thread_idx, block_idx, barrier
 from std.memory import UnsafePointer, stack_allocation
 
@@ -40,11 +40,19 @@ struct AesGpu[KEY_SIZE: Int](
         self.w = ctx.enqueue_create_buffer[DType.uint32](Self.WORDS_SIZE)
         self.w.enqueue_copy_from(w)
 
+        # Both tables are comptime values; materialize them so the upload has
+        # a runtime buffer to read from.
+        var sbox = materialize[SBOX]()
         self.sbox = ctx.enqueue_create_buffer[DType.uint32](256)
-        self.sbox.enqueue_copy_from(SBOX.unsafe_ptr())
+        self.sbox.enqueue_copy_from(sbox.unsafe_ptr())
 
+        var sbox_inv = materialize[SBOX_INV]()
         self.sbox_inv = ctx.enqueue_create_buffer[DType.uint8](256)
-        self.sbox_inv.enqueue_copy_from(SBOX_INV.unsafe_ptr())
+        self.sbox_inv.enqueue_copy_from(sbox_inv.unsafe_ptr())
+
+        # The three uploads above all read from locals of this function, so
+        # they have to land before it returns and those locals die.
+        ctx.synchronize()
 
     def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))

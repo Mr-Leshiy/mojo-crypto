@@ -1,4 +1,4 @@
-from std.gpu.host import DeviceContext
+from max.gpu.host import DeviceContext
 
 from mojo_crypto.block_ciphers.aes import (
     AesGpu,
