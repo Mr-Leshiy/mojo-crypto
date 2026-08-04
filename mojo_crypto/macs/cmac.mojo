@@ -1,8 +1,8 @@
-from std.memory import unsafe_memcpy
 from std.math import min
 
 from mojo_crypto.block_ciphers.traits import BlockCipherEncryptable
 from mojo_crypto.macs.traits import Mac
+from mojo_crypto.utils import to_bytes
 
 
 struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
@@ -54,12 +54,13 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
         mut self, block: SIMD[DType.uint8, Self.BLOCK_SIZE]
     ) raises:
         self._state ^= block
-        self._cipher.encrypt(
-            Span[UInt8, origin_of(self._state)](
-                unsafe_ptr=UnsafePointer(to=self._state).bitcast[UInt8](),
-                length=Self.BLOCK_SIZE,
-            )
-        )
+        # The cipher works on bytes, so the state goes through a byte array
+        # and back rather than the vector's storage being aliased as one.
+        var state_bytes = to_bytes[
+            input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
+        ](self._state)
+        self._cipher.encrypt(state_bytes)
+        self._state = SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(state_bytes)
 
     def update[o: Origin](mut self, data: Span[UInt8, o]) raises:
         """Absorb more input."""
@@ -75,12 +76,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
             var take = min(
                 Self.BLOCK_SIZE - self._last_message_block_len, len(input)
             )
-            unsafe_memcpy(
-                dest=UnsafePointer(self._last_message_block.unsafe_ptr())
-                + self._last_message_block_len,
-                src=input.unsafe_ptr(),
-                count=take,
-            )
+            self._tail_span(take).copy_from(input[:take])
             self._last_message_block_len += take
             input = input[take:]
 
@@ -93,30 +89,35 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
                 and len(input) > 0
             ):
                 self._absorb_block(
-                    UnsafePointer(self._last_message_block.unsafe_ptr()).load[
-                        width=Self.BLOCK_SIZE, alignment=1
-                    ]()
+                    SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(
+                        self._last_message_block
+                    )
                 )
                 self._last_message_block_len = 0
 
         while len(input) > Self.BLOCK_SIZE:
+            # `input` has a runtime length, so `SIMD.from_bytes` — which needs
+            # a fixed-size array — only applies after the block is copied out.
+            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+            Span(block).copy_from(input[: Self.BLOCK_SIZE])
             self._absorb_block(
-                UnsafePointer(input.unsafe_ptr()).load[
-                    width=Self.BLOCK_SIZE, alignment=1
-                ]()
+                SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(block)
             )
             input = input[Self.BLOCK_SIZE :]
 
         # Fill `_last_message_block` with the tail, for `finalize` to mask
         # with K1/K2.
         if len(input) > 0:
-            unsafe_memcpy(
-                dest=UnsafePointer(self._last_message_block.unsafe_ptr())
-                + self._last_message_block_len,
-                src=input.unsafe_ptr(),
-                count=len(input),
-            )
+            self._tail_span(len(input)).copy_from(input)
             self._last_message_block_len += len(input)
+
+    @always_inline
+    def _tail_span(
+        mut self, count: Int
+    ) -> Span[UInt8, origin_of(self._last_message_block)]:
+        """The `count` free tail-buffer bytes after the buffered prefix."""
+        var start = self._last_message_block_len
+        return Span(self._last_message_block)[start : start + count]
 
     def finalize(var self) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
         """
@@ -130,41 +131,36 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
 
         var subkey = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
         self._cipher.encrypt(subkey)
-        var k1 = _dbl(subkey)
+        var k1 = _dbl(subkey^)
 
         # Zero-pad the buffered tail into a full block; only the first
         # `_last_message_block_len` bytes of `_last_message_block` are
         # meaningful.
         var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
-        unsafe_memcpy(
-            dest=padded.unsafe_ptr(),
-            src=self._last_message_block.unsafe_ptr(),
-            count=self._last_message_block_len,
+        var tail_len = self._last_message_block_len
+        Span(padded)[:tail_len].copy_from(
+            Span(self._last_message_block)[:tail_len]
         )
 
-        var last = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+        var last: InlineArray[UInt8, Self.BLOCK_SIZE]
         if self._last_message_block_len == Self.BLOCK_SIZE:
-            var padded_simd = UnsafePointer(padded.unsafe_ptr()).load[
-                width=Self.BLOCK_SIZE, alignment=1
-            ]()
-            var k1_simd = UnsafePointer(k1.unsafe_ptr()).load[
-                width=Self.BLOCK_SIZE, alignment=1
-            ]()
-            UnsafePointer(last.unsafe_ptr()).store[alignment=1](
-                self._state ^ padded_simd ^ k1_simd
+            var padded_simd = SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(
+                padded
             )
+            var k1_simd = SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(k1)
+            last = to_bytes[
+                input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
+            ](self._state ^ padded_simd ^ k1_simd)
         else:
             padded[self._last_message_block_len] ^= 0x80
-            var padded_simd = UnsafePointer(padded.unsafe_ptr()).load[
-                width=Self.BLOCK_SIZE, alignment=1
-            ]()
-            var k2 = _dbl(k1)
-            var k2_simd = UnsafePointer(k2.unsafe_ptr()).load[
-                width=Self.BLOCK_SIZE, alignment=1
-            ]()
-            UnsafePointer(last.unsafe_ptr()).store[alignment=1](
-                self._state ^ padded_simd ^ k2_simd
+            var padded_simd = SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(
+                padded
             )
+            var k2 = _dbl(k1^)
+            var k2_simd = SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(k2)
+            last = to_bytes[
+                input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
+            ](self._state ^ padded_simd ^ k2_simd)
 
         self._cipher.encrypt(last)
         return last^
