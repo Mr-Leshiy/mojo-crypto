@@ -70,7 +70,7 @@ def test_ctr_32_be_aes() raises:
         + "04E96C34CCD2F0A95CDE7321852D90C0"
     )
     var zeros = InlineArray[UInt8, 64](fill=0)
-    var ctr = CTR(Aes128Naive(key), iv^)
+    var ctr = CTR(Aes128Naive(key), iv.copy())
     ctr.encrypt(zeros)
     assert_equal(zeros, ks_expected, msg="counter_incr")
 

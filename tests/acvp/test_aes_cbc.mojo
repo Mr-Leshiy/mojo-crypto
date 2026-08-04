@@ -93,12 +93,12 @@ def check_aes_cbc_aft[
         var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
         var pt = v.pt.copy()
 
-        var cbc_enc = CbcMode[C](cipher_init(key), iv)
+        var cbc_enc = CbcMode[C](cipher_init(key), iv^)
         cbc_enc.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
         var ct = v.ct.copy()
-        var cbc_dec = CbcMode[C](cipher_init(key), iv)
+        var cbc_dec = CbcMode[C](cipher_init(key), iv^)
         cbc_dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
@@ -123,7 +123,7 @@ def check_aes_cbc_mct[
         if v.is_encrypt:
             var block = v.pt.copy()
             var next_block = v.iv.copy()
-            var cbc = CbcMode[C](cipher_init(key), iv)
+            var cbc = CbcMode[C](cipher_init(key), iv^)
             for _ in range(MCT_INNER_ITERATIONS):
                 cbc.encrypt(block[:])
                 var tmp = block^
@@ -133,7 +133,7 @@ def check_aes_cbc_mct[
         else:
             var block = v.ct.copy()
             var next_block = v.iv.copy()
-            var cbc = CbcMode[C](cipher_init(key), iv)
+            var cbc = CbcMode[C](cipher_init(key), iv^)
             for _ in range(MCT_INNER_ITERATIONS):
                 cbc.decrypt(block[:])
                 var tmp = block^
