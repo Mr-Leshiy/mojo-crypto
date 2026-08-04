@@ -57,8 +57,8 @@ struct Product32(Copyable, Movable):
 
     var _zw: InlineArray[UInt32, 8]
 
-    def __init__(out self, zw: InlineArray[UInt32, 8]):
-        self._zw = zw
+    def __init__(out self, var zw: InlineArray[UInt32, 8]):
+        self._zw = zw^
 
     def mont_reduce(self) -> InlineArray[UInt8, BLOCK_SIZE]:
         """Reduce mod `x^128 + x^127 + x^126 + x^121 + 1` using shift/XOR folding.
@@ -67,7 +67,7 @@ struct Product32(Copyable, Movable):
         zw[3] is updated in i=0 and read back as `lw` in i=3 — the sequential
         dependency is load-bearing, so the loop is unrolled.
         """
-        var zw = self._zw
+        var zw = self._zw.copy()
         # i=0
         var lw = zw[0]
         zw[4] = zw[4] ^ lw ^ (lw >> 1) ^ (lw >> 2) ^ (lw >> 7)
@@ -197,4 +197,4 @@ def _karatsuba_mul32(
     zw[5] = c5 ^ (_rev32(c11 ^ c10 ^ c12 ^ c16) >> 1)
     zw[6] = c3 ^ (_rev32(c14) >> 1)
     zw[7] = _rev32(c12) >> 1
-    return Product32(zw)
+    return Product32(zw^)

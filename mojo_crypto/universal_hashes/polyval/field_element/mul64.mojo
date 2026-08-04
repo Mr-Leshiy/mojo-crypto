@@ -55,8 +55,8 @@ struct Product64(Copyable, Movable):
 
     var _zw: InlineArray[UInt64, 4]
 
-    def __init__(out self, zw: InlineArray[UInt64, 4]):
-        self._zw = zw
+    def __init__(out self, var zw: InlineArray[UInt64, 4]):
+        self._zw = zw^
 
     def mont_reduce(self) -> InlineArray[UInt8, BLOCK_SIZE]:
         """Reduce mod `x^128 + x^127 + x^126 + x^121 + 1` using shift/XOR folding.
@@ -118,4 +118,4 @@ def _karatsuba_mul64(
     zw[1] = z0h ^ z2
     zw[2] = z1 ^ z2h
     zw[3] = z1h
-    return Product64(zw)
+    return Product64(zw^)

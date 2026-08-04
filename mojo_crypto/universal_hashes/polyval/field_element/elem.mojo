@@ -50,8 +50,8 @@ struct FieldElement(
 
     var _v: InlineArray[UInt8, BLOCK_SIZE]
 
-    def __init__(out self, v: InlineArray[UInt8, BLOCK_SIZE]):
-        self._v = v
+    def __init__(out self, var v: InlineArray[UInt8, BLOCK_SIZE]):
+        self._v = v^
 
     @staticmethod
     def zeros() -> Self:

@@ -73,7 +73,7 @@ struct _PolyvalRf[P: Pmull](
         self._y = FieldElement(_store_bytes(_gf128_mul_rf[Self.P](acc, h1, d1)))
 
     def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
-        return self._y._v
+        return self._y._v^
 
     def reset(mut self):
         self._y = FieldElement.zeros()
