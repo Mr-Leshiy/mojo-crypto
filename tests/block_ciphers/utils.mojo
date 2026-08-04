@@ -14,10 +14,7 @@ from mojo_crypto.block_ciphers.traits import (
 )
 
 comptime BlockCipherEngine = (
-    BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Deinitable
+    BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable
 )
 
 

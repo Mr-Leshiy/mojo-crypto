@@ -5,10 +5,7 @@ from mojo_crypto.block_ciphers.traits import (
 
 
 struct CtrMode[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Movable
-    & Deinitable,
+    C: BlockCipherEncryptable & BlockCipherDecryptable & Movable & Deinitable,
     SIZE: Int = C.BLOCK_SIZE,
     BIG_ENDIAN: Bool = True,
 ](

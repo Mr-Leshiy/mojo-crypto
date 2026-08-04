@@ -77,7 +77,7 @@ struct _Sha2Word64[
         mut state: SIMD[DType.uint64, 8],
         block: InlineArray[UInt8, SHA2_WORD64_BLOCK_SIZE],
     ) thin,
-](Copyable, Digest, Deinitable, Movable):
+](Copyable, Deinitable, Digest, Movable):
     """
     Naive **SHA-2 (64-bit word)** engine — FIPS 180-4 §6.4.
 

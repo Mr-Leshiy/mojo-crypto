@@ -13,7 +13,7 @@
 # The 128×128 multiplication is decomposed into 9 × 32×32 sub-products via
 # Karatsuba; with the bit-reversal twin we perform 18 × 32-bit bmul calls.
 
-from std.sys.intrinsics import llvm_intrinsic
+from std.bit import bit_reverse
 
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
@@ -47,8 +47,11 @@ def _bmul32(x: UInt32, y: UInt32) -> UInt32:
 
 
 @always_inline
-def _rev32(x: UInt32) -> UInt32:
-    return llvm_intrinsic["llvm.bitreverse.i32", UInt32](x)
+def _rev32[
+    width: Int, //
+](x: SIMD[DType.uint32, width]) -> SIMD[DType.uint32, width]:
+    """Bit-reverse each 32-bit lane; `width=1` covers the scalar call sites."""
+    return bit_reverse(x)
 
 
 struct Product32(Copyable, Movable):
@@ -101,10 +104,7 @@ def _karatsuba_mul32(
     var yw = SIMD[DType.uint32, 4].from_bytes(a)
     var hw = SIMD[DType.uint32, 4].from_bytes(b)
 
-    var hwr0 = _rev32(hw[0])
-    var hwr1 = _rev32(hw[1])
-    var hwr2 = _rev32(hw[2])
-    var hwr3 = _rev32(hw[3])
+    var hwr = bit_reverse(hw)
 
     # Karatsuba decomposition for a (yw limbs)
     var a0 = yw[0]
@@ -116,10 +116,10 @@ def _karatsuba_mul32(
     var a6 = a0 ^ a2
     var a7 = a1 ^ a3
     var a8 = a6 ^ a7
-    var a9 = _rev32(yw[0])
-    var a10 = _rev32(yw[1])
-    var a11 = _rev32(yw[2])
-    var a12 = _rev32(yw[3])
+    var a9 = bit_reverse(yw[0])
+    var a10 = bit_reverse(yw[1])
+    var a11 = bit_reverse(yw[2])
+    var a12 = bit_reverse(yw[3])
     var a13 = a9 ^ a10
     var a14 = a11 ^ a12
     var a15 = a9 ^ a11
@@ -136,10 +136,10 @@ def _karatsuba_mul32(
     var b6 = b0 ^ b2
     var b7 = b1 ^ b3
     var b8 = b6 ^ b7
-    var b9 = hwr0
-    var b10 = hwr1
-    var b11 = hwr2
-    var b12 = hwr3
+    var b9 = hwr[0]
+    var b10 = hwr[1]
+    var b11 = hwr[2]
+    var b12 = hwr[3]
     var b13 = b9 ^ b10
     var b14 = b11 ^ b12
     var b15 = b9 ^ b11
@@ -178,11 +178,11 @@ def _karatsuba_mul32(
 
     var zw = InlineArray[UInt32, 8](uninitialized=True)
     zw[0] = c0
-    zw[1] = c4 ^ (_rev32(c9) >> 1)
-    zw[2] = c1 ^ c0 ^ c2 ^ c6 ^ (_rev32(c13) >> 1)
-    zw[3] = c4 ^ c5 ^ c8 ^ (_rev32(c10 ^ c9 ^ c11 ^ c15) >> 1)
-    zw[4] = c2 ^ c1 ^ c3 ^ c7 ^ (_rev32(c13 ^ c14 ^ c17) >> 1)
-    zw[5] = c5 ^ (_rev32(c11 ^ c10 ^ c12 ^ c16) >> 1)
-    zw[6] = c3 ^ (_rev32(c14) >> 1)
-    zw[7] = _rev32(c12) >> 1
+    zw[1] = c4 ^ (bit_reverse(c9) >> 1)
+    zw[2] = c1 ^ c0 ^ c2 ^ c6 ^ (bit_reverse(c13) >> 1)
+    zw[3] = c4 ^ c5 ^ c8 ^ (bit_reverse(c10 ^ c9 ^ c11 ^ c15) >> 1)
+    zw[4] = c2 ^ c1 ^ c3 ^ c7 ^ (bit_reverse(c13 ^ c14 ^ c17) >> 1)
+    zw[5] = c5 ^ (bit_reverse(c11 ^ c10 ^ c12 ^ c16) >> 1)
+    zw[6] = c3 ^ (bit_reverse(c14) >> 1)
+    zw[7] = bit_reverse(c12) >> 1
     return Product32(zw^)

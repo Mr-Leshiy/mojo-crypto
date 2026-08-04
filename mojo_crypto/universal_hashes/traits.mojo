@@ -25,7 +25,7 @@ trait UniversalHashable:
         """
 
         UhashSizeError[Self.BLOCK_SIZE].check(len(data))
-        
+
         for i in range(len(data) // Self.BLOCK_SIZE):
             var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             UnsafePointer(block.unsafe_ptr()).store(

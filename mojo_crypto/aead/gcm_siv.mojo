@@ -46,10 +46,7 @@ struct LengthError(Deinitable, Writable):
 
 @fieldwise_init
 struct GcmSiv[
-    C: BlockCipherEncryptable
-    & BlockCipherDecryptable
-    & Copyable
-    & Deinitable,
+    C: BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable,
     G: UniversalHashable & Copyable & Deinitable,
 ](
     AeadDecryptable,
