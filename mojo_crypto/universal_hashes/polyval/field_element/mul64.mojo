@@ -12,6 +12,7 @@
 from std.sys.intrinsics import llvm_intrinsic
 from std.bit import bit_reverse
 
+from mojo_crypto.utils import to_bytes
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
 
@@ -73,8 +74,9 @@ struct Product64(Copyable, Movable):
         v3 ^= v1 ^ (v1 >> 1) ^ (v1 >> 2) ^ (v1 >> 7)
         v2 ^= (v1 << 63) ^ (v1 << 62) ^ (v1 << 57)
 
-        var out = SIMD[DType.uint64, 2](v2, v3).as_bytes()
-        return rebind_var[InlineArray[UInt8, BLOCK_SIZE]](out^)
+        return to_bytes[input_size=2, output_size=BLOCK_SIZE](
+            SIMD[DType.uint64, 2](v2, v3)
+        )
 
 
 def _karatsuba_mul64(

@@ -1,4 +1,4 @@
-from mojo_crypto.utils.conversions import to_bytes
+from mojo_crypto.utils import to_bytes
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 

@@ -15,6 +15,7 @@
 
 from std.bit import bit_reverse
 
+from mojo_crypto.utils import to_bytes
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
 
@@ -80,8 +81,9 @@ struct Product32(Copyable, Movable):
         zw[7] = zw[7] ^ lw ^ (lw >> 1) ^ (lw >> 2) ^ (lw >> 7)
         zw[6] = zw[6] ^ ((lw << 31) ^ (lw << 30) ^ (lw << 25))
 
-        var out = SIMD[DType.uint32, 4](zw[4], zw[5], zw[6], zw[7]).as_bytes()
-        return rebind_var[InlineArray[UInt8, BLOCK_SIZE]](out^)
+        return to_bytes[input_size=4, output_size=BLOCK_SIZE](
+            SIMD[DType.uint32, 4](zw[4], zw[5], zw[6], zw[7])
+        )
 
 
 def _karatsuba_mul32(

@@ -22,7 +22,7 @@
 
 from std.sys.info import is_64bit
 
-from mojo_crypto.utils import hex_encode
+from mojo_crypto.utils import hex_encode, to_bytes
 from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 from mojo_crypto.universal_hashes.polyval.field_element.mul64 import (
     _karatsuba_mul64,
@@ -51,10 +51,9 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
     def __init__(out self, var v: InlineArray[UInt8, BLOCK_SIZE]):
         self._v = v^
 
-    def __init__(out self, reg: SIMD[DType.uint64, 2]):
+    def __init__(out self, v: SIMD[DType.uint64, 2]):
         """Build an element from two 64-bit limbs (low limb first)."""
-        var v = reg.as_bytes()
-        self._v = rebind_var[InlineArray[UInt8, BLOCK_SIZE]](v^)
+        self._v = to_bytes[input_size=2, output_size=BLOCK_SIZE](v)
 
     @staticmethod
     def zeros() -> Self:
@@ -70,8 +69,9 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
         var a = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(self._v)
         var b = SIMD[DType.uint8, BLOCK_SIZE].from_bytes(rhs._v)
 
-        var c = (a ^ b).as_bytes()
-        return Self(rebind_var[InlineArray[UInt8, BLOCK_SIZE]](c^))
+        return Self(
+            to_bytes[input_size=BLOCK_SIZE, output_size=BLOCK_SIZE](a ^ b)
+        )
 
     def __mul__(self, rhs: Self) -> Self:
         """Multiply two POLYVAL field elements mod `x^128 + x^127 + x^126 + x^121 + 1`.
