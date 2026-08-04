@@ -42,6 +42,7 @@ struct CbcMode[
         for i in range(num_blocks):
             var offset = i * Self.BLOCK_SIZE
             for j in range(Self.BLOCK_SIZE):
+                # TODO: revise to use SIMD
                 data[offset + j] ^= self._iv[j]
             self._cipher.encrypt(data[offset : offset + Self.BLOCK_SIZE])
             for j in range(Self.BLOCK_SIZE):

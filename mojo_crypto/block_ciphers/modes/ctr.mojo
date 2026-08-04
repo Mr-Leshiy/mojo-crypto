@@ -67,6 +67,7 @@ struct CtrMode[
             self._cipher.encrypt(Span(keystream))
             var end = min(offset + Self.BLOCK_SIZE, len(data))
             for j in range(end - offset):
+                # TODO: revise to use SIMD
                 data[offset + j] ^= keystream[j]
             self._increment_ctr()
             offset += Self.BLOCK_SIZE
