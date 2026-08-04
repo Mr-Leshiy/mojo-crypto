@@ -85,8 +85,8 @@ def _compress(
 # assignment.
 @always_inline
 def _rounds[first: Int](mut abef: Words, mut cdgh: Words, schedule: Words):
-    var wk = schedule + Words(
-        K64[first], K64[first + 1], K64[first + 2], K64[first + 3]
+    var wk = schedule + comptime (
+        Words(K64[first], K64[first + 1], K64[first + 2], K64[first + 3])
     )
     abef, cdgh = _sha512rnds2(cdgh, abef, wk.slice[2]()), abef
     abef, cdgh = _sha512rnds2(cdgh, abef, wk.slice[2, offset=2]()), abef

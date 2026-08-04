@@ -55,6 +55,10 @@ def _compress(
     var g = state[6]
     var h = state[7]
 
+    # The round loop indexes K32 with a runtime counter, so the comptime table
+    # has to be materialized into a runtime value first.
+    var k = materialize[K32]()
+
     for t in range(ROUNDS_32):
         var s1 = (
             _rotr(e, BIG_SIGMA1_ROT_A)
@@ -62,7 +66,7 @@ def _compress(
             ^ _rotr(e, BIG_SIGMA1_ROT_C)
         )
         var ch = (e & f) ^ (~e & g)
-        var temp1 = h + s1 + ch + K32[t] + w[t]
+        var temp1 = h + s1 + ch + k[t] + w[t]
         var s0 = (
             _rotr(a, BIG_SIGMA0_ROT_A)
             ^ _rotr(a, BIG_SIGMA0_ROT_B)

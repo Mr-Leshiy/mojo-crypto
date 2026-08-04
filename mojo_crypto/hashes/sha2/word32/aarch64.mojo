@@ -61,8 +61,8 @@ def _compress(
 
 @always_inline
 def _rounds[first: Int](mut abcd: Words, mut efgh: Words, schedule: Words):
-    var wk = schedule + Words(
-        K32[first], K32[first + 1], K32[first + 2], K32[first + 3]
+    var wk = schedule + comptime (
+        Words(K32[first], K32[first + 1], K32[first + 2], K32[first + 3])
     )
     abcd, efgh = _sha256h(abcd, efgh, wk), _sha256h2(efgh, abcd, wk)
 
