@@ -67,7 +67,7 @@ struct Product64(Copyable, Movable):
         var v1 = self._zw[1]
         var v2 = self._zw[2]
         var v3 = self._zw[3]
-    
+
         v2 ^= v0 ^ (v0 >> 1) ^ (v0 >> 2) ^ (v0 >> 7)
         v1 ^= (v0 << 63) ^ (v0 << 62) ^ (v0 << 57)
         v3 ^= v1 ^ (v1 >> 1) ^ (v1 >> 2) ^ (v1 >> 7)

@@ -45,6 +45,7 @@ def _bmul32(x: UInt32, y: UInt32) -> UInt32:
     var z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0)
     return (z0 & m0) | (z1 & m1) | (z2 & m2) | (z3 & m3)
 
+
 struct Product32(Copyable, Movable):
     """Unreduced 256-bit carryless product stored as eight 32-bit limbs (lo … hi).
     """

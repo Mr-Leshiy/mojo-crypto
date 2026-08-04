@@ -28,8 +28,10 @@ trait UniversalHashable:
 
         for i in range(len(data) // Self.BLOCK_SIZE):
             var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
-            UnsafePointer(block.unsafe_ptr()).store(
-                UnsafePointer(data.unsafe_ptr()).load[width=Self.BLOCK_SIZE](
+            # `data` has a runtime length, so `SIMD.from_bytes` — which needs a
+            # fixed-size `Array` — does not apply; load the block as one vector.
+            block.unsafe_ptr().unsafe_store(
+                data.unsafe_ptr().unsafe_load[width=Self.BLOCK_SIZE](
                     i * Self.BLOCK_SIZE
                 )
             )
@@ -52,7 +54,7 @@ trait UniversalHashable:
             var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
             unsafe_memcpy(
                 dest=padded.unsafe_ptr(),
-                src=UnsafePointer(data.unsafe_ptr()) + n_full,
+                src=data[n_full:].unsafe_ptr(),
                 count=tail_len,
             )
             self.update_block(padded^)

@@ -93,9 +93,5 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
         return self._v^
 
     def write_to(self, mut writer: Some[Writer]):
-        var hex = hex_encode(
-            Span[UInt8, origin_of(self._v)](
-                unsafe_ptr=self._v.unsafe_ptr(), length=BLOCK_SIZE
-            )
-        )
+        var hex = hex_encode(Span(self._v))
         writer.write(hex)
