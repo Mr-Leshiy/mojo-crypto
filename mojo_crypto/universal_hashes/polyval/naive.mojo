@@ -3,7 +3,7 @@ from .field_element import FieldElement
 from .common import BLOCK_SIZE, KEY_SIZE, TAG_SIZE
 
 
-struct PolyvalNaive(Copyable, ImplicitlyDeletable, Movable, UniversalHashable):
+struct PolyvalNaive(Copyable, Deinitable, Movable, UniversalHashable):
     """Portable software POLYVAL implementation.
 
     Reference: <https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/backend/soft.rs>

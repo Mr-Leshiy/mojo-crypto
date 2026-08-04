@@ -23,7 +23,7 @@ trait Pmull:
 
 
 struct _PolyvalRf[P: Pmull](
-    Copyable, ImplicitlyDeletable, Movable, UniversalHashable
+    Copyable, Deinitable, Movable, UniversalHashable
 ):
     """Optimized POLYVAL implementation using the R/F algorithm.
 
@@ -85,7 +85,7 @@ comptime P1: UInt64 = 0xC200_0000_0000_0000
 
 @fieldwise_init
 struct ExpandedKey[P: Pmull](
-    Copyable, Equatable, ImplicitlyDeletable, Movable, Writable
+    Copyable, Equatable, Deinitable, Movable, Writable
 ):
     """Precomputed key material for POLYVAL using the R/F algorithm.
 

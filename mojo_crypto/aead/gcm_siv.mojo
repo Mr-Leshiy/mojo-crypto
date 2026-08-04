@@ -19,7 +19,7 @@ comptime C_MAX: UInt64 = (1 << 36) + 16
 
 
 @fieldwise_init
-struct LengthError(ImplicitlyDeletable, Writable):
+struct LengthError(Deinitable, Writable):
     """Raised when GCM-SIV input exceeds the maximum permitted length."""
 
     var aad_len: Int
@@ -49,13 +49,13 @@ struct GcmSiv[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & ImplicitlyDeletable,
-    G: UniversalHashable & Copyable & ImplicitlyDeletable,
+    & Deinitable,
+    G: UniversalHashable & Copyable & Deinitable,
 ](
     AeadDecryptable,
     AeadEncryptable,
     Copyable,
-    ImplicitlyDeletable,
+    Deinitable,
     Movable,
 ):
     """
@@ -301,7 +301,7 @@ struct GcmSiv[
 
 
 def _derive_subkey[
-    C: BlockCipherEncryptable & ImplicitlyDeletable,
+    C: BlockCipherEncryptable & Deinitable,
     N: Int,
     NONCE_SIZE: Int,
 ](

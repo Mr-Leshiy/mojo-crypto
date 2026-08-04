@@ -7,7 +7,7 @@ comptime BYTES_16K: Int = 16_384
 
 
 def bench_hash[
-    H: Digest & ImplicitlyDeletable & Movable,
+    H: Digest & Deinitable & Movable,
     prefix: StringLiteral,
 ]() raises:
     @parameter

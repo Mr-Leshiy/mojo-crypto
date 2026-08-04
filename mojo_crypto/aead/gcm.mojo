@@ -15,14 +15,14 @@ struct Gcm[
     Cipher: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & ImplicitlyDeletable,
-    G: UniversalHashable & Copyable & ImplicitlyDeletable,
+    & Deinitable,
+    G: UniversalHashable & Copyable & Deinitable,
     NONCE_SIZE: Int,
 ](
     AeadDecryptable,
     AeadEncryptable,
     Copyable,
-    ImplicitlyDeletable,
+    Deinitable,
     Movable,
 ):
     """

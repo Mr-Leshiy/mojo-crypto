@@ -8,13 +8,13 @@ struct CtrMode[
     C: BlockCipherEncryptable
     & BlockCipherDecryptable
     & Movable
-    & ImplicitlyDeletable,
+    & Deinitable,
     SIZE: Int = C.BLOCK_SIZE,
     BIG_ENDIAN: Bool = True,
 ](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
-    ImplicitlyDeletable,
+    Deinitable,
     Movable,
 ):
     """

@@ -17,7 +17,7 @@ comptime BlockCipherEngine = (
     BlockCipherEncryptable
     & BlockCipherDecryptable
     & Copyable
-    & ImplicitlyDeletable
+    & Deinitable
 )
 
 

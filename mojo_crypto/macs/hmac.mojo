@@ -4,8 +4,8 @@ from mojo_crypto.hashes.traits import Digest
 from mojo_crypto.macs.traits import Mac
 
 
-struct Hmac[H: Digest & Movable & ImplicitlyDeletable](
-    ImplicitlyDeletable, Mac, Movable
+struct Hmac[H: Digest & Movable & Deinitable](
+    Deinitable, Mac, Movable
 ):
     """
     **HMAC**: a hash-based message authentication code.

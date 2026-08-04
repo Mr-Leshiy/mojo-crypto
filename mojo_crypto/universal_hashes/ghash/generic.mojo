@@ -1,8 +1,8 @@
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 
 
-struct _GHashGeneric[P: Copyable & ImplicitlyDeletable & UniversalHashable](
-    Copyable, ImplicitlyDeletable, Movable, UniversalHashable
+struct _GHashGeneric[P: Copyable & Deinitable & UniversalHashable](
+    Copyable, Deinitable, Movable, UniversalHashable
 ):
     """
     **GHASH**: universal hash over GF(2^128) used by AES-GCM.

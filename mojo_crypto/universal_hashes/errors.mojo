@@ -1,5 +1,5 @@
 @fieldwise_init
-struct UhashSizeError[Size: Int](ImplicitlyDeletable, Writable):
+struct UhashSizeError[Size: Int](Deinitable, Writable):
     var size: Int
 
     @staticmethod

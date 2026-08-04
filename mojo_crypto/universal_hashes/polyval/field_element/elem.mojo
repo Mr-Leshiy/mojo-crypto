@@ -33,7 +33,7 @@ from mojo_crypto.universal_hashes.polyval.field_element.mul32 import (
 
 
 struct FieldElement(
-    Copyable, Equatable, ImplicitlyDeletable, Movable, Writable
+    Copyable, Equatable, Deinitable, Movable, Writable
 ):
     """An element in POLYVAL's field.
 

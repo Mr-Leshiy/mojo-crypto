@@ -11,7 +11,7 @@ struct AesNaive[KEY_SIZE: Int](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
     Copyable,
-    ImplicitlyDeletable,
+    Deinitable,
     Movable,
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
