@@ -6,13 +6,46 @@ assembles a big-endian word out of a byte span.
 """
 
 from std.memory import unsafe_memcpy
+from std.sys import size_of, is_big_endian
 
 
 @always_inline
 def to_bytes[
-    dtype: DType, output_size: Int, input_size: Int
+    dtype: DType,
+    output_size: Int,
+    input_size: Int,
+    big_endian: Bool = is_big_endian(),
 ](input: SIMD[dtype, input_size]) -> InlineArray[UInt8, output_size]:
-    return rebind_var[InlineArray[UInt8, output_size]](input.as_bytes())
+    """Reinterpret a SIMD vector as its `output_size` bytes.
+
+    `SIMD.as_bytes` is typed `Array[UInt8, size_of[Self]()]`, a size expression
+    that is not folded at parse time, so the result has to be rebound to the
+    caller's `output_size`. The size equality is checked here rather than in a
+    `where` clause: a `where` clause must be *proven* where the call is written,
+    and `size_of` cannot be evaluated while the lane count is still symbolic —
+    a generic caller such as `_reverse[SIZE]` would be rejected even though
+    every concrete instantiation is sound.
+
+    Parameters:
+        dtype: The lane type of the input vector.
+        output_size: The length of the returned byte array.
+        input_size: The number of lanes in the input vector.
+        big_endian: Whether to emit each lane big-endian; defaults to the
+            target's own byte order, matching a raw memory reinterpretation.
+
+    Args:
+        input: The vector to reinterpret.
+
+    Returns:
+        The `output_size` bytes of `input`.
+    """
+    comptime assert size_of[SIMD[dtype, input_size]]() == output_size, (
+        "to_bytes: output_size must equal the byte width of the input vector"
+    )
+
+    return rebind_var[InlineArray[UInt8, output_size]](
+        input.as_bytes[big_endian=big_endian]()
+    )
 
 
 @always_inline

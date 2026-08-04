@@ -45,7 +45,7 @@ def _reverse[
     Reverse this field element at a byte-level of granularity.
     """
 
-    return to_bytes[output_size=SIZE](
+    return to_bytes[input_size=SIZE, output_size=SIZE](
         SIMD[DType.uint8, SIZE].from_bytes(v).reversed()
     )
 
