@@ -93,7 +93,7 @@ def check_aes_cbc_aft[
         var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
         var pt = v.pt.copy()
 
-        var cbc_enc = CbcMode[C](cipher_init(key), iv^)
+        var cbc_enc = CbcMode[C](cipher_init(key), iv.copy())
         cbc_enc.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
