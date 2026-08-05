@@ -1,3 +1,4 @@
+from mojo_crypto.utils import load_bytes, store_bytes, to_bytes
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -33,7 +34,7 @@ struct CtrMode[
     comptime NONCE_SIZE: Int = Self.BLOCK_SIZE - Self.SIZE
 
     var _cipher: Self.C
-    var _ctr: InlineArray[UInt8, Self.C.BLOCK_SIZE]
+    var _ctr: SIMD[DType.uint8, Self.BLOCK_SIZE]
 
     @staticmethod
     def _assert_valid_params():
@@ -52,7 +53,7 @@ struct CtrMode[
         Self._assert_valid_params()
 
         self._cipher = cipher^
-        self._ctr = ctr^
+        self._ctr = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](ctr)
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         self._apply(data)
@@ -63,12 +64,31 @@ struct CtrMode[
     def _apply[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         var offset = 0
         while offset < len(data):
-            var keystream = self._ctr.copy()
-            self._cipher.encrypt(Span(keystream))
+            # The keystream block is E(counter). The cipher works on bytes, so
+            # the counter goes out as an array and the result comes back as a
+            # vector to be XOR'd over the data a whole block at a time.
+            var keystream = to_bytes[
+                input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
+            ](self._ctr)
+            self._cipher.encrypt(keystream)
+
             var end = min(offset + Self.BLOCK_SIZE, len(data))
-            for j in range(end - offset):
-                # TODO: revise to use SIMD
-                data[offset + j] ^= keystream[j]
+            var block = data[offset:end]
+            if len(block) == Self.BLOCK_SIZE:
+                var ks = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](
+                    keystream
+                )
+                var s = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](
+                    block
+                )
+                store_bytes(block, s ^ ks)
+            else:
+                # Trailing partial block — CTR is a stream cipher, so only the
+                # bytes that exist are XOR'd. A vector load would run off the
+                # end of `data`, so this tail stays byte-wise.
+                for j in range(len(block)):
+                    block[j] ^= keystream[j]
+
             self._increment_ctr()
             offset += Self.BLOCK_SIZE
 
