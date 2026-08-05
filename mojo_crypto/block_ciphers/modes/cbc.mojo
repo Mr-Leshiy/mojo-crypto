@@ -61,23 +61,14 @@ struct CbcMode[
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
         var num_blocks = len(data) // Self.BLOCK_SIZE
         for i in range(num_blocks):
-            # var offset = i * Self.BLOCK_SIZE
-            # var data_span = data[offset : offset + Self.BLOCK_SIZE]
-            # var data_simd = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](data_span)
-
-            # var saved = data_simd
-
-            # self._cipher.decrypt(data_span)
-
-            # data_simd ^= self._iv
-            # store_bytes(data_span, data_simd)
-
-            # self._iv = saved
             var offset = i * Self.BLOCK_SIZE
-            var saved = InlineArray[UInt8, Self.Cipher.BLOCK_SIZE](fill=0)
-            for j in range(Self.BLOCK_SIZE):
-                saved[j] = data[offset + j]
-            self._cipher.decrypt(data[offset : offset + Self.BLOCK_SIZE])
-            for j in range(Self.BLOCK_SIZE):
-                data[offset + j] ^= self._iv[j]
-            self._iv = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](saved)
+            var data_span = data[offset : offset + Self.BLOCK_SIZE]
+            var saved = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](data_span)
+
+            self._cipher.decrypt(data_span)
+
+            data_simd = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](data_span)
+            data_simd ^= self._iv
+            store_bytes(data_span, data_simd)
+
+            self._iv = saved
