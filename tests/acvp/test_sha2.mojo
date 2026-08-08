@@ -4,7 +4,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.utils import to_inline_array, to_list
+from mojo_crypto.utils import to_array, to_list
 
 from tests.acvp.utils import load_python_acvp_vectors
 from tests.hashes.utils import (
@@ -94,7 +94,7 @@ def check_sha2_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
         h.update(v.msg[:])
         var actual = h^.finalize()
 
-        var expected = to_inline_array[T.OUTPUT_SIZE](v.digest)
+        var expected = to_array[T.OUTPUT_SIZE](v.digest)
         assert_equal(actual, expected, msg=msg)
 
 

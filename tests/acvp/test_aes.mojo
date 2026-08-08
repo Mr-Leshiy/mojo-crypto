@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 
 from tests.acvp.utils import load_python_acvp_vectors
@@ -87,7 +87,7 @@ def check_aes_ecb_aft[
 
         var msg = "[{}], count={}".format(reflect[C].name(), v.count)
 
-        var cipher = cipher_init(to_inline_array[KeySize](v.key))
+        var cipher = cipher_init(to_array[KeySize](v.key))
 
         var pt = v.pt.copy()
         cipher.encrypt(pt[:])
@@ -114,7 +114,7 @@ def check_aes_ecb_mct[
 
         var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
         var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
-        var key = to_inline_array[KeySize](v.key)
+        var key = to_array[KeySize](v.key)
 
         var cipher = cipher_init(key)
         for _ in range(MCT_INNER_ITERATIONS):

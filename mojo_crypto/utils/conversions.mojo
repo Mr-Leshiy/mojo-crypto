@@ -1,6 +1,6 @@
 """Conversions between the container and word representations of key material.
 
-`to_inline_array`/`to_list` move a fixed-size buffer between `Array` and
+`to_array`/`to_list` move a fixed-size buffer between `Array` and
 `List` (test vectors arrive as lists, the primitives take arrays);
 `load_bytes`/`store_bytes` reinterpret a byte span as a vector and back;
 `load_be` assembles a big-endian word out of a byte span.
@@ -120,7 +120,7 @@ def to_bytes[
 
 # TODO: rename it to array
 @always_inline
-def to_inline_array[
+def to_array[
     size: Int,
     T: Copyable & Deinitable,
 ](data: List[T]) raises -> Array[T, size]:

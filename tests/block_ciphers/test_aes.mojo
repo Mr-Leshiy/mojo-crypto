@@ -1,7 +1,7 @@
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.traits import (
     BlockCipherDecryptable,
@@ -30,7 +30,7 @@ def check_aes[
 
         var msg = "[{}], key_size={}".format(reflect[C].name(), KeySize)
 
-        var cipher = cipher_init(to_inline_array[KeySize](v.key))
+        var cipher = cipher_init(to_array[KeySize](v.key))
 
         var pt = v.pt.copy()
         cipher.encrypt(pt[:])

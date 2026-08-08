@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.macs import Cmac
 
@@ -72,7 +72,7 @@ def check_aes_cmac_aft[
 
         var msg = "[Cmac[{}]], count={}".format(reflect[C].name(), v.count)
 
-        var cmac = Cmac[C](cipher_init(to_inline_array[KeySize](v.key)))
+        var cmac = Cmac[C](cipher_init(to_array[KeySize](v.key)))
         cmac.update(v.pt[:])
         var full_tag = cmac^.finalize()
 

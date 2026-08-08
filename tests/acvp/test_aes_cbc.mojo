@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.modes import CbcMode
 
@@ -89,8 +89,8 @@ def check_aes_cbc_aft[
 
         var msg = "[CbcMode[{}]], count={}".format(reflect[C].name(), v.count)
 
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+        var key = to_array[KeySize](v.key)
+        var iv = to_array[C.BLOCK_SIZE](v.iv)
         var pt = v.pt.copy()
 
         var cbc_enc = CbcMode[C](cipher_init(key), iv.copy())
@@ -117,8 +117,8 @@ def check_aes_cbc_mct[
 
         var msg = "[CbcMode[{}]], count={}".format(reflect[C].name(), v.count)
 
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+        var key = to_array[KeySize](v.key)
+        var iv = to_array[C.BLOCK_SIZE](v.iv)
 
         if v.is_encrypt:
             var block = v.pt.copy()

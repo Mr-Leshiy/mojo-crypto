@@ -2,7 +2,7 @@ from std.testing import assert_equal, assert_raises, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.polyval import PolyvalNaive
 from mojo_crypto.aead.gcm_siv import GcmSiv
@@ -85,9 +85,9 @@ def check_aes_gcm_siv_aft[
         var cipher_body = List[UInt8](v.ct[:cipher_len])
 
         var msg = "[GcmSiv[{}]], count={}".format(reflect[C].name(), v.count)
-        var key = to_inline_array[KeySize](v.key)
-        var nonce = to_inline_array[NONCE_SIZE](v.iv)
-        var tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
+        var key = to_array[KeySize](v.key)
+        var nonce = to_array[NONCE_SIZE](v.iv)
+        var tag = to_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
             var data = v.pt.copy()
             var gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](

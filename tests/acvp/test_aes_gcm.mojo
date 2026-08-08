@@ -2,7 +2,7 @@ from std.testing import assert_equal, assert_raises, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.ghash import GHashNaive
 from mojo_crypto.aead.gcm import Gcm
@@ -89,9 +89,9 @@ def check_aes_gcm_aft[
         var msg = "[Gcm[{}], nonce={}, tag={}], count={}".format(
             reflect[C].name(), NONCE_SIZE, TAG_SIZE, v.count
         )
-        var key = to_inline_array[KeySize](v.key)
-        var nonce = to_inline_array[NONCE_SIZE](v.iv)
-        var tag = to_inline_array[TAG_SIZE](v.tag)
+        var key = to_array[KeySize](v.key)
+        var nonce = to_array[NONCE_SIZE](v.iv)
+        var tag = to_array[TAG_SIZE](v.tag)
         if v.is_encrypt:
             var data = v.pt.copy()
             var gcm = Gcm[C, GHashNaive, NONCE_SIZE](cipher_init(key), nonce)

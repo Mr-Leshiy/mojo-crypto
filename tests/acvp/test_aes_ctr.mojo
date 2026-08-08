@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.modes import CtrMode
 
@@ -65,8 +65,8 @@ def check_aes_ctr_aft[
 
         var msg = "[CtrMode[{}]], count={}".format(reflect[C].name(), v.count)
 
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+        var key = to_array[KeySize](v.key)
+        var iv = to_array[C.BLOCK_SIZE](v.iv)
 
         if v.is_encrypt:
             var pt = v.pt.copy()

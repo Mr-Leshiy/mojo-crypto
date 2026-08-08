@@ -1,5 +1,5 @@
 from .conversions import (
-    to_inline_array,
+    to_array,
     to_list,
     load_be,
     load_bytes,
