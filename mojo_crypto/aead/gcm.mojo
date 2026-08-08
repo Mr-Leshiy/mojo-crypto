@@ -52,7 +52,7 @@ struct Gcm[
         """Initialize the GCM mode with the given block cipher and nonce."""
         Self._assert_valid_params()
 
-        ghash_key = Array[UInt8, Self.G.KEY_SIZE](fill=0)
+        var ghash_key = Array[UInt8, Self.G.KEY_SIZE](fill=0)
 
         cipher.encrypt(ghash_key)
 

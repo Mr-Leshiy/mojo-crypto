@@ -118,6 +118,7 @@ def to_bytes[
     )
 
 
+# TODO: rename it to array
 @always_inline
 def to_inline_array[
     size: Int,

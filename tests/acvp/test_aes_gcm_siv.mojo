@@ -81,19 +81,19 @@ def check_aes_gcm_siv_aft[
         # GCM-SIV ACVP vectors have no separate tag field: the ciphertext is
         # ciphertext||tag (RFC 8452), so split the trailing TAG_SIZE bytes of
         # `v.ct` back out into the ciphertext body and the tag.
-        cipher_len = len(v.ct) - TAG_SIZE
-        cipher_body = List[UInt8](v.ct[:cipher_len])
+        var cipher_len = len(v.ct) - TAG_SIZE
+        var cipher_body = List[UInt8](v.ct[:cipher_len])
 
-        msg = "[GcmSiv[{}]], count={}".format(reflect[C].name(), v.count)
-        key = to_inline_array[KeySize](v.key)
-        nonce = to_inline_array[NONCE_SIZE](v.iv)
-        tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
+        var msg = "[GcmSiv[{}]], count={}".format(reflect[C].name(), v.count)
+        var key = to_inline_array[KeySize](v.key)
+        var nonce = to_inline_array[NONCE_SIZE](v.iv)
+        var tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
             data = v.pt.copy()
             gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
                 key, nonce
             )
-            actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
+            var actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, cipher_body, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
