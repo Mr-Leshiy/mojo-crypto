@@ -10,7 +10,7 @@ def bench_uhash[
     H: UniversalHashable & Deinitable,
     prefix: StringLiteral,
 ]() raises:
-    var key = InlineArray[UInt8, H.KEY_SIZE](fill=0)
+    var key = Array[UInt8, H.KEY_SIZE](fill=0)
 
     @parameter
     def bench[N: Int, suffix: StringLiteral]() raises:

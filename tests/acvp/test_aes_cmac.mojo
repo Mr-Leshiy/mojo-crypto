@@ -64,7 +64,7 @@ def check_aes_cmac_aft[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CmacTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:

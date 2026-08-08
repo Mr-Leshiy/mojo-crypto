@@ -31,7 +31,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
     # Lazily-buffered tail of the input: `update` always holds back the final
     # block (even when it is full) so `finalize` can tell whether to mask it
     # with K1 (full block) or K2 (partial, 10*-padded).
-    var _last_message_block: InlineArray[UInt8, Self.BLOCK_SIZE]
+    var _last_message_block: Array[UInt8, Self.BLOCK_SIZE]
     var _last_message_block_len: Int
 
     def __init__(out self, var cipher: Self.Cipher):
@@ -39,7 +39,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
         Self._assert_valid_params()
         self._cipher = cipher^
         self._state = SIMD[DType.uint8, Self.BLOCK_SIZE](0)
-        self._last_message_block = InlineArray[UInt8, Self.BLOCK_SIZE](
+        self._last_message_block = Array[UInt8, Self.BLOCK_SIZE](
             uninitialized=True
         )
         self._last_message_block_len = 0
@@ -98,7 +98,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
         while len(input) > Self.BLOCK_SIZE:
             # `input` has a runtime length, so `SIMD.from_bytes` — which needs
             # a fixed-size array — only applies after the block is copied out.
-            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+            var block = Array[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             Span(block).copy_from(input[: Self.BLOCK_SIZE])
             self._absorb_block(
                 SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(block)
@@ -119,7 +119,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
         var start = self._last_message_block_len
         return Span(self._last_message_block)[start : start + count]
 
-    def finalize(var self) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(var self) raises -> Array[UInt8, Self.TAG_SIZE]:
         """
         Consume self and return the TAG_SIZE-byte authentication tag.
 
@@ -129,20 +129,20 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
         produce the tag.
         """
 
-        var subkey = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
+        var subkey = Array[UInt8, Self.BLOCK_SIZE](fill=0)
         self._cipher.encrypt(subkey)
         var k1 = _dbl(subkey^)
 
         # Zero-pad the buffered tail into a full block; only the first
         # `_last_message_block_len` bytes of `_last_message_block` are
         # meaningful.
-        var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
+        var padded = Array[UInt8, Self.BLOCK_SIZE](fill=0)
         var tail_len = self._last_message_block_len
         Span(padded)[:tail_len].copy_from(
             Span(self._last_message_block)[:tail_len]
         )
 
-        var last: InlineArray[UInt8, Self.BLOCK_SIZE]
+        var last: Array[UInt8, Self.BLOCK_SIZE]
         if self._last_message_block_len == Self.BLOCK_SIZE:
             var padded_simd = SIMD[DType.uint8, Self.BLOCK_SIZE].from_bytes(
                 padded
@@ -173,7 +173,7 @@ struct Cmac[Cipher: BlockCipherEncryptable & Copyable & Deinitable](
 
 def _dbl[
     BLOCK_SIZE: Int
-](var block: InlineArray[UInt8, BLOCK_SIZE]) -> InlineArray[UInt8, BLOCK_SIZE]:
+](var block: Array[UInt8, BLOCK_SIZE]) -> Array[UInt8, BLOCK_SIZE]:
     """
     Double `block` over GF(2^(8*BLOCK_SIZE)) (NIST SP 800-38B's `dbl`
     operation, big-endian).

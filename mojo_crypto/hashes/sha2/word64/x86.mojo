@@ -29,7 +29,7 @@ comptime HalfWords = SIMD[DType.uint64, 2]
 # via the x86 SHA512 extension.
 def _compress(
     mut state: SIMD[DType.uint64, 8],
-    block: InlineArray[UInt8, SHA2_WORD64_BLOCK_SIZE],
+    block: Array[UInt8, SHA2_WORD64_BLOCK_SIZE],
 ):
     # VSHA512RNDS2 carries the state as two interleaved quarters rather than as
     # A..D / E..H, so re-lane it once here and undo that after the rounds.

@@ -6,11 +6,11 @@ trait UniversalHashable:
     comptime KEY_SIZE: Int
     comptime TAG_SIZE: Int
 
-    def __init__(out self, var h: InlineArray[UInt8, Self.KEY_SIZE]):
+    def __init__(out self, var h: Array[UInt8, Self.KEY_SIZE]):
         """Initialize the hash from a KEY_SIZE-byte key."""
         ...
 
-    def update_block(mut self, var block: InlineArray[UInt8, Self.BLOCK_SIZE]):
+    def update_block(mut self, var block: Array[UInt8, Self.BLOCK_SIZE]):
         """Absorb a single BLOCK_SIZE block."""
         ...
 
@@ -25,7 +25,7 @@ trait UniversalHashable:
         UhashSizeError[Self.BLOCK_SIZE].check(len(data))
 
         for i in range(len(data) // Self.BLOCK_SIZE):
-            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+            var block = Array[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             # `data` has a runtime length, so `SIMD.from_bytes` — which needs a
             # fixed-size `Array` — does not apply; load the block as one vector.
             block.unsafe_ptr().unsafe_store(
@@ -49,11 +49,11 @@ trait UniversalHashable:
         n_full = len(data) - tail_len
         self.update(data[:n_full])
         if tail_len > 0:
-            var padded = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
+            var padded = Array[UInt8, Self.BLOCK_SIZE](fill=0)
             Span(padded)[:tail_len].copy_from(data[n_full:])
             self.update_block(padded^)
 
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(var self) -> Array[UInt8, Self.TAG_SIZE]:
         """Consume self and return the TAG_SIZE-byte authentication tag."""
         ...
 

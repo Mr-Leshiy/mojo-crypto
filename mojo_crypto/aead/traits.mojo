@@ -10,7 +10,7 @@ trait AeadEncryptable:
         tag_size: Int, aad_o: Origin, o: MutOrigin
     ](
         mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> InlineArray[UInt8, tag_size]:
+    ) raises -> Array[UInt8, tag_size]:
         """Encrypt `data` in place and return the `tag_size`-byte tag."""
         ...
 
@@ -29,7 +29,7 @@ trait AeadDecryptable:
         mut self,
         aad: Span[UInt8, aad_o],
         data: Span[UInt8, o],
-        tag: InlineArray[UInt8, tag_size],
+        tag: Array[UInt8, tag_size],
     ) raises:
         """Verify `tag`, then decrypt `data` in place."""
         ...

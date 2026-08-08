@@ -74,7 +74,7 @@ def check_aes_gcm_aft[
     //,
     NONCE_SIZE: Int,
     TAG_SIZE: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[GcmTestVector]) raises:
     for v in vectors:
         # This instantiation only handles vectors matching its sizes; the GCM

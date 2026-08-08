@@ -16,14 +16,14 @@ struct PolyvalNaive(Copyable, Deinitable, Movable, UniversalHashable):
     var _h: FieldElement
     var _y: FieldElement
 
-    def __init__(out self, var h: InlineArray[UInt8, Self.KEY_SIZE]):
+    def __init__(out self, var h: Array[UInt8, Self.KEY_SIZE]):
         self._h = FieldElement(h^)
         self._y = FieldElement.zeros()
 
-    def update_block(mut self, var block: InlineArray[UInt8, Self.BLOCK_SIZE]):
+    def update_block(mut self, var block: Array[UInt8, Self.BLOCK_SIZE]):
         self._y = (self._y + FieldElement(block^)) * self._h
 
-    def finalize(deinit self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(deinit self) -> Array[UInt8, Self.TAG_SIZE]:
         return self._y^.into_bytes()
 
     def reset(mut self):

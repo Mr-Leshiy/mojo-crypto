@@ -46,7 +46,7 @@ struct CtrMode[
     def __init__(
         out self,
         var cipher: Self.C,
-        var ctr: InlineArray[UInt8, Self.BLOCK_SIZE],
+        var ctr: Array[UInt8, Self.BLOCK_SIZE],
     ):
         """Initialize from a fully-assembled initial counter block."""
 

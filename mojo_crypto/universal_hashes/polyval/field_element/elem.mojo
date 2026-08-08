@@ -46,9 +46,9 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
     [RFC8452 §3]: https://tools.ietf.org/html/rfc8452#section-3
     """
 
-    var _v: InlineArray[UInt8, BLOCK_SIZE]
+    var _v: Array[UInt8, BLOCK_SIZE]
 
-    def __init__(out self, var v: InlineArray[UInt8, BLOCK_SIZE]):
+    def __init__(out self, var v: Array[UInt8, BLOCK_SIZE]):
         self._v = v^
 
     def __init__(out self, v: SIMD[DType.uint64, 2]):
@@ -57,7 +57,7 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
 
     @staticmethod
     def zeros() -> Self:
-        return Self(InlineArray[UInt8, BLOCK_SIZE](fill=0))
+        return Self(Array[UInt8, BLOCK_SIZE](fill=0))
 
     def __add__(self, rhs: Self) -> Self:
         """
@@ -87,7 +87,7 @@ struct FieldElement(Copyable, Deinitable, Equatable, Movable, Writable):
     def __imul__(mut self, rhs: Self):
         self = self * rhs
 
-    def into_bytes(deinit self) -> InlineArray[UInt8, BLOCK_SIZE]:
+    def into_bytes(deinit self) -> Array[UInt8, BLOCK_SIZE]:
         """Consume the element and return its BLOCK_SIZE-byte representation.
 
         Takes `deinit self`, not `var self`: transferring `_v` out dismantles

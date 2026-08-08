@@ -64,7 +64,7 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
         # block boundary and the inner hash's own buffer handles the rest.
         self._inner.update(data)
 
-    def finalize(var self) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(var self) raises -> Array[UInt8, Self.TAG_SIZE]:
         """
         Consume self and return the TAG_SIZE-byte authentication tag.
 
@@ -136,7 +136,7 @@ def _k0[
         H.OUTPUT_SIZE <= size
     ), "digest is wider than K0; H(K) does not fit"
 
-    var k0 = InlineArray[UInt8, size](fill=0)
+    var k0 = Array[UInt8, size](fill=0)
     if len(key) > size:
         var h = H()
         h.update(key)
@@ -158,7 +158,7 @@ def _xor_to_array[
 ](
     a: SIMD[DType.uint8, size],
     b: SIMD[DType.uint8, size],
-) -> InlineArray[
+) -> Array[
     UInt8, size
 ]:
     return to_bytes[input_size=size, output_size=size](a ^ b)

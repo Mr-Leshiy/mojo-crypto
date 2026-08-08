@@ -81,7 +81,7 @@ def check_aes_cbc_aft[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CbcTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:
@@ -107,7 +107,7 @@ def check_aes_cbc_mct[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CbcTestVector]) raises:
     comptime MCT_INNER_ITERATIONS: Int = 1000
 

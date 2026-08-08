@@ -25,13 +25,13 @@ struct _GHashGeneric[P: Copyable & Deinitable & UniversalHashable](
 
     var _poly: Self.P
 
-    def __init__(out self, var h: InlineArray[UInt8, Self.KEY_SIZE]):
+    def __init__(out self, var h: Array[UInt8, Self.KEY_SIZE]):
         self._poly = Self.P(_mulx(_reverse(h^)))
 
-    def update_block(mut self, var block: InlineArray[UInt8, Self.BLOCK_SIZE]):
+    def update_block(mut self, var block: Array[UInt8, Self.BLOCK_SIZE]):
         self._poly.update_block(_reverse(block^))
 
-    def finalize(var self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(var self) -> Array[UInt8, Self.TAG_SIZE]:
         return _reverse(self._poly.copy().finalize())
 
     def reset(mut self):
@@ -40,7 +40,7 @@ struct _GHashGeneric[P: Copyable & Deinitable & UniversalHashable](
 
 def _reverse[
     SIZE: Int
-](var v: InlineArray[UInt8, SIZE]) -> InlineArray[UInt8, SIZE]:
+](var v: Array[UInt8, SIZE]) -> Array[UInt8, SIZE]:
     """
     Reverse this field element at a byte-level of granularity.
     """
@@ -52,7 +52,7 @@ def _reverse[
 
 def _mulx[
     SIZE: Int
-](var v: InlineArray[UInt8, SIZE]) -> InlineArray[UInt8, SIZE]:
+](var v: Array[UInt8, SIZE]) -> Array[UInt8, SIZE]:
     """
     The `mulX_POLYVAL()` function as defined in [RFC 8452 Appendix A].
 

@@ -25,10 +25,10 @@ struct AesAarch64[KEY_SIZE: Int](
     comptime NK: Int = Self.KEY_SIZE // 4
     comptime NR: Int = Self.NK + 6
 
-    var enc_rks: InlineArray[SIMD[DType.uint8, 16], Self.NR + 1]
-    var dec_rks: InlineArray[SIMD[DType.uint8, 16], Self.NR + 1]
+    var enc_rks: Array[SIMD[DType.uint8, 16], Self.NR + 1]
+    var dec_rks: Array[SIMD[DType.uint8, 16], Self.NR + 1]
 
-    def __init__(out self, key: InlineArray[UInt8, Self.KEY_SIZE]):
+    def __init__(out self, key: Array[UInt8, Self.KEY_SIZE]):
         _check_key_size[Self.KEY_SIZE]()
 
         self.enc_rks = _expand_enc_rks[Self.NR, Self.NK](key)
@@ -91,7 +91,7 @@ def _inv_mix(v: SIMD[DType.uint8, BLOCK_SIZE]) -> SIMD[DType.uint8, BLOCK_SIZE]:
 # FIPS 197 §5.1 Cipher() via ARMv8 Crypto Extension.
 def _cipher[
     NR: Int, o: MutOrigin
-](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
+](data: Span[UInt8, o], rks: Array[SIMD[DType.uint8, 16], NR + 1]):
     var s = load_bytes[DType.uint8, BLOCK_SIZE](data)
     comptime for r in range(NR - 1):
         s = _aesmc(_aese(s, rks[r]))
@@ -103,7 +103,7 @@ def _cipher[
 # FIPS 197 §5.3 InvCipher() via ARMv8 Crypto Extension (equivalent inverse).
 def _decipher[
     NR: Int, o: MutOrigin
-](data: Span[UInt8, o], rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]):
+](data: Span[UInt8, o], rks: Array[SIMD[DType.uint8, 16], NR + 1]):
     var s = load_bytes[DType.uint8, BLOCK_SIZE](data)
     s = _aesd(s, rks[0])
     s = _inv_mix(s)
@@ -116,7 +116,7 @@ def _decipher[
 
 
 # FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.
-comptime RCON: InlineArray[UInt8, 10] = [
+comptime RCON: Array[UInt8, 10] = [
     # fmt: off
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36,
     # fmt: on
@@ -129,7 +129,7 @@ comptime RCON: InlineArray[UInt8, 10] = [
 # order in kb[] directly, so each round key is a plain 16-byte load.
 def _expand_enc_rks[
     NR: Int, NK: Int, KEY_SIZE: Int
-](key: InlineArray[UInt8, KEY_SIZE]) -> InlineArray[
+](key: Array[UInt8, KEY_SIZE]) -> Array[
     SIMD[DType.uint8, 16], NR + 1
 ]:
     # Both tables are comptime values, so materialize them once here rather
@@ -137,7 +137,7 @@ def _expand_enc_rks[
     var sbox = materialize[SBOX]()
     var rcon = materialize[RCON]()
 
-    var kb = InlineArray[UInt8, (NR + 1) * 16](uninitialized=True)
+    var kb = Array[UInt8, (NR + 1) * 16](uninitialized=True)
     for i in range(KEY_SIZE):
         kb[i] = key[i]
     for wi in range(NK, (NR + 1) * 4):
@@ -162,9 +162,9 @@ def _expand_enc_rks[
         kb[wi * 4 + 1] = kb[(wi - NK) * 4 + 1] ^ b1
         kb[wi * 4 + 2] = kb[(wi - NK) * 4 + 2] ^ b2
         kb[wi * 4 + 3] = kb[(wi - NK) * 4 + 3] ^ b3
-    var rks = InlineArray[SIMD[DType.uint8, 16], NR + 1](uninitialized=True)
+    var rks = Array[SIMD[DType.uint8, 16], NR + 1](uninitialized=True)
     for r in range(NR + 1):
-        var block = InlineArray[UInt8, 16](uninitialized=True)
+        var block = Array[UInt8, 16](uninitialized=True)
         Span(block).copy_from(Span(kb)[r * 16 : r * 16 + 16])
         rks[r] = SIMD[DType.uint8, 16].from_bytes(block)
     return rks^
@@ -175,10 +175,10 @@ def _expand_enc_rks[
 # instead of UInt32 words: dk[0]=ek[NR], dk[1..NR-1]=aesimc(ek[NR-r]), dk[NR]=ek[0].
 def _dec_from_enc_rks[
     NR: Int
-](enc_rks: InlineArray[SIMD[DType.uint8, 16], NR + 1]) -> InlineArray[
+](enc_rks: Array[SIMD[DType.uint8, 16], NR + 1]) -> Array[
     SIMD[DType.uint8, 16], NR + 1
 ]:
-    var rks = InlineArray[SIMD[DType.uint8, 16], NR + 1](uninitialized=True)
+    var rks = Array[SIMD[DType.uint8, 16], NR + 1](uninitialized=True)
     rks[0] = enc_rks[NR]
     comptime for r in range(1, NR):
         rks[r] = _inv_mix(enc_rks[NR - r])

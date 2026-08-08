@@ -32,7 +32,7 @@ struct CbcMode[
     def __init__(
         out self,
         var cipher: Self.Cipher,
-        var iv: InlineArray[UInt8, Self.BLOCK_SIZE],
+        var iv: Array[UInt8, Self.BLOCK_SIZE],
     ):
         self._cipher = cipher^
         self._iv = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](iv)

@@ -38,9 +38,9 @@ def hex_decode(s: String) raises -> List[UInt8]:
 
 
 @always_inline
-def hex_decode[SIZE: Int](s: String) raises -> InlineArray[UInt8, SIZE]:
+def hex_decode[SIZE: Int](s: String) raises -> Array[UInt8, SIZE]:
     """Hex-decode `s` into a newly allocated, fixed-size array."""
-    var result = InlineArray[UInt8, SIZE](uninitialized=True)
+    var result = Array[UInt8, SIZE](uninitialized=True)
     hex_decode(s, Span(result))
     return result^
 

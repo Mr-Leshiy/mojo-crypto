@@ -1,6 +1,6 @@
 """Conversions between the container and word representations of key material.
 
-`to_inline_array`/`to_list` move a fixed-size buffer between `InlineArray` and
+`to_inline_array`/`to_list` move a fixed-size buffer between `Array` and
 `List` (test vectors arrive as lists, the primitives take arrays);
 `load_bytes`/`store_bytes` reinterpret a byte span as a vector and back;
 `load_be` assembles a big-endian word out of a byte span.
@@ -16,7 +16,7 @@ def load_bytes[
     """Reinterpret the first `width` lanes' worth of `data` as a vector.
 
     The counterpart of `SIMD.from_bytes`, for the case that one needs a
-    fixed-size `InlineArray` and `data` does not have one: a span with a
+    fixed-size `Array` and `data` does not have one: a span with a
     runtime length. Reading through the span's pointer avoids the copy that
     staging the bytes into an array would cost, which matters in the
     block-cipher inner loops this exists for.
@@ -56,7 +56,7 @@ def store_bytes[
     """Write `value` over the leading bytes of `data`.
 
     The inverse of `load_bytes`, and the in-place counterpart of `to_bytes`:
-    it writes through the span rather than returning a fresh `InlineArray`,
+    it writes through the span rather than returning a fresh `Array`,
     so the caller pays no copy. Byte order is the target's own, as in
     `load_bytes`.
 
@@ -85,7 +85,7 @@ def to_bytes[
     output_size: Int,
     input_size: Int,
     big_endian: Bool = is_big_endian(),
-](input: SIMD[dtype, input_size]) -> InlineArray[UInt8, output_size]:
+](input: SIMD[dtype, input_size]) -> Array[UInt8, output_size]:
     """Reinterpret a SIMD vector as its `output_size` bytes.
 
     `SIMD.as_bytes` is typed `Array[UInt8, size_of[Self]()]`, a size expression
@@ -113,7 +113,7 @@ def to_bytes[
         size_of[SIMD[dtype, input_size]]() == output_size
     ), "to_bytes: output_size must equal the byte width of the input vector"
 
-    return rebind_var[InlineArray[UInt8, output_size]](
+    return rebind_var[Array[UInt8, output_size]](
         input.as_bytes[big_endian=big_endian]()
     )
 
@@ -122,8 +122,8 @@ def to_bytes[
 def to_inline_array[
     size: Int,
     T: Copyable & Deinitable,
-](data: List[T]) raises -> InlineArray[T, size]:
-    """Copy a `size`-length List into a fixed-size InlineArray.
+](data: List[T]) raises -> Array[T, size]:
+    """Copy a `size`-length List into a fixed-size Array.
 
     Copies the underlying buffer in a single `Span.copy_from` rather than
     element-by-element.
@@ -136,7 +136,7 @@ def to_inline_array[
         data: The list to copy from.
 
     Returns:
-        An `InlineArray[T, size]` holding a copy of `data`.
+        An `Array[T, size]` holding a copy of `data`.
 
     Raises:
         Error: If `len(data) != size`.
@@ -145,7 +145,7 @@ def to_inline_array[
         raise Error(
             "expected list of length {}; got {}".format(size, len(data))
         )
-    var arr = InlineArray[T, size](uninitialized=True)
+    var arr = Array[T, size](uninitialized=True)
     Span(arr).copy_from(Span(data))
     return arr^
 
@@ -153,8 +153,8 @@ def to_inline_array[
 @always_inline
 def to_list[
     size: Int, T: Copyable & Deinitable
-](data: InlineArray[T, size]) -> List[T]:
-    """Copy a fixed-size InlineArray into a List.
+](data: Array[T, size]) -> List[T]:
+    """Copy a fixed-size Array into a List.
 
     Copies the underlying buffer in a single `Span.copy_from` rather than
     element-by-element.

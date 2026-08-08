@@ -22,7 +22,7 @@ def check_aes[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[AesTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:

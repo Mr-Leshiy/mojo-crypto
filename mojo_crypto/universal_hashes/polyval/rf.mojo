@@ -53,11 +53,11 @@ struct _PolyvalRf[P: Pmull](Copyable, Deinitable, Movable, UniversalHashable):
     var _h: ExpandedKey[Self.P]
     var _y: FieldElement
 
-    def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
+    def __init__(out self, h: Array[UInt8, Self.KEY_SIZE]):
         self._h = ExpandedKey[Self.P](h)
         self._y = FieldElement.zeros()
 
-    def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
+    def update_block(mut self, block: Array[UInt8, Self.BLOCK_SIZE]):
         """Absorb one block into the accumulator: y = (y ⊕ block) × H."""
         data = SIMD[DType.uint64, 2].from_bytes(block)
         y = SIMD[DType.uint64, 2].from_bytes(self._y._v)
@@ -70,7 +70,7 @@ struct _PolyvalRf[P: Pmull](Copyable, Deinitable, Movable, UniversalHashable):
         # Multiply by H using R/F algorithm
         self._y = FieldElement(_gf128_mul_rf[Self.P](acc, h1, d1))
 
-    def finalize(deinit self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(deinit self) -> Array[UInt8, Self.TAG_SIZE]:
         return self._y^.into_bytes()
 
     def reset(mut self):
@@ -112,7 +112,7 @@ struct ExpandedKey[P: Pmull](
     # D^4
     var d4: FieldElement
 
-    def __init__(out self, h: InlineArray[UInt8, KEY_SIZE]):
+    def __init__(out self, h: Array[UInt8, KEY_SIZE]):
         h1 = SIMD[DType.uint64, 2].from_bytes(h)
         d1 = _compute_d[Self.P](h1)
 

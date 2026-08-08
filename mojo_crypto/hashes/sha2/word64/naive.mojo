@@ -28,10 +28,10 @@ comptime BIG_SIGMA1_ROT_C: UInt64 = 41
 # SHA-384, SHA-512/224, and SHA-512/256).
 def _compress(
     mut state: SIMD[DType.uint64, 8],
-    block: InlineArray[UInt8, SHA2_WORD64_BLOCK_SIZE],
+    block: Array[UInt8, SHA2_WORD64_BLOCK_SIZE],
 ):
     var block_span = Span(block)
-    var w = InlineArray[UInt64, ROUNDS_64](uninitialized=True)
+    var w = Array[UInt64, ROUNDS_64](uninitialized=True)
     for t in range(16):
         w[t] = load_be[DType.uint64](block_span[8 * t : 8 * t + 8])
     for t in range(16, ROUNDS_64):

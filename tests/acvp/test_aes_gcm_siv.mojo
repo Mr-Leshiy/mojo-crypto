@@ -64,7 +64,7 @@ def check_aes_gcm_siv_aft[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[GcmSivTestVector]) raises:
     # GCM-SIV (RFC 8452) fixes the nonce at 96 bits and the tag at 128 bits.
     comptime NONCE_SIZE = 12
