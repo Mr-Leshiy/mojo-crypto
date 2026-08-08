@@ -1,31 +1,47 @@
 from max.gpu.host import DeviceContext
-from std.time import monotonic
-from std.runtime.asyncrt import create_task
+from std.gpu import global_idx
+from std.runtime.asyncrt import create_raising_task
 
 from mojo_crypto.runtime.executor import Executor
 
 
-async def foo(mut executor: Executor) -> Int:
-    return await timeout(executor, 50)
+# One thread per element: doubles every value of the array in place.
+# The size is a parameter, not an argument: `Int` is not `DevicePassable`, so
+# it cannot cross the host/device boundary as a kernel argument.
+def _double[SIZE: Int](data: Pointer[Scalar[DType.uint32], MutAnyOrigin]):
+    var i = global_idx.x
+    if i < SIZE:
+        data[unsafe_offset=i] = data[unsafe_offset=i] * data[unsafe_offset=i]
 
-async def foo1() -> Int:
-    return 1 + 1
 
+async def foo[
+    N: Int
+](mut executor: Executor, data: Array[UInt32, N]) raises -> Array[UInt32, N]:
+    var ctx = executor.gpu_ctx()
 
-async def timeout(mut executor: Executor, ms: Int) -> Int:
-    var deadline = monotonic() + ms * 1_000_000
-    var polls = 0
-    while monotonic() < deadline:
-        polls += 1
-        # await executor.yield_now()
-    print("timeout", ms, "ms elapsed after", polls, "polls")
-    return polls
+    var result = data.copy()
+
+    var buf = ctx.enqueue_create_buffer[DType.uint32](N)
+    buf.enqueue_copy_from(result)
+    await executor.yield_now()
+
+    comptime kernel = _double[N]
+    ctx.enqueue_function[kernel](buf, grid_dim=1, block_dim=N)
+
+    buf.enqueue_copy_to(result)
+    await executor.yield_now()
+
+    return result^
 
 
 def main() raises:
     with DeviceContext() as ctx:
-        var executor = Executor()
+        var executor = Executor(ctx^)
 
-        var task = create_task(foo(executor))
+        var a: Array[UInt32, 6] = [1, 2, 3, 4, 5, 6]
+        var foo_c = foo(executor, a)
+        var task = create_raising_task(foo_c^)
 
-        print("Done, polls:", task.wait())
+        executor.wait()
+
+        print(task^.wait())

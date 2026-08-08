@@ -14,11 +14,11 @@ comptime _EXECUTOR = _Global["ASYNC_GPU_EXECUTOR", Executor, _init_executor]
 
 
 struct Executor:
-    # var _ctx: DeviceContext
+    var _ctx: DeviceContext
     var _q: Deque[AnyCoroutine]
 
-    def __init__(out self):
-        # self._ctx = ctx
+    def __init__(out self, ctx: DeviceContext):
+        self._ctx = ctx
         self._q = Deque[AnyCoroutine]()
 
     def gpu_ctx(self) -> DeviceContext:
@@ -27,7 +27,7 @@ struct Executor:
     def wait(mut self) raises:
         while len(self._q) > 0:
             _coro_resume_fn(self._q.popleft())
-        # self._ctx.synchronize()
+        self._ctx.synchronize()
 
     async def yield_now(mut self):
         """Suspend the calling coroutine and put it back on the run queue.
