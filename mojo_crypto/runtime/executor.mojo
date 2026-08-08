@@ -24,10 +24,17 @@ struct Executor:
     def gpu_ctx(self) -> DeviceContext:
         return self._ctx
 
+    def add[
+        type: Deinitable, origins: OriginSet
+    ](mut self, var handle: Coroutine[type, origins]):
+        self._q.append(handle^._take_handle())
+
     def wait(mut self) raises:
+        print("Start waiting", len(self._q))
         while len(self._q) > 0:
             _coro_resume_fn(self._q.popleft())
         self._ctx.synchronize()
+        print("End waiting")
 
     async def yield_now(mut self):
         """Suspend the calling coroutine and put it back on the run queue.

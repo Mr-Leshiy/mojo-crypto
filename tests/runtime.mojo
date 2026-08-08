@@ -23,13 +23,17 @@ async def foo[
 
     var buf = ctx.enqueue_create_buffer[DType.uint32](N)
     buf.enqueue_copy_from(result)
+    print("Start sync input")
     await executor.yield_now()
+    print("End sync input")
 
     comptime kernel = _double[N]
     ctx.enqueue_function[kernel](buf, grid_dim=1, block_dim=N)
 
     buf.enqueue_copy_to(result)
+    print("Start sync output")
     await executor.yield_now()
+    print("End sync output")
 
     return result^
 
@@ -42,6 +46,9 @@ def main() raises:
         var foo_c = foo(executor, a)
         var task = create_raising_task(foo_c^)
 
-        executor.wait()
+        try:
+            executor.wait()
+        except e:
+            print("Error: ", e)
 
         print(task^.wait())
