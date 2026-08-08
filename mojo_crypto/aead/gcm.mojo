@@ -79,9 +79,9 @@ struct Gcm[
 
     def encrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
-    ](
-        mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> Array[UInt8, TAG_SIZE]:
+    ](mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]) raises -> Array[
+        UInt8, TAG_SIZE
+    ]:
         """
         Encrypt `data` in place and return the `TAG_SIZE`-byte tag.
 
@@ -143,9 +143,7 @@ struct Gcm[
 
     def _init_ctr(
         self,
-    ) raises -> Tuple[
-        CtrMode[Self.Cipher], Array[UInt8, Self.BLOCK_SIZE]
-    ]:
+    ) raises -> Tuple[CtrMode[Self.Cipher], Array[UInt8, Self.BLOCK_SIZE]]:
         """
         Initialize counter mode.
 
@@ -188,9 +186,7 @@ struct Gcm[
             )
             ghash.update_block(length_block^)
 
-            j0 = rebind_var[Array[UInt8, Self.BLOCK_SIZE]](
-                ghash^.finalize()
-            )
+            j0 = rebind_var[Array[UInt8, Self.BLOCK_SIZE]](ghash^.finalize())
 
         # CtrMode starts at J0; consuming the first keystream block yields the
         # tag mask E(J0) and advances the counter to inc32(J0) for the data.

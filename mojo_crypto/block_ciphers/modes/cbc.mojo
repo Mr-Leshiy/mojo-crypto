@@ -71,9 +71,9 @@ struct CbcMode[
 
             self._cipher.decrypt(data_span)
 
-            var data_simd = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](
-                data_span
-            )
+            var data_simd = load_bytes[
+                dtype=DType.uint8, width=Self.BLOCK_SIZE
+            ](data_span)
             data_simd ^= self._iv
             store_bytes(data_span, data_simd)
 

@@ -8,9 +8,9 @@ trait AeadEncryptable:
 
     def encrypt[
         tag_size: Int, aad_o: Origin, o: MutOrigin
-    ](
-        mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> Array[UInt8, tag_size]:
+    ](mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]) raises -> Array[
+        UInt8, tag_size
+    ]:
         """Encrypt `data` in place and return the `tag_size`-byte tag."""
         ...
 

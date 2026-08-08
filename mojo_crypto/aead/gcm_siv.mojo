@@ -88,9 +88,7 @@ struct GcmSiv[
     @staticmethod
     def create[
         KEY_SIZE: Int,
-        cipher_init: def(Array[UInt8, KEY_SIZE]) raises capturing[
-            _
-        ] -> Self.C,
+        cipher_init: def(Array[UInt8, KEY_SIZE]) raises capturing[_] -> Self.C,
     ](
         key_generating_key: Array[UInt8, KEY_SIZE],
         nonce: Array[UInt8, Self.NONCE_SIZE],
@@ -143,9 +141,9 @@ struct GcmSiv[
 
     def encrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
-    ](
-        mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> Array[UInt8, TAG_SIZE]:
+    ](mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]) raises -> Array[
+        UInt8, TAG_SIZE
+    ]:
         """
         Encrypt `data` in place and return the 16-byte tag.
 
@@ -194,9 +192,7 @@ struct GcmSiv[
 
         LengthError.check_decrypt(len(aad), len(data))
 
-        var tag_block = rebind_var[Array[UInt8, Self.TAG_SIZE]](
-            tag.copy()
-        )
+        var tag_block = rebind_var[Array[UInt8, Self.TAG_SIZE]](tag.copy())
 
         # POLYVAL absorbs the AAD (padded) first.
         self._polyval.update_padded(aad)

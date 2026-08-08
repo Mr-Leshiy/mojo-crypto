@@ -7,8 +7,12 @@ from mojo_crypto.universal_hashes.polyval.common import BLOCK_SIZE
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element.rs
 def test_fe_add() raises:
-    var a = FieldElement(hex_decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e"))
-    var b = FieldElement(hex_decode[BLOCK_SIZE]("ff000000000000000000000000000000"))
+    var a = FieldElement(
+        hex_decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e")
+    )
+    var b = FieldElement(
+        hex_decode[BLOCK_SIZE]("ff000000000000000000000000000000")
+    )
     var expected = FieldElement(
         hex_decode[BLOCK_SIZE]("99e94bd4ef8a2c3b884cfa59ca342b2e")
     )
@@ -28,8 +32,12 @@ def test_fe_add() raises:
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element.rs
 def test_fe_mul() raises:
-    var a = FieldElement(hex_decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e"))
-    var b = FieldElement(hex_decode[BLOCK_SIZE]("ff000000000000000000000000000000"))
+    var a = FieldElement(
+        hex_decode[BLOCK_SIZE]("66e94bd4ef8a2c3b884cfa59ca342b2e")
+    )
+    var b = FieldElement(
+        hex_decode[BLOCK_SIZE]("ff000000000000000000000000000000")
+    )
     var expected = FieldElement(
         hex_decode[BLOCK_SIZE]("ebe563401e7e91ea3ad6426b8140c394")
     )

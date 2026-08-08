@@ -188,7 +188,9 @@ def test_fe_mulx() raises:
         hex_decode[GHashNaive.BLOCK_SIZE]("00000000000000000000000000000080"),
         hex_decode[GHashNaive.BLOCK_SIZE]("010000000000000000000000000000c2"),
     ]
-    var r = hex_decode[GHashNaive.BLOCK_SIZE]("01000000000000000000000000000000")
+    var r = hex_decode[GHashNaive.BLOCK_SIZE](
+        "01000000000000000000000000000000"
+    )
 
     for vec in MULX_TEST_VECTORS:
         r = _mulx(r.copy())

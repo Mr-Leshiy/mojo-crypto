@@ -105,9 +105,7 @@ def _add_round_key[
 
 
 # FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
-def _sub_bytes[
-    o: MutOrigin
-](state: Span[UInt8, o], sbox: Array[UInt32, 256]):
+def _sub_bytes[o: MutOrigin](state: Span[UInt8, o], sbox: Array[UInt32, 256]):
     for i in range(16):
         state[i] = UInt8(sbox[Int(state[i])])
 

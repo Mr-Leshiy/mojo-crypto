@@ -129,9 +129,7 @@ comptime RCON: Array[UInt8, 10] = [
 # order in kb[] directly, so each round key is a plain 16-byte load.
 def _expand_enc_rks[
     NR: Int, NK: Int, KEY_SIZE: Int
-](key: Array[UInt8, KEY_SIZE]) -> Array[
-    SIMD[DType.uint8, 16], NR + 1
-]:
+](key: Array[UInt8, KEY_SIZE]) -> Array[SIMD[DType.uint8, 16], NR + 1]:
     # Both tables are comptime values, so materialize them once here rather
     # than at every lookup inside the loop below.
     var sbox = materialize[SBOX]()
