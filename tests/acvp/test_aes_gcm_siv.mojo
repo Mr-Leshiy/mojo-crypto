@@ -31,10 +31,10 @@ def parse_acvp_aes_gcm_siv_aft(
 ) raises -> List[GcmSivTestVector]:
     var vectors = List[GcmSivTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         var pt_hex: String
         var ct_hex: String

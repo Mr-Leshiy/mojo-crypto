@@ -45,8 +45,8 @@ trait UniversalHashable:
         whose MACs are based on universal hashing (e.g. AES-GCM, AES-GCM-SIV).
         """
 
-        tail_len = len(data) % Self.BLOCK_SIZE
-        n_full = len(data) - tail_len
+        var tail_len = len(data) % Self.BLOCK_SIZE
+        var n_full = len(data) - tail_len
         self.update(data[:n_full])
         if tail_len > 0:
             var padded = Array[UInt8, Self.BLOCK_SIZE](fill=0)

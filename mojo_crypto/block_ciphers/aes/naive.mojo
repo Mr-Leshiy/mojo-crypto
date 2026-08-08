@@ -256,8 +256,8 @@ def _rot_word(w: UInt32) -> UInt32:
 
 @always_inline
 def _sub_word(w: UInt32, sbox: Array[UInt32, 256]) -> UInt32:
-    a0 = sbox[w >> 24] << 24
-    a1 = sbox[w >> 16 & 0xFF] << 16
-    a2 = sbox[w >> 8 & 0xFF] << 8
-    a3 = sbox[w & 0xFF]
+    var a0 = sbox[w >> 24] << 24
+    var a1 = sbox[w >> 16 & 0xFF] << 16
+    var a2 = sbox[w >> 8 & 0xFF] << 8
+    var a3 = sbox[w & 0xFF]
     return a0 | a1 | a2 | a3

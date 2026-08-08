@@ -25,10 +25,10 @@ def parse_acvp_aes_ecb_aft(
 ) raises -> List[EcbTestVector]:
     var vectors = List[EcbTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         var pt_hex: String
         var ct_hex: String
@@ -56,9 +56,9 @@ def parse_acvp_aes_ecb_mct(
 ) raises -> List[EcbTestVector]:
     var vectors = List[EcbTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         var i = 0
         for entry in expected["resultsArray"]:

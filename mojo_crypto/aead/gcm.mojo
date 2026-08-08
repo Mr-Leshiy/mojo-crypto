@@ -194,8 +194,8 @@ struct Gcm[
 
         # CtrMode starts at J0; consuming the first keystream block yields the
         # tag mask E(J0) and advances the counter to inc32(J0) for the data.
-        ctr = CtrMode[Self.Cipher](self._cipher.copy(), j0^)
-        tag_mask = Array[UInt8, Self.BLOCK_SIZE](fill=0)
+        var ctr = CtrMode[Self.Cipher](self._cipher.copy(), j0^)
+        var tag_mask = Array[UInt8, Self.BLOCK_SIZE](fill=0)
         ctr.encrypt(tag_mask)
 
         return (ctr^, tag_mask^)

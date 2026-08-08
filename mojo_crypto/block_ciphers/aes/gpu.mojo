@@ -1,6 +1,7 @@
 from max.gpu.host import DeviceContext, DeviceBuffer
 from max.gpu.memory import AddressSpace
-from std.gpu import thread_idx, block_idx, barrier
+from max.gpu.sync import barrier
+from std.gpu import thread_idx, block_idx
 from std.memory import stack_allocation
 
 from mojo_crypto.block_ciphers.traits import (
