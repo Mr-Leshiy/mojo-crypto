@@ -34,25 +34,35 @@ struct Executor(Movable):
 
 struct _ExecutorInner:
     var _ctx: DeviceContext
-    var _q: Deque[AnyCoroutine]
+
+    # The run queue lives behind its own shared pointer, and no method below
+    # takes `mut self`. Both halves matter.
+    #
+    # A resumed coroutine reaches this very queue through the `Context`'s copy
+    # of the executor pointer, so `wait` must not hold an exclusive borrow
+    # across `_coro_resume_fn`: under `mut self` the compiler may keep the
+    # `Deque` header in registers for the duration of the resume and write it
+    # back afterwards, silently discarding whatever `yield_now` enqueued. Going
+    # through the pointer instead keeps both paths on the same header.
+    var _q: ArcPointer[Deque[AnyCoroutine]]
 
     def __init__(out self, ctx: DeviceContext):
         self._ctx = ctx
-        self._q = Deque[AnyCoroutine]()
+        self._q = ArcPointer(Deque[AnyCoroutine]())
 
     def add[
         type: Deinitable, origins: OriginSet
-    ](mut self, var handle: Coroutine[type, origins]):
+    ](self, var handle: Coroutine[type, origins]):
         handle._set_noop_callback()
         self.enqueue(handle^._take_handle())
 
-    def enqueue(mut self, hdl: AnyCoroutine):
-        self._q.append(hdl)
+    def enqueue(self, hdl: AnyCoroutine):
+        self._q[].append(hdl)
 
-    def wait(mut self) raises:
-        while len(self._q) > 0:
-            print("Before resume", len(self._q))
-            _coro_resume_fn(self._q.popleft())
-            print("After resume", len(self._q))
-        print("Wait finished")
+    def wait(self) raises:
+        while len(self._q[]) > 0:
+            # Pop first, resume second: the handle has to leave the queue
+            # before the coroutine can push itself back on.
+            var hdl = self._q[].popleft()
+            _coro_resume_fn(hdl)
         self._ctx.synchronize()

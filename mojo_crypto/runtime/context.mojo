@@ -23,6 +23,5 @@ struct Context(Movable):
         @parameter
         def body(hdl: AnyCoroutine):
             self._executor[].enqueue(hdl)
-            print("yield now", len(self._executor[]._q))
 
         _suspend_async[body]()
