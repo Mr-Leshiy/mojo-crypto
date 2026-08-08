@@ -27,15 +27,15 @@ def parse_acvp_aes_cmac_aft(
 ) raises -> List[CmacTestVector]:
     var vectors = List[CmacTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
 
         # CMAC uses "gen"/"ver" instead of "encrypt"/"decrypt" for the same
         # produce-vs-check duality: "gen" computes the canonical MAC (like
         # encrypt), "ver" checks a possibly-wrong candidate (like GCM
         # decrypt).
-        is_encrypt = String(group["direction"]) == "gen"
+        var is_encrypt = String(group["direction"]) == "gen"
 
         # The MAC may be truncated below the full block (macLen 64..128
         # bits); tag_hex is left at whatever length the JSON already gives,

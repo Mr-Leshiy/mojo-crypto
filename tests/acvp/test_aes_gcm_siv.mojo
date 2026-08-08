@@ -89,16 +89,16 @@ def check_aes_gcm_siv_aft[
         var nonce = to_inline_array[NONCE_SIZE](v.iv)
         var tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
-            data = v.pt.copy()
-            gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
+            var data = v.pt.copy()
+            var gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
                 key, nonce
             )
             var actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, cipher_body, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
-            data = cipher_body.copy()
-            gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
+            var data = cipher_body.copy()
+            var gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
                 key, nonce
             )
             if v.test_passed:

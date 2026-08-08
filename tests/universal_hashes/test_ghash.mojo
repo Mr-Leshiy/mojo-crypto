@@ -47,10 +47,10 @@ def test_ghash_test_vector() raises:
 # as RFC errata, so we use the corrected vector from the errata instead:
 # <https://www.rfc-editor.org/errata_search.php?rfc=8452>
 def test_mulx_rfc8452_vector() raises:
-    input = hex_decode[GHashNaive.BLOCK_SIZE](
+    var input = hex_decode[GHashNaive.BLOCK_SIZE](
         "9c98c04df9387ded828175a92ba652d8"
     )
-    expected = hex_decode[GHashNaive.BLOCK_SIZE](
+    var expected = hex_decode[GHashNaive.BLOCK_SIZE](
         "3931819bf271fada0503eb52574ca572"
     )
     assert_equal(expected, _mulx(input^))
@@ -58,7 +58,7 @@ def test_mulx_rfc8452_vector() raises:
 
 # Test vectors from https://github.com/RustCrypto/universal-hashes/blob/master/polyval/src/field_element/mulx.rs
 def test_fe_mulx() raises:
-    MULX_TEST_VECTORS = [
+    var MULX_TEST_VECTORS = [
         hex_decode[GHashNaive.BLOCK_SIZE]("02000000000000000000000000000000"),
         hex_decode[GHashNaive.BLOCK_SIZE]("04000000000000000000000000000000"),
         hex_decode[GHashNaive.BLOCK_SIZE]("08000000000000000000000000000000"),
@@ -188,7 +188,7 @@ def test_fe_mulx() raises:
         hex_decode[GHashNaive.BLOCK_SIZE]("00000000000000000000000000000080"),
         hex_decode[GHashNaive.BLOCK_SIZE]("010000000000000000000000000000c2"),
     ]
-    r = hex_decode[GHashNaive.BLOCK_SIZE]("01000000000000000000000000000000")
+    var r = hex_decode[GHashNaive.BLOCK_SIZE]("01000000000000000000000000000000")
 
     for vec in MULX_TEST_VECTORS:
         r = _mulx(r.copy())

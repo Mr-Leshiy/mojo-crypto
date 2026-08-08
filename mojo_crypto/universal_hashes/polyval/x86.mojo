@@ -25,8 +25,8 @@ struct _Pmull(Pmull):
         scalar (i64, i64) interface of AArch64's PMULL.
         """
 
-        va = SIMD[DType.uint64, 2](a, 0)
-        vb = SIMD[DType.uint64, 2](b, 0)
+        var va = SIMD[DType.uint64, 2](a, 0)
+        var vb = SIMD[DType.uint64, 2](b, 0)
         return llvm_intrinsic["llvm.x86.pclmulqdq", SIMD[DType.uint64, 2]](
             va, vb, Int8(0x00)
         )

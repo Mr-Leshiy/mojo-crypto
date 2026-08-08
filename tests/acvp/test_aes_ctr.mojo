@@ -25,10 +25,10 @@ def parse_acvp_aes_ctr_aft(
 ) raises -> List[CtrTestVector]:
     var vectors = List[CtrTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         # CTR encryption vectors carry the IV in expectedResults rather than
         # the prompt; skip them and rely on the decryption vectors (same

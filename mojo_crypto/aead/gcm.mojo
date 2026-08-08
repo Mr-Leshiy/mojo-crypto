@@ -163,7 +163,7 @@ struct Gcm[
 
         Self._assert_valid_params()
 
-        j0 = Array[UInt8, Self.BLOCK_SIZE](fill=0)
+        var j0 = Array[UInt8, Self.BLOCK_SIZE](fill=0)
 
         comptime if Self.NONCE_SIZE == 12:
             # J0 = IV || 0^31 || 1
