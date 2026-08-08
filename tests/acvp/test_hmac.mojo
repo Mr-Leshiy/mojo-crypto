@@ -31,8 +31,8 @@ def parse_acvp_hmac_aft(
 ) raises -> List[HmacTestVector]:
     var vectors = List[HmacTestVector]()
     for v in python_vectors:
-        test = v["test"]
-        expected = v["expected"]
+        var test = v["test"]
+        var expected = v["expected"]
 
         # Unlike the SHA-2 sets, no bit-granular lengths to skip: the HMAC
         # registration pins keyLen, msgLen and macLen to increments of 8.

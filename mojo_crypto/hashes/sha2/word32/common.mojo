@@ -11,7 +11,7 @@ comptime SHA2_WORD32_BLOCK_SIZE: Int = 64
 comptime ROUNDS_32: Int = 64
 
 # FIPS 180-4 §4.2.2 — round constants for the 32-bit word engine (SHA-224/256).
-comptime K32: InlineArray[UInt32, ROUNDS_32] = [
+comptime K32: Array[UInt32, ROUNDS_32] = [
     # fmt: off
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -25,7 +25,7 @@ comptime K32: InlineArray[UInt32, ROUNDS_32] = [
 ]
 
 # FIPS 180-4 §5.3.2 — SHA-224 initial hash value.
-comptime SHA224_IV: InlineArray[UInt32, 8] = [
+comptime SHA224_IV: Array[UInt32, 8] = [
     0xC1059ED8,
     0x367CD507,
     0x3070DD17,
@@ -37,7 +37,7 @@ comptime SHA224_IV: InlineArray[UInt32, 8] = [
 ]
 
 # FIPS 180-4 §5.3.3 — SHA-256 initial hash value.
-comptime SHA256_IV: InlineArray[UInt32, 8] = [
+comptime SHA256_IV: Array[UInt32, 8] = [
     0x6A09E667,
     0xBB67AE85,
     0x3C6EF372,
@@ -50,11 +50,11 @@ comptime SHA256_IV: InlineArray[UInt32, 8] = [
 
 
 struct _Sha2Word32[
-    IV: InlineArray[UInt32, 8],
+    IV: Array[UInt32, 8],
     DigestSize: Int,
     compress: def(
         mut state: SIMD[DType.uint32, 8],
-        block: InlineArray[UInt8, SHA2_WORD32_BLOCK_SIZE],
+        block: Array[UInt8, SHA2_WORD32_BLOCK_SIZE],
     ) thin,
 ](Copyable, Deinitable, Digest, Movable):
     """
@@ -69,13 +69,13 @@ struct _Sha2Word32[
     comptime OUTPUT_SIZE: Int = Self.DigestSize
 
     var _state: SIMD[DType.uint32, 8]
-    var _buffer: InlineArray[UInt8, Self.BLOCK_SIZE]
+    var _buffer: Array[UInt8, Self.BLOCK_SIZE]
     var _buffer_len: Int
     var _total_len: UInt64
 
     def __init__(out self):
         self._state = Self._iv()
-        self._buffer = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+        self._buffer = Array[UInt8, Self.BLOCK_SIZE](uninitialized=True)
         self._buffer_len = 0
         self._total_len = 0
 
@@ -112,7 +112,7 @@ struct _Sha2Word32[
                 self._buffer_len = 0
 
         while len(input) >= Self.BLOCK_SIZE:
-            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+            var block = Array[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             Span(block).copy_from(input[: Self.BLOCK_SIZE])
             Self.compress(self._state, block)
             input = input[Self.BLOCK_SIZE :]
@@ -128,7 +128,7 @@ struct _Sha2Word32[
         """The `count` free buffer bytes starting at the buffered prefix."""
         return Span(self._buffer)[self._buffer_len : self._buffer_len + count]
 
-    def finalize(var self) -> InlineArray[UInt8, Self.OUTPUT_SIZE]:
+    def finalize(var self) -> Array[UInt8, Self.OUTPUT_SIZE]:
         """Consume self and return the OUTPUT_SIZE-byte digest."""
 
         # FIPS 180-4 §5.1.1: append 0x80, zero-pad to 56 mod 64, then the
@@ -154,7 +154,7 @@ struct _Sha2Word32[
             )
         Self.compress(self._state, self._buffer)
 
-        var out = InlineArray[UInt8, Self.OUTPUT_SIZE](uninitialized=True)
+        var out = Array[UInt8, Self.OUTPUT_SIZE](uninitialized=True)
         for i in range(Self.OUTPUT_SIZE):
             out[i] = UInt8(self._state[i // 4] >> UInt32(8 * (3 - i % 4)))
         return out^

@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 
 from tests.acvp.utils import load_python_acvp_vectors
@@ -25,10 +25,10 @@ def parse_acvp_aes_ecb_aft(
 ) raises -> List[EcbTestVector]:
     var vectors = List[EcbTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         var pt_hex: String
         var ct_hex: String
@@ -56,9 +56,9 @@ def parse_acvp_aes_ecb_mct(
 ) raises -> List[EcbTestVector]:
     var vectors = List[EcbTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         var i = 0
         for entry in expected["resultsArray"]:
@@ -79,7 +79,7 @@ def check_aes_ecb_aft[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[EcbTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:
@@ -87,7 +87,7 @@ def check_aes_ecb_aft[
 
         var msg = "[{}], count={}".format(reflect[C].name(), v.count)
 
-        var cipher = cipher_init(to_inline_array[KeySize](v.key))
+        var cipher = cipher_init(to_array[KeySize](v.key))
 
         var pt = v.pt.copy()
         cipher.encrypt(pt[:])
@@ -102,7 +102,7 @@ def check_aes_ecb_mct[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[EcbTestVector]) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
@@ -114,7 +114,7 @@ def check_aes_ecb_mct[
 
         var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
         var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
-        var key = to_inline_array[KeySize](v.key)
+        var key = to_array[KeySize](v.key)
 
         var cipher = cipher_init(key)
         for _ in range(MCT_INNER_ITERATIONS):

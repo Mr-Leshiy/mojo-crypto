@@ -53,24 +53,24 @@ struct _PolyvalRf[P: Pmull](Copyable, Deinitable, Movable, UniversalHashable):
     var _h: ExpandedKey[Self.P]
     var _y: FieldElement
 
-    def __init__(out self, h: InlineArray[UInt8, Self.KEY_SIZE]):
+    def __init__(out self, h: Array[UInt8, Self.KEY_SIZE]):
         self._h = ExpandedKey[Self.P](h)
         self._y = FieldElement.zeros()
 
-    def update_block(mut self, block: InlineArray[UInt8, Self.BLOCK_SIZE]):
+    def update_block(mut self, block: Array[UInt8, Self.BLOCK_SIZE]):
         """Absorb one block into the accumulator: y = (y ⊕ block) × H."""
-        data = SIMD[DType.uint64, 2].from_bytes(block)
-        y = SIMD[DType.uint64, 2].from_bytes(self._y._v)
-        h1 = SIMD[DType.uint64, 2].from_bytes(self._h.h1._v)
-        d1 = SIMD[DType.uint64, 2].from_bytes(self._h.d1._v)
+        var data = SIMD[DType.uint64, 2].from_bytes(block)
+        var y = SIMD[DType.uint64, 2].from_bytes(self._y._v)
+        var h1 = SIMD[DType.uint64, 2].from_bytes(self._h.h1._v)
+        var d1 = SIMD[DType.uint64, 2].from_bytes(self._h.d1._v)
 
         # XOR with accumulator
-        acc = y ^ data
+        var acc = y ^ data
 
         # Multiply by H using R/F algorithm
         self._y = FieldElement(_gf128_mul_rf[Self.P](acc, h1, d1))
 
-    def finalize(deinit self) -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(deinit self) -> Array[UInt8, Self.TAG_SIZE]:
         return self._y^.into_bytes()
 
     def reset(mut self):
@@ -112,18 +112,18 @@ struct ExpandedKey[P: Pmull](
     # D^4
     var d4: FieldElement
 
-    def __init__(out self, h: InlineArray[UInt8, KEY_SIZE]):
-        h1 = SIMD[DType.uint64, 2].from_bytes(h)
-        d1 = _compute_d[Self.P](h1)
+    def __init__(out self, h: Array[UInt8, KEY_SIZE]):
+        var h1 = SIMD[DType.uint64, 2].from_bytes(h)
+        var d1 = _compute_d[Self.P](h1)
 
-        h2 = _gf128_mul_rf[Self.P](h1, h1, d1)
-        d2 = _compute_d[Self.P](h2)
+        var h2 = _gf128_mul_rf[Self.P](h1, h1, d1)
+        var d2 = _compute_d[Self.P](h2)
 
-        h3 = _gf128_mul_rf[Self.P](h2, h1, d1)
-        d3 = _compute_d[Self.P](h3)
+        var h3 = _gf128_mul_rf[Self.P](h2, h1, d1)
+        var d3 = _compute_d[Self.P](h3)
 
-        h4 = _gf128_mul_rf[Self.P](h2, h2, d2)
-        d4 = _compute_d[Self.P](h4)
+        var h4 = _gf128_mul_rf[Self.P](h2, h2, d2)
+        var d4 = _compute_d[Self.P](h4)
 
         self.h1 = FieldElement(h1)
         self.d1 = FieldElement(d1)
@@ -157,8 +157,8 @@ def _compute_d[P: Pmull](h: SIMD[DType.uint64, 2]) -> SIMD[DType.uint64, 2]:
     carry-less product of the low lane against the reduction constant.
     """
 
-    h_swap = SIMD[DType.uint64, 2](h[1], h[0])
-    t = P.mul(h[0], P1)
+    var h_swap = SIMD[DType.uint64, 2](h[1], h[0])
+    var t = P.mul(h[0], P1)
     return h_swap ^ t
 
 
@@ -172,7 +172,7 @@ def _gf128_mul_rf[
 ) -> SIMD[DType.uint64, 2]:
     """Complete R/F multiplication with reduction (5 PCLMULQDQs total)."""
 
-    rf = _rf_mul_unreduced[P](m, h, d)
+    var rf = _rf_mul_unreduced[P](m, h, d)
     return _reduce_rf[P](rf[0], rf[1])
 
 
@@ -191,8 +191,8 @@ def _rf_mul_unreduced[
     F = M0×D0 ⊕ M1×H0
     """
 
-    r = P.mul(m[0], d[1]) ^ P.mul(m[1], h[1])
-    f = P.mul(m[0], d[0]) ^ P.mul(m[1], h[0])
+    var r = P.mul(m[0], d[1]) ^ P.mul(m[1], h[1])
+    var f = P.mul(m[0], d[0]) ^ P.mul(m[1], h[0])
     return (r, f)
 
 
@@ -206,6 +206,6 @@ def _reduce_rf[
     F1 is the high lane of f; x^64×F0 shifts F0 into the high lane.
     """
 
-    f1_vec = SIMD[DType.uint64, 2](f[1], 0)
-    f0_shifted = SIMD[DType.uint64, 2](0, f[0])
+    var f1_vec = SIMD[DType.uint64, 2](f[1], 0)
+    var f0_shifted = SIMD[DType.uint64, 2](0, f[0])
     return r ^ f1_vec ^ f0_shifted ^ P.mul(f[0], P1)

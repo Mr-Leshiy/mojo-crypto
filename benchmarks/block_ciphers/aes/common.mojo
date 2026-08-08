@@ -13,15 +13,15 @@ comptime BLOCKS_16K: Int = 16_384
 def bench_cipher[
     C: BlockCipherEncryptable & BlockCipherDecryptable & Deinitable,
     KeySize: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
     prefix: StringLiteral,
 ]() raises:
-    var key = InlineArray[UInt8, KeySize](fill=0)
+    var key = Array[UInt8, KeySize](fill=0)
     var cipher = cipher_init(key)
 
     @parameter
     def bench[N: Int, suffix: StringLiteral]() raises:
-        var data = InlineArray[UInt8, N](fill=0)
+        var data = Array[UInt8, N](fill=0)
 
         @parameter
         def do_encrypt() raises:

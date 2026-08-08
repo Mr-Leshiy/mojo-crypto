@@ -20,9 +20,9 @@ struct AesNaive[KEY_SIZE: Int](
     comptime NR: Int = Self.NK + 6
     comptime WORDS_SIZE: Int = NB * (Self.NR + 1)
 
-    var w: InlineArray[UInt32, Self.WORDS_SIZE]
+    var w: Array[UInt32, Self.WORDS_SIZE]
 
-    def __init__(out self, key: InlineArray[UInt8, Self.KEY_SIZE]):
+    def __init__(out self, key: Array[UInt8, Self.KEY_SIZE]):
         _check_key_size[Self.KEY_SIZE]()
         comptime assert (
             Self.KEY_SIZE == 16 or Self.KEY_SIZE == 24 or Self.KEY_SIZE == 32
@@ -53,14 +53,14 @@ struct AesNaive[KEY_SIZE: Int](
 
 # FIPS 197 §5.1 Cipher()
 # FIPS 197 §3.4: state[r][c] = in[r + 4*c] (column-major).
-# All helpers operate directly on the flat InlineArray[UInt8, 16] using
+# All helpers operate directly on the flat Array[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 def _cipher[
     NR: Int, WORDS_SIZE: Int, o: MutOrigin
 ](
     state: Span[UInt8, o],
-    w: InlineArray[UInt32, WORDS_SIZE],
-    sbox: InlineArray[UInt32, 256],
+    w: Array[UInt32, WORDS_SIZE],
+    sbox: Array[UInt32, 256],
 ):
     _add_round_key(state, 0, w)
     for r in range(1, NR):
@@ -78,8 +78,8 @@ def _decipher[
     NR: Int, WORDS_SIZE: Int, o: MutOrigin
 ](
     state: Span[UInt8, o],
-    w: InlineArray[UInt32, WORDS_SIZE],
-    sbox_inv: InlineArray[UInt8, 256],
+    w: Array[UInt32, WORDS_SIZE],
+    sbox_inv: Array[UInt8, 256],
 ):
     _add_round_key(state, NR, w)
     for r in range(NR - 1, 0, -1):
@@ -95,7 +95,7 @@ def _decipher[
 # FIPS 197 §5.1.4 AddRoundKey()
 def _add_round_key[
     WORDS_SIZE: Int, o: MutOrigin
-](state: Span[UInt8, o], round: Int, w: InlineArray[UInt32, WORDS_SIZE],):
+](state: Span[UInt8, o], round: Int, w: Array[UInt32, WORDS_SIZE],):
     for c in range(NB):
         var w_idx = NB * round + c
         state[4 * c] ^= UInt8(w[w_idx] >> 24)
@@ -105,9 +105,7 @@ def _add_round_key[
 
 
 # FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
-def _sub_bytes[
-    o: MutOrigin
-](state: Span[UInt8, o], sbox: InlineArray[UInt32, 256]):
+def _sub_bytes[o: MutOrigin](state: Span[UInt8, o], sbox: Array[UInt32, 256]):
     for i in range(16):
         state[i] = UInt8(sbox[Int(state[i])])
 
@@ -115,7 +113,7 @@ def _sub_bytes[
 # FIPS 197 §5.3.2 InvSubBytes() — apply inverse S-box to every byte
 def _inv_sub_bytes[
     o: MutOrigin
-](state: Span[UInt8, o], sbox_inv: InlineArray[UInt8, 256]):
+](state: Span[UInt8, o], sbox_inv: Array[UInt8, 256]):
     for i in range(16):
         state[i] = sbox_inv[Int(state[i])]
 
@@ -124,7 +122,7 @@ def _inv_sub_bytes[
 # Row r in flat layout occupies indices r, r+4, r+8, r+12
 def _shift_rows[o: MutOrigin](state: Span[UInt8, o]):
     for r in range(1, NB):
-        var tmp = InlineArray[UInt8, NB](uninitialized=True)
+        var tmp = Array[UInt8, NB](uninitialized=True)
         for c in range(NB):
             tmp[c] = state[r + 4 * c]
         for c in range(NB):
@@ -134,7 +132,7 @@ def _shift_rows[o: MutOrigin](state: Span[UInt8, o]):
 # FIPS 197 §5.3.1 InvShiftRows() — cyclic right shift of row r by r positions
 def _inv_shift_rows[o: MutOrigin](state: Span[UInt8, o]):
     for r in range(1, NB):
-        var tmp = InlineArray[UInt8, NB](uninitialized=True)
+        var tmp = Array[UInt8, NB](uninitialized=True)
         for c in range(NB):
             tmp[c] = state[r + 4 * c]
         for c in range(NB):
@@ -212,7 +210,7 @@ def _xtime(a: UInt8) -> UInt8:
 
 
 # FIPS 197 Table 2 — round constants Rcon[1..10], stored 0-indexed.
-comptime RCON: InlineArray[UInt32, 10] = [
+comptime RCON: Array[UInt32, 10] = [
     # fmt: off
     0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
     0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000,
@@ -224,13 +222,13 @@ comptime RCON: InlineArray[UInt32, 10] = [
 # <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf>
 def _key_expansion[
     WORDS_SIZE: Int, NK: Int, KEY_SIZE: Int
-](key: InlineArray[UInt8, KEY_SIZE]) -> InlineArray[UInt32, WORDS_SIZE]:
+](key: Array[UInt8, KEY_SIZE]) -> Array[UInt32, WORDS_SIZE]:
     # Both tables are comptime values, so materialize them once here rather
     # than at every lookup inside the loop below.
     var sbox = materialize[SBOX]()
     var rcon = materialize[RCON]()
 
-    var w = InlineArray[UInt32, WORDS_SIZE](uninitialized=True)
+    var w = Array[UInt32, WORDS_SIZE](uninitialized=True)
     for i in range(NK):
         w[i] = (
             UInt32(key[4 * i]) << 24
@@ -255,9 +253,9 @@ def _rot_word(w: UInt32) -> UInt32:
 
 
 @always_inline
-def _sub_word(w: UInt32, sbox: InlineArray[UInt32, 256]) -> UInt32:
-    a0 = sbox[w >> 24] << 24
-    a1 = sbox[w >> 16 & 0xFF] << 16
-    a2 = sbox[w >> 8 & 0xFF] << 8
-    a3 = sbox[w & 0xFF]
+def _sub_word(w: UInt32, sbox: Array[UInt32, 256]) -> UInt32:
+    var a0 = sbox[w >> 24] << 24
+    var a1 = sbox[w >> 16 & 0xFF] << 16
+    var a2 = sbox[w >> 8 & 0xFF] << 8
+    var a3 = sbox[w & 0xFF]
     return a0 | a1 | a2 | a3

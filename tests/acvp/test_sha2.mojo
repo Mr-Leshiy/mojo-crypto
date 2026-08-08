@@ -4,7 +4,7 @@ from std.python import PythonObject
 from std.reflection import reflect
 
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.utils import to_inline_array, to_list
+from mojo_crypto.utils import to_array, to_list
 
 from tests.acvp.utils import load_python_acvp_vectors
 from tests.hashes.utils import (
@@ -30,8 +30,8 @@ def parse_acvp_sha2_aft(
 ) raises -> List[HashTestVector]:
     var vectors = List[HashTestVector]()
     for v in python_vectors:
-        test = v["test"]
-        expected = v["expected"]
+        var test = v["test"]
+        var expected = v["expected"]
 
         # ACVP allows bit-granular message lengths for SHA-224/384/512-224
         # (registration messageLength increment=1), but Digest.update only
@@ -66,9 +66,9 @@ def parse_acvp_sha2_mct(
 ) raises -> List[MctTestVector]:
     var vectors = List[MctTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
 
         var checkpoints = List[List[UInt8]]()
         for entry in expected["resultsArray"]:
@@ -94,7 +94,7 @@ def check_sha2_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
         h.update(v.msg[:])
         var actual = h^.finalize()
 
-        var expected = to_inline_array[T.OUTPUT_SIZE](v.digest)
+        var expected = to_array[T.OUTPUT_SIZE](v.digest)
         assert_equal(actual, expected, msg=msg)
 
 

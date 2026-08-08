@@ -26,10 +26,10 @@ comptime BIG_SIGMA1_ROT_C: UInt32 = 25
 # FIPS 180-4 §6.2.2 — the SHA-256 compression function (also used by SHA-224).
 def _compress(
     mut state: SIMD[DType.uint32, 8],
-    block: InlineArray[UInt8, SHA2_WORD32_BLOCK_SIZE],
+    block: Array[UInt8, SHA2_WORD32_BLOCK_SIZE],
 ):
     var block_span = Span(block)
-    var w = InlineArray[UInt32, ROUNDS_32](uninitialized=True)
+    var w = Array[UInt32, ROUNDS_32](uninitialized=True)
     for t in range(16):
         w[t] = load_be[DType.uint32](block_span[4 * t : 4 * t + 4])
     for t in range(16, ROUNDS_32):

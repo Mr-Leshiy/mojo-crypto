@@ -24,7 +24,7 @@ def run_aes_checks[
         C: BlockCipherEngine,
         KeySize: Int,
         //,
-        cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+        cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
     ](TestInput) raises capturing[_],
 ](input: TestInput) raises:
     comptime if has_accelerator():
@@ -33,7 +33,7 @@ def run_aes_checks[
             @parameter
             def aes_gpu[
                 KeySize: Int
-            ](key: InlineArray[UInt8, KeySize]) raises -> AesGpu[KeySize]:
+            ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
                 return AesGpu[KeySize](ctx, key)
 
             check[aes_gpu[16]](input)
@@ -47,7 +47,7 @@ def run_aes_checks[
         @parameter
         def aes_aarch64[
             KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> AesAarch64[KeySize]:
+        ](key: Array[UInt8, KeySize]) raises -> AesAarch64[KeySize]:
             return AesAarch64[KeySize](key)
 
         check[aes_aarch64[16]](input)
@@ -61,7 +61,7 @@ def run_aes_checks[
         @parameter
         def aes_x86[
             KeySize: Int
-        ](key: InlineArray[UInt8, KeySize]) raises -> AesX86[KeySize]:
+        ](key: Array[UInt8, KeySize]) raises -> AesX86[KeySize]:
             return AesX86[KeySize](key)
 
         check[aes_x86[16]](input)
@@ -71,7 +71,7 @@ def run_aes_checks[
     @parameter
     def aes_cpu[
         KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> AesNaive[KeySize]:
+    ](key: Array[UInt8, KeySize]) raises -> AesNaive[KeySize]:
         return AesNaive[KeySize](key)
 
     check[aes_cpu[16]](input)

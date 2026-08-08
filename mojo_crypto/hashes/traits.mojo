@@ -15,7 +15,7 @@ trait Digest:
         """Absorb more input."""
         ...
 
-    def finalize(var self) -> InlineArray[UInt8, Self.OUTPUT_SIZE]:
+    def finalize(var self) -> Array[UInt8, Self.OUTPUT_SIZE]:
         """Consume self and return the OUTPUT_SIZE-byte digest."""
         ...
 

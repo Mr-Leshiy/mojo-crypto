@@ -2,7 +2,7 @@ from std.testing import assert_equal, assert_raises, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.polyval import PolyvalNaive
 from mojo_crypto.aead.gcm_siv import GcmSiv
@@ -31,10 +31,10 @@ def parse_acvp_aes_gcm_siv_aft(
 ) raises -> List[GcmSivTestVector]:
     var vectors = List[GcmSivTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         var pt_hex: String
         var ct_hex: String
@@ -64,7 +64,7 @@ def check_aes_gcm_siv_aft[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[GcmSivTestVector]) raises:
     # GCM-SIV (RFC 8452) fixes the nonce at 96 bits and the tag at 128 bits.
     comptime NONCE_SIZE = 12
@@ -81,24 +81,24 @@ def check_aes_gcm_siv_aft[
         # GCM-SIV ACVP vectors have no separate tag field: the ciphertext is
         # ciphertext||tag (RFC 8452), so split the trailing TAG_SIZE bytes of
         # `v.ct` back out into the ciphertext body and the tag.
-        cipher_len = len(v.ct) - TAG_SIZE
-        cipher_body = List[UInt8](v.ct[:cipher_len])
+        var cipher_len = len(v.ct) - TAG_SIZE
+        var cipher_body = List[UInt8](v.ct[:cipher_len])
 
-        msg = "[GcmSiv[{}]], count={}".format(reflect[C].name(), v.count)
-        key = to_inline_array[KeySize](v.key)
-        nonce = to_inline_array[NONCE_SIZE](v.iv)
-        tag = to_inline_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
+        var msg = "[GcmSiv[{}]], count={}".format(reflect[C].name(), v.count)
+        var key = to_array[KeySize](v.key)
+        var nonce = to_array[NONCE_SIZE](v.iv)
+        var tag = to_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
-            data = v.pt.copy()
-            gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
+            var data = v.pt.copy()
+            var gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
                 key, nonce
             )
-            actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
+            var actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, cipher_body, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
-            data = cipher_body.copy()
-            gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
+            var data = cipher_body.copy()
+            var gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
                 key, nonce
             )
             if v.test_passed:

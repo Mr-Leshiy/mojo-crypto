@@ -5,7 +5,7 @@ trait Mac:
         """Absorb more input."""
         ...
 
-    def finalize(var self) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+    def finalize(var self) raises -> Array[UInt8, Self.TAG_SIZE]:
         """Consume self and return the TAG_SIZE-byte authentication tag."""
         ...
 

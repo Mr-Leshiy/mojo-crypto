@@ -17,7 +17,7 @@ comptime Words = SIMD[DType.uint64, 2]
 # via the ARMv8.2 SHA-512 Crypto Extension.
 def _compress(
     mut state: SIMD[DType.uint64, 8],
-    block: InlineArray[UInt8, SHA2_WORD64_BLOCK_SIZE],
+    block: Array[UInt8, SHA2_WORD64_BLOCK_SIZE],
 ):
     var ab = state.slice[2]()
     var cd = state.slice[2, offset=2]()

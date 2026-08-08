@@ -42,17 +42,17 @@ struct Gcm[
 
     var _cipher: Self.Cipher
     var _ghash: Self.G
-    var _nonce: InlineArray[UInt8, Self.NONCE_SIZE]
+    var _nonce: Array[UInt8, Self.NONCE_SIZE]
 
     def __init__(
         out self,
         var cipher: Self.Cipher,
-        nonce: InlineArray[UInt8, Self.NONCE_SIZE],
+        nonce: Array[UInt8, Self.NONCE_SIZE],
     ) raises:
         """Initialize the GCM mode with the given block cipher and nonce."""
         Self._assert_valid_params()
 
-        ghash_key = InlineArray[UInt8, Self.G.KEY_SIZE](fill=0)
+        var ghash_key = Array[UInt8, Self.G.KEY_SIZE](fill=0)
 
         cipher.encrypt(ghash_key)
 
@@ -79,9 +79,9 @@ struct Gcm[
 
     def encrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
-    ](
-        mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> InlineArray[UInt8, TAG_SIZE]:
+    ](mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]) raises -> Array[
+        UInt8, TAG_SIZE
+    ]:
         """
         Encrypt `data` in place and return the `TAG_SIZE`-byte tag.
 
@@ -103,7 +103,7 @@ struct Gcm[
         mut self,
         aad: Span[UInt8, aad_o],
         data: Span[UInt8, o],
-        tag: InlineArray[UInt8, TAG_SIZE],
+        tag: Array[UInt8, TAG_SIZE],
     ) raises:
         """
         Verify `tag`, then decrypt `data` in place.
@@ -143,9 +143,7 @@ struct Gcm[
 
     def _init_ctr(
         self,
-    ) raises -> Tuple[
-        CtrMode[Self.Cipher], InlineArray[UInt8, Self.BLOCK_SIZE]
-    ]:
+    ) raises -> Tuple[CtrMode[Self.Cipher], Array[UInt8, Self.BLOCK_SIZE]]:
         """
         Initialize counter mode.
 
@@ -163,7 +161,7 @@ struct Gcm[
 
         Self._assert_valid_params()
 
-        j0 = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
+        var j0 = Array[UInt8, Self.BLOCK_SIZE](fill=0)
 
         comptime if Self.NONCE_SIZE == 12:
             # J0 = IV || 0^31 || 1
@@ -179,7 +177,7 @@ struct Gcm[
             ghash.update_padded(self._nonce)
 
             # Final block: 64 zero bits followed by the IV bit-length (big-endian).
-            var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
+            var length_block = Array[UInt8, Self.G.BLOCK_SIZE](fill=0)
             # Write nonce_bits as 8 big-endian bytes into the last 8 bytes of the
             # block: byte_swap turns the native little-endian u64 into big-endian,
             # then store it as a u64 over those bytes.
@@ -188,14 +186,12 @@ struct Gcm[
             )
             ghash.update_block(length_block^)
 
-            j0 = rebind_var[InlineArray[UInt8, Self.BLOCK_SIZE]](
-                ghash^.finalize()
-            )
+            j0 = rebind_var[Array[UInt8, Self.BLOCK_SIZE]](ghash^.finalize())
 
         # CtrMode starts at J0; consuming the first keystream block yields the
         # tag mask E(J0) and advances the counter to inc32(J0) for the data.
-        ctr = CtrMode[Self.Cipher](self._cipher.copy(), j0^)
-        tag_mask = InlineArray[UInt8, Self.BLOCK_SIZE](fill=0)
+        var ctr = CtrMode[Self.Cipher](self._cipher.copy(), j0^)
+        var tag_mask = Array[UInt8, Self.BLOCK_SIZE](fill=0)
         ctr.encrypt(tag_mask)
 
         return (ctr^, tag_mask^)
@@ -204,10 +200,10 @@ struct Gcm[
         TAG_SIZE: Int, aad_o: Origin, data_o: Origin
     ](
         self,
-        mask: InlineArray[UInt8, Self.BLOCK_SIZE],
+        mask: Array[UInt8, Self.BLOCK_SIZE],
         aad: Span[UInt8, aad_o],
         data: Span[UInt8, data_o],
-    ) raises -> InlineArray[UInt8, TAG_SIZE]:
+    ) raises -> Array[UInt8, TAG_SIZE]:
         """
         Authenticate the ciphertext `data` and associated data `aad`.
 
@@ -226,14 +222,14 @@ struct Gcm[
         # Final block: [len(aad)]_64 || [len(data)]_64, both big-endian bit
         # counts. byte_swap converts the native little-endian u64 to big-endian
         # before the store.
-        var length_block = InlineArray[UInt8, Self.G.BLOCK_SIZE](fill=0)
+        var length_block = Array[UInt8, Self.G.BLOCK_SIZE](fill=0)
         var aad_bits = UInt64(len(aad)) * 8
         var data_bits = UInt64(len(data)) * 8
         store_bytes(Span(length_block)[:8], byte_swap(aad_bits))
         store_bytes(Span(length_block)[8:], byte_swap(data_bits))
         ghash.update_block(length_block^)
 
-        var full_tag = rebind_var[InlineArray[UInt8, Self.BLOCK_SIZE]](
+        var full_tag = rebind_var[Array[UInt8, Self.BLOCK_SIZE]](
             ghash^.finalize()
         )
         # full_tag ^= mask, one SIMD lane per byte.
@@ -242,6 +238,6 @@ struct Gcm[
         store_bytes(Span(full_tag), t ^ m)
 
         # GCM permits a truncated tag: return the leading TAG_SIZE bytes.
-        var tag = InlineArray[UInt8, TAG_SIZE](uninitialized=True)
+        var tag = Array[UInt8, TAG_SIZE](uninitialized=True)
         Span(tag).copy_from(Span(full_tag)[:TAG_SIZE])
         return tag^

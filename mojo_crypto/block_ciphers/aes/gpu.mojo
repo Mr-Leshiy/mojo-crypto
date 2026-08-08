@@ -1,6 +1,7 @@
 from max.gpu.host import DeviceContext, DeviceBuffer
 from max.gpu.memory import AddressSpace
-from std.gpu import thread_idx, block_idx, barrier
+from max.gpu.sync import barrier
+from std.gpu import thread_idx, block_idx
 from std.memory import stack_allocation
 
 from mojo_crypto.block_ciphers.traits import (
@@ -31,7 +32,7 @@ struct AesGpu[KEY_SIZE: Int](
     var sbox_inv: DeviceBuffer[DType.uint8]
 
     def __init__(
-        out self, ctx: DeviceContext, key: InlineArray[UInt8, Self.KEY_SIZE]
+        out self, ctx: DeviceContext, key: Array[UInt8, Self.KEY_SIZE]
     ) raises:
         _check_key_size[Self.KEY_SIZE]()
 
@@ -96,7 +97,7 @@ struct AesGpu[KEY_SIZE: Int](
 
 # FIPS 197 §5.1 Cipher()
 # FIPS 197 §3.4: state[r][c] = in[r + 4*c] (column-major).
-# All helpers operate directly on the flat InlineArray[UInt8, 16] using
+# All helpers operate directly on the flat Array[UInt8, 16] using
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 def _cipher[
     NR: Int

@@ -2,7 +2,7 @@ from std.testing import assert_equal, assert_raises, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.ghash import GHashNaive
 from mojo_crypto.aead.gcm import Gcm
@@ -32,10 +32,10 @@ def parse_acvp_aes_gcm_aft(
 ) raises -> List[GcmTestVector]:
     var vectors = List[GcmTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         # GCM carries the tag in the prompt on decrypt and in expectedResults
         # on encrypt; authentication failures are flagged via
@@ -74,7 +74,7 @@ def check_aes_gcm_aft[
     //,
     NONCE_SIZE: Int,
     TAG_SIZE: Int,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[GcmTestVector]) raises:
     for v in vectors:
         # This instantiation only handles vectors matching its sizes; the GCM
@@ -86,21 +86,21 @@ def check_aes_gcm_aft[
         ):
             continue
 
-        msg = "[Gcm[{}], nonce={}, tag={}], count={}".format(
+        var msg = "[Gcm[{}], nonce={}, tag={}], count={}".format(
             reflect[C].name(), NONCE_SIZE, TAG_SIZE, v.count
         )
-        key = to_inline_array[KeySize](v.key)
-        nonce = to_inline_array[NONCE_SIZE](v.iv)
-        tag = to_inline_array[TAG_SIZE](v.tag)
+        var key = to_array[KeySize](v.key)
+        var nonce = to_array[NONCE_SIZE](v.iv)
+        var tag = to_array[TAG_SIZE](v.tag)
         if v.is_encrypt:
-            data = v.pt.copy()
-            gcm = Gcm[C, GHashNaive, NONCE_SIZE](cipher_init(key), nonce)
-            actual_tag = gcm.encrypt[TAG_SIZE](v.aad[:], data[:])
+            var data = v.pt.copy()
+            var gcm = Gcm[C, GHashNaive, NONCE_SIZE](cipher_init(key), nonce)
+            var actual_tag = gcm.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, v.ct, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
-            data = v.ct.copy()
-            gcm = Gcm[C, GHashNaive, NONCE_SIZE](cipher_init(key), nonce)
+            var data = v.ct.copy()
+            var gcm = Gcm[C, GHashNaive, NONCE_SIZE](cipher_init(key), nonce)
             if v.test_passed:
                 gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
                 assert_equal(data, v.pt, msg=msg)

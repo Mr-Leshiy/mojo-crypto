@@ -39,7 +39,7 @@ struct Rfc4231Case(Copyable, Movable):
 
 def _assert_tag[
     SIZE: Int
-](tag: InlineArray[UInt8, SIZE], expected_hex: String) raises:
+](tag: Array[UInt8, SIZE], expected_hex: String) raises:
     var expected_len = expected_hex.byte_length() // 2
     assert_equal(hex_encode(Span(tag)[:expected_len]), expected_hex)
 

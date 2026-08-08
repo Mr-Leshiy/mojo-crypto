@@ -19,7 +19,7 @@ comptime Words = SIMD[DType.uint32, 4]
 # via the x86 SHA-NI extension.
 def _compress(
     mut state: SIMD[DType.uint32, 8],
-    block: InlineArray[UInt8, SHA2_WORD32_BLOCK_SIZE],
+    block: Array[UInt8, SHA2_WORD32_BLOCK_SIZE],
 ):
     # SHA256RNDS2 carries the state as two interleaved quarters rather than as
     # A..D / E..H, so re-lane it once here and undo that after the rounds.

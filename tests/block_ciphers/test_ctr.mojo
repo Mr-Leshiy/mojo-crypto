@@ -21,7 +21,7 @@ def test_ctr_32_le_aes() raises:
         + "80775A82065256B4787DC91C6942B700"
     )
 
-    var zeros = InlineArray[UInt8, 64](fill=0)
+    var zeros = Array[UInt8, 64](fill=0)
     var ctr = CTR(Aes128Naive(key), iv.copy())
     ctr.encrypt(zeros)
     assert_equal(zeros, ks_expected, msg="counter_incr")
@@ -33,7 +33,7 @@ def test_ctr_32_le_aes() raises:
         + "EA97764768D34A570D9BD129C4C29D44"
         + "81765B83075357B5797CC81D6843B601"
     )
-    var ones = InlineArray[UInt8, 64](fill=1)
+    var ones = Array[UInt8, 64](fill=1)
     var ctr2 = CTR(Aes128Naive(key), iv^)
     ctr2.encrypt(ones)
     assert_equal(ones, xor_expected, msg="keystream_xor")
@@ -48,7 +48,7 @@ def test_ctr_32_le_aes() raises:
         + "6355A0DA2E08FB00112FFA38C26189EE"
         + "55DD5B0B130ED87096FE01B59A665A60"
     )
-    var wrap = InlineArray[UInt8, 64](fill=0)
+    var wrap = Array[UInt8, 64](fill=0)
     var ctr3 = CTR(Aes128Naive(key), iv2^)
     ctr3.encrypt(wrap)
     assert_equal(wrap, wrap_expected, msg="counter_wrap")
@@ -69,7 +69,7 @@ def test_ctr_32_be_aes() raises:
         + "0AB37657B9C2AA09762E518FC9395D53"
         + "04E96C34CCD2F0A95CDE7321852D90C0"
     )
-    var zeros = InlineArray[UInt8, 64](fill=0)
+    var zeros = Array[UInt8, 64](fill=0)
     var ctr = CTR(Aes128Naive(key), iv.copy())
     ctr.encrypt(zeros)
     assert_equal(zeros, ks_expected, msg="counter_incr")
@@ -81,7 +81,7 @@ def test_ctr_32_be_aes() raises:
         + "0BB27756B8C3AB08772F508EC8385C52"
         + "05E86D35CDD3F1A85DDF7220842C91C1"
     )
-    var ones = InlineArray[UInt8, 64](fill=1)
+    var ones = Array[UInt8, 64](fill=1)
     var ctr2 = CTR(Aes128Naive(key), iv^)
     ctr2.encrypt(ones)
     assert_equal(ones, xor_expected, msg="keystream_xor")
@@ -96,7 +96,7 @@ def test_ctr_32_be_aes() raises:
         + "BD1AE8716BE69C3B4D886B222B9B4E1E"
         + "67548EF896A96E2746D8CA6476D8B183"
     )
-    var wrap = InlineArray[UInt8, 64](fill=0)
+    var wrap = Array[UInt8, 64](fill=0)
     var ctr3 = CTR(Aes128Naive(key), iv2^)
     ctr3.encrypt(wrap)
     assert_equal(wrap, wrap_expected, msg="counter_wrap")

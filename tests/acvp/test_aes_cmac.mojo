@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.macs import Cmac
 
@@ -27,15 +27,15 @@ def parse_acvp_aes_cmac_aft(
 ) raises -> List[CmacTestVector]:
     var vectors = List[CmacTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
 
         # CMAC uses "gen"/"ver" instead of "encrypt"/"decrypt" for the same
         # produce-vs-check duality: "gen" computes the canonical MAC (like
         # encrypt), "ver" checks a possibly-wrong candidate (like GCM
         # decrypt).
-        is_encrypt = String(group["direction"]) == "gen"
+        var is_encrypt = String(group["direction"]) == "gen"
 
         # The MAC may be truncated below the full block (macLen 64..128
         # bits); tag_hex is left at whatever length the JSON already gives,
@@ -64,7 +64,7 @@ def check_aes_cmac_aft[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CmacTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:
@@ -72,7 +72,7 @@ def check_aes_cmac_aft[
 
         var msg = "[Cmac[{}]], count={}".format(reflect[C].name(), v.count)
 
-        var cmac = Cmac[C](cipher_init(to_inline_array[KeySize](v.key)))
+        var cmac = Cmac[C](cipher_init(to_array[KeySize](v.key)))
         cmac.update(v.pt[:])
         var full_tag = cmac^.finalize()
 

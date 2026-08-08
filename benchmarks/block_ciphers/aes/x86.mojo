@@ -12,9 +12,7 @@ def main() raises:
     print("Running AES x86 AES-NI benchmarks")
 
     @parameter
-    def aes[
-        KeySize: Int
-    ](key: InlineArray[UInt8, KeySize]) raises -> AesX86[KeySize]:
+    def aes[KeySize: Int](key: Array[UInt8, KeySize]) raises -> AesX86[KeySize]:
         return AesX86[KeySize](key)
 
     bench_cipher[Aes128X86, 16, aes[16], "aes128"]()

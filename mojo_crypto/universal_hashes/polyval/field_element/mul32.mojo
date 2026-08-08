@@ -51,12 +51,12 @@ struct Product32(Copyable, Movable):
     """Unreduced 256-bit carryless product stored as eight 32-bit limbs (lo … hi).
     """
 
-    var _zw: InlineArray[UInt32, 8]
+    var _zw: Array[UInt32, 8]
 
-    def __init__(out self, var zw: InlineArray[UInt32, 8]):
+    def __init__(out self, var zw: Array[UInt32, 8]):
         self._zw = zw^
 
-    def mont_reduce(self) -> InlineArray[UInt8, BLOCK_SIZE]:
+    def mont_reduce(self) -> Array[UInt8, BLOCK_SIZE]:
         """Reduce mod `x^128 + x^127 + x^126 + x^121 + 1` using shift/XOR folding.
 
         Equivalent to the 64-bit reduction but split across 32-bit limbs.
@@ -87,7 +87,7 @@ struct Product32(Copyable, Movable):
 
 
 def _karatsuba_mul32(
-    a: InlineArray[UInt8, BLOCK_SIZE], b: InlineArray[UInt8, BLOCK_SIZE]
+    a: Array[UInt8, BLOCK_SIZE], b: Array[UInt8, BLOCK_SIZE]
 ) -> Product32:
     """Compute the unreduced 256-bit carryless product of two 128-bit field elements.
 
@@ -170,7 +170,7 @@ def _karatsuba_mul32(
     c14 ^= c11 ^ c12
     c17 ^= c15 ^ c16
 
-    var zw = InlineArray[UInt32, 8](uninitialized=True)
+    var zw = Array[UInt32, 8](uninitialized=True)
     zw[0] = c0
     zw[1] = c4 ^ (bit_reverse(c9) >> 1)
     zw[2] = c1 ^ c0 ^ c2 ^ c6 ^ (bit_reverse(c13) >> 1)

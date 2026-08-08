@@ -83,17 +83,15 @@ struct GcmSiv[
     # key derived in `create`. Used for both CTR encryption and tag encryption.
     var _cipher: Self.C
     var _polyval: Self.G
-    var _nonce: InlineArray[UInt8, Self.NONCE_SIZE]
+    var _nonce: Array[UInt8, Self.NONCE_SIZE]
 
     @staticmethod
     def create[
         KEY_SIZE: Int,
-        cipher_init: def(InlineArray[UInt8, KEY_SIZE]) raises capturing[
-            _
-        ] -> Self.C,
+        cipher_init: def(Array[UInt8, KEY_SIZE]) raises capturing[_] -> Self.C,
     ](
-        key_generating_key: InlineArray[UInt8, KEY_SIZE],
-        nonce: InlineArray[UInt8, Self.NONCE_SIZE],
+        key_generating_key: Array[UInt8, KEY_SIZE],
+        nonce: Array[UInt8, Self.NONCE_SIZE],
     ) raises -> Self:
         """Initialize GCM-SIV with the key-generating-key cipher and nonce."""
         Self._assert_valid_params()
@@ -143,9 +141,9 @@ struct GcmSiv[
 
     def encrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
-    ](
-        mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]
-    ) raises -> InlineArray[UInt8, TAG_SIZE]:
+    ](mut self, aad: Span[UInt8, aad_o], data: Span[UInt8, o]) raises -> Array[
+        UInt8, TAG_SIZE
+    ]:
         """
         Encrypt `data` in place and return the 16-byte tag.
 
@@ -171,7 +169,7 @@ struct GcmSiv[
         var ctr = self._init_ctr(tag)
         ctr.encrypt(data)
 
-        return rebind_var[InlineArray[UInt8, TAG_SIZE]](tag^)
+        return rebind_var[Array[UInt8, TAG_SIZE]](tag^)
 
     def decrypt[
         TAG_SIZE: Int, aad_o: Origin, o: MutOrigin
@@ -179,7 +177,7 @@ struct GcmSiv[
         mut self,
         aad: Span[UInt8, aad_o],
         data: Span[UInt8, o],
-        tag: InlineArray[UInt8, TAG_SIZE],
+        tag: Array[UInt8, TAG_SIZE],
     ) raises:
         """
         Decrypt `data` in place, then verify `tag`.
@@ -194,9 +192,7 @@ struct GcmSiv[
 
         LengthError.check_decrypt(len(aad), len(data))
 
-        var tag_block = rebind_var[InlineArray[UInt8, Self.TAG_SIZE]](
-            tag.copy()
-        )
+        var tag_block = rebind_var[Array[UInt8, Self.TAG_SIZE]](tag.copy())
 
         # POLYVAL absorbs the AAD (padded) first.
         self._polyval.update_padded(aad)
@@ -228,7 +224,7 @@ struct GcmSiv[
         mut self,
         aad_len: Int,
         buffer_len: Int,
-    ) raises -> InlineArray[UInt8, Self.TAG_SIZE]:
+    ) raises -> Array[UInt8, Self.TAG_SIZE]:
         """
         Finish the POLYVAL tag over already-absorbed AAD and payload.
 
@@ -249,9 +245,9 @@ struct GcmSiv[
         ).as_bytes[big_endian=False]()
 
         self._polyval.update_block(
-            rebind_var[InlineArray[UInt8, Self.G.BLOCK_SIZE]](length_block^)
+            rebind_var[Array[UInt8, Self.G.BLOCK_SIZE]](length_block^)
         )
-        var tag = rebind_var[InlineArray[UInt8, Self.TAG_SIZE]](
+        var tag = rebind_var[Array[UInt8, Self.TAG_SIZE]](
             self._polyval.copy().finalize()
         )
         # Reset the live accumulator (it still holds this message's AAD and
@@ -273,7 +269,7 @@ struct GcmSiv[
 
     def _init_ctr(
         self,
-        nonce: InlineArray[UInt8, Self.TAG_SIZE],
+        nonce: Array[UInt8, Self.TAG_SIZE],
     ) -> CtrMode[Self.C, 4, BIG_ENDIAN=False]:
         """
         Initialize counter mode for payload encryption/decryption.
@@ -289,7 +285,7 @@ struct GcmSiv[
         counter_block[Self.BLOCK_SIZE - 1] |= 0x80
         return CtrMode[Self.C, 4, BIG_ENDIAN=False](
             self._cipher.copy(),
-            rebind_var[InlineArray[UInt8, Self.BLOCK_SIZE]](counter_block^),
+            rebind_var[Array[UInt8, Self.BLOCK_SIZE]](counter_block^),
         )
 
 
@@ -300,8 +296,8 @@ def _derive_subkey[
 ](
     mut cipher: C,
     var counter: UInt32,
-    nonce: InlineArray[UInt8, NONCE_SIZE],
-) raises -> InlineArray[UInt8, N]:
+    nonce: Array[UInt8, NONCE_SIZE],
+) raises -> Array[UInt8, N]:
     """
     Derive subkeys from the master key-generating-key in counter mode.
 
@@ -326,8 +322,8 @@ def _derive_subkey[
         N % 8 == 0
     ), "GCM-SIV derived key size must be a multiple of 8 bytes"
 
-    var key = InlineArray[UInt8, N](uninitialized=True)
-    var block = InlineArray[UInt8, C.BLOCK_SIZE](fill=0)
+    var key = Array[UInt8, N](uninitialized=True)
+    var block = Array[UInt8, C.BLOCK_SIZE](fill=0)
     for chunk in range(N // 8):
         # block[0:4] = counter as a little-endian u32, host-independent.
         var counter_bytes = counter.as_bytes[big_endian=False]()

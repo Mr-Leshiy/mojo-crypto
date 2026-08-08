@@ -11,7 +11,7 @@ comptime SHA2_WORD64_BLOCK_SIZE: Int = 128
 comptime ROUNDS_64: Int = 80
 
 # FIPS 180-4 §4.2.3 — round constants for the 64-bit word engine (SHA-384/512/512-224/512-256).
-comptime K64: InlineArray[UInt64, ROUNDS_64] = [
+comptime K64: Array[UInt64, ROUNDS_64] = [
     # fmt: off
     0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
     0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
@@ -37,7 +37,7 @@ comptime K64: InlineArray[UInt64, ROUNDS_64] = [
 ]
 
 # FIPS 180-4 §5.3.4 — SHA-384 initial hash value.
-comptime SHA384_IV: InlineArray[UInt64, 8] = [
+comptime SHA384_IV: Array[UInt64, 8] = [
     # fmt: off
     0xCBBB9D5DC1059ED8, 0x629A292A367CD507, 0x9159015A3070DD17, 0x152FECD8F70E5939,
     0x67332667FFC00B31, 0x8EB44A8768581511, 0xDB0C2E0D64F98FA7, 0x47B5481DBEFA4FA4,
@@ -45,7 +45,7 @@ comptime SHA384_IV: InlineArray[UInt64, 8] = [
 ]
 
 # FIPS 180-4 §5.3.5 — SHA-512 initial hash value.
-comptime SHA512_IV: InlineArray[UInt64, 8] = [
+comptime SHA512_IV: Array[UInt64, 8] = [
     # fmt: off
     0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
     0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179,
@@ -53,7 +53,7 @@ comptime SHA512_IV: InlineArray[UInt64, 8] = [
 ]
 
 # FIPS 180-4 §5.3.6.1 — SHA-512/224 initial hash value.
-comptime SHA512_224_IV: InlineArray[UInt64, 8] = [
+comptime SHA512_224_IV: Array[UInt64, 8] = [
     # fmt: off
     0x8C3D37C819544DA2, 0x73E1996689DCD4D6, 0x1DFAB7AE32FF9C82, 0x679DD514582F9FCF,
     0x0F6D2B697BD44DA8, 0x77E36F7304C48942, 0x3F9D85A86A1D36C8, 0x1112E6AD91D692A1,
@@ -61,7 +61,7 @@ comptime SHA512_224_IV: InlineArray[UInt64, 8] = [
 ]
 
 # FIPS 180-4 §5.3.6.2 — SHA-512/256 initial hash value.
-comptime SHA512_256_IV: InlineArray[UInt64, 8] = [
+comptime SHA512_256_IV: Array[UInt64, 8] = [
     # fmt: off
     0x22312194FC2BF72C, 0x9F555FA3C84C64C2, 0x2393B86B6F53B151, 0x963877195940EABD,
     0x96283EE2A88EFFE3, 0xBE5E1E2553863992, 0x2B0199FC2C85B8AA, 0x0EB72DDC81C52CA2,
@@ -70,11 +70,11 @@ comptime SHA512_256_IV: InlineArray[UInt64, 8] = [
 
 
 struct _Sha2Word64[
-    IV: InlineArray[UInt64, 8],
+    IV: Array[UInt64, 8],
     DigestSize: Int,
     compress: def(
         mut state: SIMD[DType.uint64, 8],
-        block: InlineArray[UInt8, SHA2_WORD64_BLOCK_SIZE],
+        block: Array[UInt8, SHA2_WORD64_BLOCK_SIZE],
     ) thin,
 ](Copyable, Deinitable, Digest, Movable):
     """
@@ -90,13 +90,13 @@ struct _Sha2Word64[
     comptime OUTPUT_SIZE: Int = Self.DigestSize
 
     var _state: SIMD[DType.uint64, 8]
-    var _buffer: InlineArray[UInt8, Self.BLOCK_SIZE]
+    var _buffer: Array[UInt8, Self.BLOCK_SIZE]
     var _buffer_len: Int
     var _total_len: UInt64
 
     def __init__(out self):
         self._state = Self._iv()
-        self._buffer = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+        self._buffer = Array[UInt8, Self.BLOCK_SIZE](uninitialized=True)
         self._buffer_len = 0
         self._total_len = 0
 
@@ -133,7 +133,7 @@ struct _Sha2Word64[
                 self._buffer_len = 0
 
         while len(input) >= Self.BLOCK_SIZE:
-            var block = InlineArray[UInt8, Self.BLOCK_SIZE](uninitialized=True)
+            var block = Array[UInt8, Self.BLOCK_SIZE](uninitialized=True)
             Span(block).copy_from(input[: Self.BLOCK_SIZE])
             Self.compress(self._state, block)
             input = input[Self.BLOCK_SIZE :]
@@ -149,7 +149,7 @@ struct _Sha2Word64[
         """The `count` free buffer bytes starting at the buffered prefix."""
         return Span(self._buffer)[self._buffer_len : self._buffer_len + count]
 
-    def finalize(var self) -> InlineArray[UInt8, Self.OUTPUT_SIZE]:
+    def finalize(var self) -> Array[UInt8, Self.OUTPUT_SIZE]:
         """Consume self and return the OUTPUT_SIZE-byte digest."""
 
         # FIPS 180-4 §5.1.2: append 0x80, zero-pad to 112 mod 128, then the
@@ -177,7 +177,7 @@ struct _Sha2Word64[
             )
         Self.compress(self._state, self._buffer)
 
-        var out = InlineArray[UInt8, Self.OUTPUT_SIZE](uninitialized=True)
+        var out = Array[UInt8, Self.OUTPUT_SIZE](uninitialized=True)
         for i in range(Self.OUTPUT_SIZE):
             out[i] = UInt8(self._state[i // 8] >> UInt64(8 * (7 - i % 8)))
         return out^

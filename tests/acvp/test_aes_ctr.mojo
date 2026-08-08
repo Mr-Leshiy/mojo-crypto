@@ -2,7 +2,7 @@ from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
 
-from mojo_crypto.utils import to_inline_array
+from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.modes import CtrMode
 
@@ -25,10 +25,10 @@ def parse_acvp_aes_ctr_aft(
 ) raises -> List[CtrTestVector]:
     var vectors = List[CtrTestVector]()
     for v in python_vectors:
-        group = v["group"]
-        test = v["test"]
-        expected = v["expected"]
-        is_encrypt = String(group["direction"]) == "encrypt"
+        var group = v["group"]
+        var test = v["test"]
+        var expected = v["expected"]
+        var is_encrypt = String(group["direction"]) == "encrypt"
 
         # CTR encryption vectors carry the IV in expectedResults rather than
         # the prompt; skip them and rely on the decryption vectors (same
@@ -57,7 +57,7 @@ def check_aes_ctr_aft[
     C: BlockCipherEngine,
     KeySize: Int,
     //,
-    cipher_init: def(InlineArray[UInt8, KeySize]) raises capturing[_] -> C,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
 ](vectors: List[CtrTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:
@@ -65,8 +65,8 @@ def check_aes_ctr_aft[
 
         var msg = "[CtrMode[{}]], count={}".format(reflect[C].name(), v.count)
 
-        var key = to_inline_array[KeySize](v.key)
-        var iv = to_inline_array[C.BLOCK_SIZE](v.iv)
+        var key = to_array[KeySize](v.key)
+        var iv = to_array[C.BLOCK_SIZE](v.iv)
 
         if v.is_encrypt:
             var pt = v.pt.copy()

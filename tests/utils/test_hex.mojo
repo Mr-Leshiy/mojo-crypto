@@ -31,7 +31,7 @@ def test_hex_decode() raises:
     var decoded = hex_decode(hex_encode(Span(data)))
     assert_true(decoded == data)
 
-    var expected_fixed: InlineArray[UInt8, 4] = [0x00, 0xFF, 0xAB, 0x12]
+    var expected_fixed: Array[UInt8, 4] = [0x00, 0xFF, 0xAB, 0x12]
     assert_equal(hex_decode[4]("00ffab12"), expected_fixed)
 
     expected_fixed = [0xDE, 0xAD, 0xBE, 0xEF]
