@@ -1,21 +1,31 @@
 from max.gpu.host import DeviceContext
+from std.time import monotonic
+from std.runtime.asyncrt import create_task
 
-from mojo_crypto.runtime.context import Context
 from mojo_crypto.runtime.executor import Executor
 
 
-async def foo(i: Int) -> Int:
-    print("calling foo", i)
-    return i + 1
+async def foo(mut executor: Executor) -> Int:
+    return await timeout(executor, 50)
+
+async def foo1() -> Int:
+    return 1 + 1
+
+
+async def timeout(mut executor: Executor, ms: Int) -> Int:
+    var deadline = monotonic() + ms * 1_000_000
+    var polls = 0
+    while monotonic() < deadline:
+        polls += 1
+        # await executor.yield_now()
+    print("timeout", ms, "ms elapsed after", polls, "polls")
+    return polls
 
 
 def main() raises:
-    with DeviceContext() as gpu_ctx:
-        print("Init executor")
-        var ctx = Context(gpu_ctx)
-        var executor = Executor(ctx^)
+    with DeviceContext() as ctx:
+        var executor = Executor()
 
-        for i in range(3):
-            executor.spawn(foo(i))
-        executor.run()
-        print("done")
+        var task = create_task(foo(executor))
+
+        print("Done, polls:", task.wait())
