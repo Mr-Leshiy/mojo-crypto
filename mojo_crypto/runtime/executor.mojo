@@ -1,14 +1,10 @@
 from max.gpu.host import DeviceContext
 from std.builtin.coroutine import (
     AnyCoroutine,
-    RaisingCoroutine,
-    _CoroutineContext,
     _coro_resume_fn,
-    _coro_resume_noop_callback,
+    _coro_destroy_fn
 )
-from std.sys import has_accelerator
 from std.collections import Deque
-from std.ffi import _Global
 from std.memory import ArcPointer
 
 from .context import Context
@@ -41,19 +37,25 @@ struct _ExecutorInner:
         self._ctx = ctx
         self._q = ArcPointer(Deque[AnyCoroutine]())
 
+    def __deinit__(deinit self):
+        try:
+            while len(self._q[]) > 0:
+                var hdl = self._q[].popleft()
+                _coro_destroy_fn(hdl)
+        except:
+            pass
+
     def add[
         type: Deinitable, origins: OriginSet
-    ](mut self, var handle: Coroutine[type, origins]):
-        handle._set_noop_callback()
-        self.enqueue(handle^._take_handle())
+    ](mut self, var hdl: Coroutine[type, origins]):
+        hdl._set_noop_callback()
+        self.enqueue(hdl^._take_handle())
 
     def enqueue(mut self, hdl: AnyCoroutine):
         self._q[].append(hdl)
 
     def wait(mut self) raises:
         while len(self._q[]) > 0:
-            # Pop first, resume second: the handle has to leave the queue
-            # before the coroutine can push itself back on.
             var hdl = self._q[].popleft()
             _coro_resume_fn(hdl)
         self._ctx.synchronize()
