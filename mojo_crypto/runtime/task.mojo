@@ -1,21 +1,20 @@
-from std.builtin.coroutine import AnyCoroutine, _coro_destroy_fn
+from std.builtin.coroutine import AnyCoroutine
+from std.memory import ArcPointer
 
-from .executor import Executor
+from .executor import _ExecutorInner
 
 
-struct Task[type: Deinitable, origins: OriginSet, executor_origin: ImmOrigin](
-    Movable where False
-):
-    var _executor: Pointer[Executor, Self.executor_origin]
+struct Task[type: Deinitable, origins: OriginSet](Movable where False):
+    var _executor: ArcPointer[_ExecutorInner]
     var _handle: AnyCoroutine
     var _result: Self.type
 
     def __init__(
         out self,
         var handle: Coroutine[Self.type, Self.origins],
-        ref[Self.executor_origin] executor: Executor,
+        var executor: ArcPointer[_ExecutorInner],
     ):
-        self._executor = Pointer(to=executor)
+        self._executor = executor^
         __mlir_op.`lit.ownership.mark_initialized`(
             __get_mvalue_as_litref(self._result)
         )
