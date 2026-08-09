@@ -38,6 +38,16 @@ struct Executor(Movable):
 struct _ExecutorInner:
     var _ctx: DeviceContext
 
+    # The queue has to stay behind a pointer. `wait` takes `mut self` — an
+    # exclusive, `noalias` borrow — yet a coroutine it resumes reaches this
+    # same object through the `Context`'s executor pointer to enqueue itself.
+    # Stored inline, the deque header would sit in that exclusively borrowed
+    # memory and may be cached in registers across the resume, silently
+    # dropping the append. Behind a pointer the header lives outside that
+    # borrow and both paths agree on it. Note that the queue is genuinely
+    # shared-mutable across those two paths, so `OwnedPointer`'s uniqueness
+    # claim is a fiction the optimizer is free to act on.
+    # (Analysis by Claude)
     var _q: OwnedPointer[Deque[AnyCoroutine]]
 
     def __init__(out self, ctx: DeviceContext):
