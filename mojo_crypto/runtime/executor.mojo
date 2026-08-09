@@ -5,7 +5,7 @@ from std.builtin.coroutine import (
     _coro_destroy_fn,
 )
 from std.collections import Deque
-from std.memory import ArcPointer
+from std.memory import ArcPointer, OwnedPointer
 
 from .context import Context
 from .task import Task
@@ -38,11 +38,11 @@ struct Executor(Movable):
 struct _ExecutorInner:
     var _ctx: DeviceContext
 
-    var _q: ArcPointer[Deque[AnyCoroutine]]
+    var _q: OwnedPointer[Deque[AnyCoroutine]]
 
     def __init__(out self, ctx: DeviceContext):
         self._ctx = ctx
-        self._q = ArcPointer(Deque[AnyCoroutine]())
+        self._q = OwnedPointer(Deque[AnyCoroutine]())
 
     def __deinit__(deinit self):
         try:
