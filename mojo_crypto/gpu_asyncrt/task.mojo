@@ -38,7 +38,9 @@ def _mark_completed(flag: _CompletedFlagPointer):
     flag[].store(1)
 
 
-struct Task[type: Deinitable, origins: OriginSet](Movable where False):
+struct Task[type: Deinitable & Movable, origins: OriginSet](
+    Movable where False
+):
     """A coroutine queued on an `Executor`, and the result it will produce.
 
     Immovable: the coroutine writes its result and completion flag through
@@ -80,6 +82,19 @@ struct Task[type: Deinitable, origins: OriginSet](Movable where False):
         )
 
         self._handle = handle^._take_handle()
+
+    def wait(deinit self) raises -> Self.type:
+        """Run the executor until this task completes, then take its result.
+
+        Consumes the task: the flag and the result slot it owns die with it.
+        """
+
+        @parameter
+        def completed() -> Bool:
+            return self.is_completed()
+
+        self._executor[].wait_until[completed]()
+        return self._result^
 
     def is_completed(self) -> Bool:
         """Return True once the coroutine has run to completion.
