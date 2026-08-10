@@ -19,7 +19,7 @@ struct Context(Movable):
     def gpu_ctx(self) -> DeviceContext:
         return self._executor[]._ctx
 
-    async def yield_now(self):
+    async def synchronize(self):
         @parameter
         def body(hdl: AnyCoroutine):
             self._executor[].enqueue(hdl)
