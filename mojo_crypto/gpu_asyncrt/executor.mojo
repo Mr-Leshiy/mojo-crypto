@@ -35,7 +35,7 @@ struct Executor(Movable):
         return Context(self._inner.copy())
 
     def add[
-        type: Deinitable, origins: OriginSet
+        type: Deinitable & Movable, origins: OriginSet
     ](
         mut self,
         var handle: Coroutine[type, origins],
@@ -110,12 +110,13 @@ struct _ExecutorInner:
     def wait(mut self) raises:
         """Run queued coroutines until all have completed."""
 
+        @parameter
         def never() -> Bool:
             return False
 
         self.wait_until[never]()
 
-    def wait_until[predicate: def() thin -> Bool](mut self) raises:
+    def wait_until[predicate: def() capturing thin -> Bool](mut self) raises:
         """Run queued coroutines until `predicate` holds or the queue empties.
 
         The device is synchronized before returning either way.

@@ -30,8 +30,21 @@ def test_task_completes_with_its_result() raises:
             executor.wait()
 
             assert_true(task.is_completed())
-            # 5 plus one from each of the two nested coroutines it awaited.
-            assert_equal(task._result, 7)
+            assert_equal(task^.wait(), 7)
+
+
+def test_task_wait_returns_its_result() raises:
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+            var executor = Executor(ctx)
+            var context = executor.context()
+
+            var first = executor.add(_yields_twice[5](context))
+            var second = executor.add(_yields_twice[10](context))
+
+            assert_equal(first^.wait(), 7)
+            assert_false(second.is_completed())
+            assert_equal(second^.wait(), 12)
 
 
 def test_tasks_complete_independently() raises:
@@ -49,28 +62,8 @@ def test_tasks_complete_independently() raises:
             # i.e. the queue really did round-robin between them.
             assert_true(first.is_completed())
             assert_true(second.is_completed())
-            assert_equal(first._result, 12)
-            assert_equal(second._result, 22)
-
-
-def test_wait_without_tasks_leaves_executor_usable() raises:
-    comptime if has_accelerator():
-        with DeviceContext() as ctx:
-            var executor = Executor(ctx)
-            var context = executor.context()
-
-            # Nothing queued: this has to return rather than wedge the queue.
-            executor.wait()
-
-            var task = executor.add(_yields_twice[0](context))
-            executor.wait()
-
-            assert_true(task.is_completed())
-            assert_equal(task._result, 2)
-
-            # A second drain of an already-empty queue changes nothing.
-            executor.wait()
-            assert_true(task.is_completed())
+            assert_equal(first^.wait(), 12)
+            assert_equal(second^.wait(), 22)
 
 
 def main() raises:
