@@ -38,9 +38,9 @@ def _mark_completed(flag: _CompletedFlagPointer):
     flag[].store(1)
 
 
-struct Task[
-    type: Deinitable & Movable, origins: OriginSet
-](Movable where False):
+struct Task[type: Deinitable & Movable, origins: OriginSet](
+    Movable where False
+):
     """A coroutine queued on an `Executor`, and the result it will produce.
 
     Immovable: the coroutine writes its result and completion flag through

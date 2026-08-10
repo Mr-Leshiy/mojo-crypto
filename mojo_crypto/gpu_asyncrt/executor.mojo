@@ -116,7 +116,7 @@ struct _ExecutorInner:
 
         self.wait_until[never]()
 
-    def wait_until[predicate: def() capturing thin -> Bool](mut self) raises:
+    def wait_until[predicate: def() thin capturing -> Bool](mut self) raises:
         """Run queued coroutines until `predicate` holds or the queue empties.
 
         The device is synchronized before returning either way.
