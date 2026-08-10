@@ -10,6 +10,7 @@ from std.memory import ArcPointer, OwnedPointer
 from .context import Context
 from .task import Task
 
+
 struct Executor(Movable):
     var _inner: ArcPointer[_ExecutorInner]
 
@@ -26,7 +27,6 @@ struct Executor(Movable):
         var handle: Coroutine[type, origins],
         out task: Task[type, origins],
     ):
-        handle._set_noop_callback()
         task = Task(handle^, self._inner.copy())
         self._inner[].add(task._handle)
 
@@ -72,7 +72,3 @@ struct _ExecutorInner:
             var handle = self._q[].popleft()
             _coro_resume_fn(handle)
         self._ctx.synchronize()
-
-
-def _coro_addr(handle: AnyCoroutine) -> String:
-    return hex(Pointer(to=handle).unsafe_bitcast[Int]()[])
