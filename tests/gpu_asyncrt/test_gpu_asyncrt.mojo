@@ -18,7 +18,6 @@ async def _yields_twice[VALUE: Int](context: Context) -> Int:
     return total
 
 
-
 def test_task_completes_with_its_result() raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
