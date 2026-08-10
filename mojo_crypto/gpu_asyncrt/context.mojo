@@ -45,6 +45,7 @@ struct Context(Movable):
             awaiting it from anywhere else hands the coroutine to a runtime that
             is not the one driving it.
         """
+
         @parameter
         def body(hdl: AnyCoroutine):
             self._executor[].enqueue(hdl)
