@@ -68,7 +68,14 @@ struct _ExecutorInner:
         self._q[].append(handle)
 
     def wait(mut self) raises:
-        while len(self._q[]) > 0:
+        def never() -> Bool:
+            return False
+
+        self.wait_until[never]()
+
+    def wait_until[predicate: def() thin -> Bool](mut self) raises:
+        while not predicate() and len(self._q[]) > 0:
             var handle = self._q[].popleft()
             _coro_resume_fn(handle)
+
         self._ctx.synchronize()
