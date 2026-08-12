@@ -44,7 +44,7 @@ def _assert_tag[
     assert_equal(hex_encode(Span(tag)[:expected_len]), expected_hex)
 
 
-@__parameter
+@parameter
 def check_hmac[T: DigestEngine](input: CheckInput) raises:
     """
     Reach the same tag by three routes, all of which must agree with the vector.

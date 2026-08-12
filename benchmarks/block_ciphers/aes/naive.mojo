@@ -11,7 +11,7 @@ from benchmarks.block_ciphers.aes.common import bench_cipher
 def main() raises:
     print("Running AES naive benchmarks")
 
-    @__parameter
+    @parameter
     def aes[
         KeySize: Int
     ](key: Array[UInt8, KeySize]) raises -> AesNaive[KeySize]:

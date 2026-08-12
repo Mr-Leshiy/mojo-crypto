@@ -15,7 +15,7 @@ def main() raises:
 
     with DeviceContext() as ctx:
 
-        @__parameter
+        @parameter
         def aes[
             KeySize: Int
         ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:

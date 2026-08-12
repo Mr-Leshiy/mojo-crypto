@@ -12,7 +12,7 @@ def bench_uhash[
 ]() raises:
     var key = Array[UInt8, H.KEY_SIZE](fill=0)
 
-    @__parameter
+    @parameter
     def bench[N: Int, suffix: StringLiteral]() raises:
         # Heap-allocate the input so it isn't a stack constant. `keep` then
         # forces the optimizer to treat the buffer as opaque and to observe the
@@ -20,7 +20,7 @@ def bench_uhash[
         # hash is dead-code-eliminated, producing meaningless (~1e-17 s) timings.
         var data = List[UInt8](length=N, fill=0)
 
-        @__parameter
+        @parameter
         def do_hash() raises:
             keep(data.unsafe_ptr())
             var hash = H(key.copy())

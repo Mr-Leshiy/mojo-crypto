@@ -11,7 +11,7 @@ from benchmarks.block_ciphers.aes.common import bench_cipher
 def main() raises:
     print("Running AES x86 AES-NI benchmarks")
 
-    @__parameter
+    @parameter
     def aes[KeySize: Int](key: Array[UInt8, KeySize]) raises -> AesX86[KeySize]:
         return AesX86[KeySize](key)
 
