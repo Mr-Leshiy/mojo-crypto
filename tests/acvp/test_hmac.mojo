@@ -50,7 +50,7 @@ def parse_acvp_hmac_aft(
     return vectors^
 
 
-@parameter
+@__parameter
 def check_hmac_aft[T: DigestEngine](vectors: List[HmacTestVector]) raises:
     for v in vectors:
         var msg = "[Hmac[{}]], count={}".format(reflect[T].name(), v.count)

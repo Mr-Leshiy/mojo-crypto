@@ -10,7 +10,7 @@ def bench_hash[
     H: Digest & Deinitable & Movable,
     prefix: StringLiteral,
 ]() raises:
-    @parameter
+    @__parameter
     def bench[N: Int, suffix: StringLiteral]() raises:
         # Heap-allocate the input so it isn't a stack constant. `keep` then
         # forces the optimizer to treat the buffer as opaque and to observe the
@@ -19,7 +19,7 @@ def bench_hash[
         # timings.
         var data = List[UInt8](length=N, fill=0)
 
-        @parameter
+        @__parameter
         def do_hash() raises:
             keep(data.unsafe_ptr())
             var hash = H()

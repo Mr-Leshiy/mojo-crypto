@@ -19,15 +19,15 @@ def bench_cipher[
     var key = Array[UInt8, KeySize](fill=0)
     var cipher = cipher_init(key)
 
-    @parameter
+    @__parameter
     def bench[N: Int, suffix: StringLiteral]() raises:
         var data = Array[UInt8, N](fill=0)
 
-        @parameter
+        @__parameter
         def do_encrypt() raises:
             cipher.encrypt(data)
 
-        @parameter
+        @__parameter
         def do_decrypt() raises:
             cipher.decrypt(data)
 

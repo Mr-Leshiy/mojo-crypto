@@ -30,7 +30,7 @@ def run_aes_checks[
     comptime if has_accelerator():
         with DeviceContext() as ctx:
 
-            @parameter
+            @__parameter
             def aes_gpu[
                 KeySize: Int
             ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
@@ -44,7 +44,7 @@ def run_aes_checks[
         ["aarch64", "arm64"]
     ) and has_target_feature["aes"]():
 
-        @parameter
+        @__parameter
         def aes_aarch64[
             KeySize: Int
         ](key: Array[UInt8, KeySize]) raises -> AesAarch64[KeySize]:
@@ -58,7 +58,7 @@ def run_aes_checks[
         "aes"
     ]():
 
-        @parameter
+        @__parameter
         def aes_x86[
             KeySize: Int
         ](key: Array[UInt8, KeySize]) raises -> AesX86[KeySize]:
@@ -68,7 +68,7 @@ def run_aes_checks[
         check[aes_x86[24]](input)
         check[aes_x86[32]](input)
 
-    @parameter
+    @__parameter
     def aes_cpu[
         KeySize: Int
     ](key: Array[UInt8, KeySize]) raises -> AesNaive[KeySize]:

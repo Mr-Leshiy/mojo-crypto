@@ -16,7 +16,7 @@ struct CheckInput(Copyable, Movable):
     var expected_hex: String
 
 
-@parameter
+@__parameter
 def check_hash[T: DigestEngine](input: CheckInput) raises:
     var h = T()
     h.update(input.msg.as_bytes())
