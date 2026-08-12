@@ -19,9 +19,15 @@ struct _Pmull(Pmull):
         64×64 → 128-bit polynomial multiply (PMULL).
 
         llvm.aarch64.neon.pmull64: (i64, i64) -> <16 x i8>  (IntrinsicsAArch64.td)
+
+        `a`/`b` are routed through 1-lane vectors (rather than passed as bare
+        scalars) so the backend selects the operands from FPR registers, which
+        is what the ISel patterns for this intrinsic expect.
         """
 
+        var va = SIMD[DType.uint64, 1](a)
+        var vb = SIMD[DType.uint64, 1](b)
         var result = llvm_intrinsic[
             "llvm.aarch64.neon.pmull64", SIMD[DType.uint8, 16]
-        ](a, b)
+        ](va, vb)
         return bitcast[DType.uint64, 2](result)
