@@ -1,10 +1,31 @@
 [workspace]
 authors = ["Mr-Leshiy <leshiy12345678@gmail.com>"]
 channels = ["conda-forge", "https://conda.modular.com/max"]
-name = "mojo-crypto"
 platforms = ["osx-arm64", "linux-aarch64", "linux-64"]
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
+preview = ["pixi-build"]
+
+[workspace.dependencies]
+mojo = "1.0.0.*"
+max = "26.5.0.*"
+
+[package]
+name = "mojo-crypto"
+version = "0.1.0"
+
+[package.build]
+backend = { name = "pixi-build-mojo", version = "0.*" }
+
+[package.host-dependencies]
+mojo.workspace = true
+max.workspace = true
+
+[package.build-dependencies]
+mojo.workspace = true
+
+[package.run-dependencies]
+mojo.workspace = true
 
 [tasks]
 fmt    = "mojo format ."
@@ -39,10 +60,12 @@ bench-build-mojo = "python scripts/bench_build_mojo.py"
 bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.toml"
 
 [dependencies]
-modular = "26.5.0"
+mojo.workspace = true
+max.workspace = true
 rust = ">=1.80.0,<2"
 hugo = ">=0.163.3,<0.164"
 go = ">=1.26.4,<2"
+gpu_async = { git = "https://github.com/Mr-Leshiy/mojo-gpu-async", branch = "feat/install-section" }
 
 [pypi-dependencies]
 typer = ">=0.12"
