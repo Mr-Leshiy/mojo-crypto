@@ -23,6 +23,7 @@ max.workspace = true
 
 [package.build-dependencies]
 mojo.workspace = true
+max.workspace = true
 
 [package.run-dependencies]
 mojo.workspace = true
