@@ -39,7 +39,7 @@ comptime RHO: Array[UInt64, KECCAK_LANES] = [
 struct _Keccak[
     permute: def(mut Array[UInt64, KECCAK_LANES]) thin,
     *,
-    Rate: Int,
+    BlockSize: Int,
     DomainSuffix: UInt8,
 ](Copyable, Deinitable, Movable, Xof):
     """
@@ -52,17 +52,17 @@ struct _Keccak[
     them. `permute` selects the Keccak-f[1600] backend.
     """
 
-    comptime BLOCK_SIZE: Int = Self.Rate
+    comptime BLOCK_SIZE: Int = Self.BlockSize
 
     var _state: Array[UInt64, KECCAK_LANES]
-    var _buffer: Array[UInt8, Self.Rate]
+    var _buffer: Array[UInt8, Self.BlockSize]
     var _buffer_len: Int
     var _squeezing: Bool
     var _squeeze_pos: Int
 
     def __init__(out self):
         self._state = Array[UInt64, KECCAK_LANES](fill=0)
-        self._buffer = Array[UInt8, Self.Rate](uninitialized=True)
+        self._buffer = Array[UInt8, Self.BlockSize](uninitialized=True)
         self._buffer_len = 0
         self._squeezing = False
         self._squeeze_pos = 0
@@ -77,18 +77,18 @@ struct _Keccak[
         # A prior `update` call left a partial block buffered — top it off
         # before deciding whether it is now full.
         if self._buffer_len > 0:
-            var take = min(Self.Rate - self._buffer_len, len(input))
+            var take = min(Self.BlockSize - self._buffer_len, len(input))
             self._buffer_span(take).copy_from(input[:take])
             self._buffer_len += take
             input = input[take:]
-            if self._buffer_len == Self.Rate:
+            if self._buffer_len == Self.BlockSize:
                 self._absorb_block()
                 self._buffer_len = 0
 
-        while len(input) >= Self.Rate:
-            Span(self._buffer).copy_from(input[: Self.Rate])
+        while len(input) >= Self.BlockSize:
+            Span(self._buffer).copy_from(input[: Self.BlockSize])
             self._absorb_block()
-            input = input[Self.Rate :]
+            input = input[Self.BlockSize :]
 
         if len(input) > 0:
             self._buffer_span(len(input)).copy_from(input)
@@ -105,7 +105,7 @@ struct _Keccak[
         """XOR the full `_buffer` into the state's leading `RATE` bytes and
         permute. Byte `i` of the state is lane `i // 8`'s byte `i % 8`,
         little-endian — FIPS 202 §3.1.2's bits-to-bytes-to-lanes mapping."""
-        for i in range(Self.Rate):
+        for i in range(Self.BlockSize):
             self._state[i // 8] ^= UInt64(self._buffer[i]) << UInt64(
                 8 * (i % 8)
             )
@@ -116,10 +116,10 @@ struct _Keccak[
         the domain-separation suffix where the message left off and the
         final `1` bit at the block's last byte, then absorb this last block
         and switch to squeezing."""
-        for i in range(self._buffer_len, Self.Rate):
+        for i in range(self._buffer_len, Self.BlockSize):
             self._buffer[i] = 0
         self._buffer[self._buffer_len] ^= Self.DomainSuffix
-        self._buffer[Self.Rate - 1] ^= 0x80
+        self._buffer[Self.BlockSize - 1] ^= 0x80
         self._absorb_block()
         self._buffer_len = 0
         self._squeezing = True
@@ -132,11 +132,11 @@ struct _Keccak[
 
         var out = data
         while len(out) > 0:
-            if self._squeeze_pos == Self.Rate:
+            if self._squeeze_pos == Self.BlockSize:
                 Self.permute(self._state)
                 self._squeeze_pos = 0
 
-            var take = min(Self.Rate - self._squeeze_pos, len(out))
+            var take = min(Self.BlockSize - self._squeeze_pos, len(out))
             for i in range(take):
                 var pos = self._squeeze_pos + i
                 out[i] = UInt8(self._state[pos // 8] >> UInt64(8 * (pos % 8)))
@@ -154,7 +154,7 @@ struct _Keccak[
 struct _Sha3[
     permute: def(mut Array[UInt64, KECCAK_LANES]) thin,
     *,
-    Rate: Int,
+    BlockSize: Int,
     OutputSize: Int,
     DomainSuffix: UInt8,
 ](Copyable, Deinitable, Digest, Movable):
@@ -163,16 +163,16 @@ struct _Sha3[
     bytes once, per FIPS 202 §6.1's SHA3-224/256/384/512.
     """
 
-    comptime BLOCK_SIZE: Int = Self.Rate
+    comptime BLOCK_SIZE: Int = Self.BlockSize
     comptime OUTPUT_SIZE: Int = Self.OutputSize
 
     var _sponge: _Keccak[
-        Rate=Self.Rate, DomainSuffix=Self.DomainSuffix, Self.permute
+        BlockSize=Self.BlockSize, DomainSuffix=Self.DomainSuffix, Self.permute
     ]
 
     def __init__(out self):
         self._sponge = _Keccak[
-            Rate=Self.Rate, DomainSuffix=Self.DomainSuffix, Self.permute
+            BlockSize=Self.BlockSize, DomainSuffix=Self.DomainSuffix, Self.permute
         ]()
 
     def update[o: Origin](mut self, data: Span[UInt8, o]):
