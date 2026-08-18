@@ -24,38 +24,30 @@ struct CheckInput(Copyable, Movable):
 def check_hash[T: DigestEngine](input: CheckInput) raises:
     var h = T()
     h.update(input.msg.as_bytes())
-    assert_equal(h^.finalize(), hex_decode[T.OUTPUT_SIZE](input.expected_hex))
-
-
-@fieldwise_init
-struct XofCheckInput(Copyable, Movable):
-    var msg: String
-    var output_len: Int
-    var expected_hex: String
-
-
-@parameter
-def check_xof[T: XofEngine](input: XofCheckInput) raises:
-    var h = T()
-    h.update(input.msg.as_bytes())
-    var out = List[UInt8](length=input.output_len, fill=0)
-    h.squeeze(Span(out))
-    assert_equal(out, hex_decode(input.expected_hex))
-
-
-# Squeezing the same output in two separate calls must give the same bytes
-# as squeezing it all at once — this is the point of an XOF.
-@parameter
-def check_xof_streamed[T: XofEngine](input: XofCheckInput) raises:
-    var h = T()
-    h.update(input.msg.as_bytes())
-    var expected = hex_decode(input.expected_hex)
-
-    var first_len = input.output_len
-    var out = List[UInt8](length=len(expected), fill=0)
-    h.squeeze(Span(out)[:first_len])
-    h.squeeze(Span(out)[first_len:])
+    var out = h^.finalize()
+    var expected = hex_decode[T.OUTPUT_SIZE](input.expected_hex)
     assert_equal(out, expected)
+
+
+@parameter
+def check_xof[T: XofEngine, output_len: Int](input: CheckInput) raises:
+    var h = T()
+    h.update(input.msg.as_bytes())
+    var out = h.squeeze[output_len]()
+    var expected = hex_decode[output_len](input.expected_hex)
+    assert_equal(out, expected)
+
+    h.reset()
+    h.update(input.msg.as_bytes())
+
+    # Squeezing the same output in two separate calls must give the same bytes
+    # as squeezing it all at once — this is the point of an XOF.
+    var first_len = output_len // 2
+    var out_2 = List[UInt8](length=output_len, fill=0)
+    var expected_2 = hex_decode(input.expected_hex)
+    h.squeeze(Span(out_2)[:first_len])
+    h.squeeze(Span(out_2)[first_len:])
+    assert_equal(out_2, expected_2)
 
 
 comptime MSG_448 = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
@@ -68,33 +60,44 @@ def test_sha3_224_vectors() raises:
     run_sha3_224_checks[check_hash](
         CheckInput(
             msg="",
-            expected_hex="6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7",
+            expected_hex=(
+                "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7"
+            ),
         )
     )
     run_sha3_224_checks[check_hash](
         CheckInput(
             msg="abc",
-            expected_hex="e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf",
+            expected_hex=(
+                "e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf"
+            ),
         )
     )
     run_sha3_224_checks[check_hash](
         CheckInput(
             msg=MSG_448,
-            expected_hex="8a24108b154ada21c9fd5574494479ba5c7e7ab76ef264ead0fcce33",
+            expected_hex=(
+                "8a24108b154ada21c9fd5574494479ba5c7e7ab76ef264ead0fcce33"
+            ),
         )
     )
     run_sha3_224_checks[check_hash](
         CheckInput(
             msg=MSG_896,
-            expected_hex="543e6868e1666c1a643630df77367ae5a62a85070a51c14cbf665cbc",
+            expected_hex=(
+                "543e6868e1666c1a643630df77367ae5a62a85070a51c14cbf665cbc"
+            ),
         )
     )
     run_sha3_224_checks[check_hash](
         CheckInput(
             msg=String("a" * 1_000_000),
-            expected_hex="d69335b93325192e516a912e6d19a15cb51c6ed5c15243e7a7fd653c",
+            expected_hex=(
+                "d69335b93325192e516a912e6d19a15cb51c6ed5c15243e7a7fd653c"
+            ),
         )
     )
+
 
 # generated:
 #   echo -n <msg> | openssl dgst -sha3-256
@@ -130,6 +133,7 @@ def test_sha3_256_vectors() raises:
         )
     )
 
+
 # generated:
 #   echo -n <msg> | openssl dgst -sha3-384
 def test_sha3_384_vectors() raises:
@@ -163,6 +167,7 @@ def test_sha3_384_vectors() raises:
             expected_hex="eee9e24d78c1855337983451df97c8ad9eedf256c6334f8e948d252d5e0e76847aa0774ddb90a842190d2c558b4b8340",
         )
     )
+
 
 # generated:
 #   echo -n <msg> | openssl dgst -sha3-512
@@ -200,78 +205,59 @@ def test_sha3_512_vectors() raises:
 
 
 # generated:
-#   echo -n <msg> | openssl dgst -shake128/-shake256 -xoflen <n>
+#   echo -n <msg> | openssl dgst -shake128 -xoflen <n>
 def test_shake128_vectors() raises:
-    run_shake128_checks[check_xof](
-        XofCheckInput(
+    run_shake128_checks[32, check_xof](
+        CheckInput(
             msg="",
-            output_len=32,
             expected_hex="7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26",
         )
     )
-    run_shake128_checks[check_xof](
-        XofCheckInput(
+    run_shake128_checks[32, check_xof](
+        CheckInput(
             msg="abc",
-            output_len=32,
             expected_hex="5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8",
         )
     )
-    run_shake128_checks[check_xof](
-        XofCheckInput(
+    run_shake128_checks[32, check_xof](
+        CheckInput(
             msg=MSG_448,
-            output_len=32,
             expected_hex="1a96182b50fb8c7e74e0a707788f55e98209b8d91fade8f32f8dd5cff7bf21f5",
         )
     )
-    run_shake128_checks[check_xof](
-        XofCheckInput(
+    run_shake128_checks[32, check_xof](
+        CheckInput(
             msg=String("a" * 1_000_000),
-            output_len=32,
             expected_hex="9d222c79c4ff9d092cf6ca86143aa411e369973808ef97093255826c5572ef58",
         )
     )
 
 
+# generated:
+#   echo -n <msg> | openssl dgst -shake256 -xoflen <n>
 def test_shake256_vectors() raises:
-    run_shake256_checks[check_xof](
-        XofCheckInput(
+    run_shake256_checks[64, check_xof](
+        CheckInput(
             msg="",
-            output_len=64,
             expected_hex="46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be",
         )
     )
-    run_shake256_checks[check_xof](
-        XofCheckInput(
+    run_shake256_checks[64, check_xof](
+        CheckInput(
             msg="abc",
-            output_len=64,
             expected_hex="483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739d5a15bef186a5386c75744c0527e1faa9f8726e462a12a4feb06bd8801e751e4",
         )
     )
-    run_shake256_checks[check_xof](
-        XofCheckInput(
+    run_shake256_checks[64, check_xof](
+        CheckInput(
             msg=MSG_448,
-            output_len=64,
             expected_hex="4d8c2dd2435a0128eefbb8c36f6f87133a7911e18d979ee1ae6be5d4fd2e332940d8688a4e6a59aa8060f1f9bc996c05aca3c696a8b66279dc672c740bb224ec",
         )
     )
-    run_shake256_checks[check_xof](
-        XofCheckInput(
+    run_shake256_checks[64, check_xof](
+        CheckInput(
             msg=String("a" * 1_000_000),
-            output_len=64,
             expected_hex="3578a7a4ca9137569cdf76ed617d31bb994fca9c1bbf8b184013de8234dfd13a3fd124d4df76c0a539ee7dd2f6e1ec346124c815d9410e145eb561bcd97b18ab",
-        )
-    )
-
-
-# generated:
-#   echo -n abc | openssl dgst -shake128 -xoflen 100
-# squeezed 16/84 here instead of all at once.
-def test_shake128_streaming() raises:
-    run_shake128_checks[check_xof_streamed](
-        XofCheckInput(
-            msg="abc",
-            output_len=16,
-            expected_hex="5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc844c50af32acd3f2cdd066568706f509bc1bdde58295dae3f891a9a0fca5783789a41f8611214ce612394df286a62d1a2252aa94db9c538956c717dc2bed4f232a0294c85",
         )
     )
 

@@ -180,18 +180,20 @@ def run_sha3_512_checks[
 def run_shake128_checks[
     TestInput: Copyable,
     //,
-    check: def[T: XofEngine](TestInput) raises capturing[_],
+    output_len: Int,
+    check: def[T: XofEngine, output_len: Int](TestInput) raises capturing[_],
 ](vectors: TestInput) raises:
     from mojo_crypto.hashes.sha3 import Shake128Naive
 
-    check[Shake128Naive](vectors)
+    check[Shake128Naive, output_len](vectors)
 
 
 def run_shake256_checks[
     TestInput: Copyable,
     //,
-    check: def[T: XofEngine](TestInput) raises capturing[_],
+    output_len: Int,
+    check: def[T: XofEngine, output_len: Int](TestInput) raises capturing[_],
 ](vectors: TestInput) raises:
     from mojo_crypto.hashes.sha3 import Shake256Naive
 
-    check[Shake256Naive](vectors)
+    check[Shake256Naive, output_len](vectors)

@@ -38,6 +38,11 @@ trait Xof:
         """Absorb more input. Must not be called once `squeeze` has been."""
         ...
 
+    def squeeze[size: Int](mut self) -> Array[UInt8, size]:
+        var out = Array[UInt8, size](fill=0)
+        self.squeeze(out)
+        return out^
+
     def squeeze[o: MutOrigin](mut self, data: Span[UInt8, o]):
         """Fill `data` with the next `len(data)` bytes of output.
 
