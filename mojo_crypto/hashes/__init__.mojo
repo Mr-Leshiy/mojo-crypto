@@ -1,1 +1,1 @@
-from .traits import Digest
+from .traits import Digest, Xof

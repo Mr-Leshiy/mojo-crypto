@@ -1,8 +1,12 @@
 from mojo_crypto.utils import target_triple_contains_any, has_target_feature
-from mojo_crypto.hashes.traits import Digest
+from mojo_crypto.hashes.traits import Digest, Xof
 
 comptime DigestEngine = Digest & Movable & Deinitable
-"""Bound every SHA-2 backend satisfies, and the one `check` is generic over."""
+"""Bound every SHA-2/SHA-3 backend satisfies, and the one `check` is generic
+over."""
+
+comptime XofEngine = Xof & Movable & Deinitable
+"""Bound every SHAKE backend satisfies, and the one `check` is generic over."""
 
 
 def run_sha224_checks[
@@ -131,3 +135,63 @@ def run_sha512_256_checks[
         check[Sha512_256X86](vectors)
 
     check[Sha512_256Naive](vectors)
+
+
+def run_sha3_224_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Sha3_224Naive
+
+    check[Sha3_224Naive](vectors)
+
+
+def run_sha3_256_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Sha3_256Naive
+
+    check[Sha3_256Naive](vectors)
+
+
+def run_sha3_384_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Sha3_384Naive
+
+    check[Sha3_384Naive](vectors)
+
+
+def run_sha3_512_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: DigestEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Sha3_512Naive
+
+    check[Sha3_512Naive](vectors)
+
+
+def run_shake128_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: XofEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Shake128Naive
+
+    check[Shake128Naive](vectors)
+
+
+def run_shake256_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: XofEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Shake256Naive
+
+    check[Shake256Naive](vectors)
