@@ -37,9 +37,10 @@ comptime RHO: Array[UInt64, KECCAK_LANES] = [
 
 
 struct _Keccak[
-    RATE: Int,
-    DomainSuffix: UInt8,
     permute: def(mut Array[UInt64, KECCAK_LANES]) thin,
+    *,
+    Rate: Int,
+    DomainSuffix: UInt8,
 ](Copyable, Deinitable, Movable, Xof):
     """
     The Keccak sponge construction (FIPS 202 §4) underlying SHA-3 and SHAKE.
@@ -51,17 +52,17 @@ struct _Keccak[
     them. `permute` selects the Keccak-f[1600] backend.
     """
 
-    comptime BLOCK_SIZE: Int = Self.RATE
+    comptime BLOCK_SIZE: Int = Self.Rate
 
     var _state: Array[UInt64, KECCAK_LANES]
-    var _buffer: Array[UInt8, Self.RATE]
+    var _buffer: Array[UInt8, Self.Rate]
     var _buffer_len: Int
     var _squeezing: Bool
     var _squeeze_pos: Int
 
     def __init__(out self):
         self._state = Array[UInt64, KECCAK_LANES](fill=0)
-        self._buffer = Array[UInt8, Self.RATE](uninitialized=True)
+        self._buffer = Array[UInt8, Self.Rate](uninitialized=True)
         self._buffer_len = 0
         self._squeezing = False
         self._squeeze_pos = 0
@@ -76,18 +77,18 @@ struct _Keccak[
         # A prior `update` call left a partial block buffered — top it off
         # before deciding whether it is now full.
         if self._buffer_len > 0:
-            var take = min(Self.RATE - self._buffer_len, len(input))
+            var take = min(Self.Rate - self._buffer_len, len(input))
             self._buffer_span(take).copy_from(input[:take])
             self._buffer_len += take
             input = input[take:]
-            if self._buffer_len == Self.RATE:
+            if self._buffer_len == Self.Rate:
                 self._absorb_block()
                 self._buffer_len = 0
 
-        while len(input) >= Self.RATE:
-            Span(self._buffer).copy_from(input[: Self.RATE])
+        while len(input) >= Self.Rate:
+            Span(self._buffer).copy_from(input[: Self.Rate])
             self._absorb_block()
-            input = input[Self.RATE :]
+            input = input[Self.Rate :]
 
         if len(input) > 0:
             self._buffer_span(len(input)).copy_from(input)
@@ -104,7 +105,7 @@ struct _Keccak[
         """XOR the full `_buffer` into the state's leading `RATE` bytes and
         permute. Byte `i` of the state is lane `i // 8`'s byte `i % 8`,
         little-endian — FIPS 202 §3.1.2's bits-to-bytes-to-lanes mapping."""
-        for i in range(Self.RATE):
+        for i in range(Self.Rate):
             self._state[i // 8] ^= UInt64(self._buffer[i]) << UInt64(
                 8 * (i % 8)
             )
@@ -115,10 +116,10 @@ struct _Keccak[
         the domain-separation suffix where the message left off and the
         final `1` bit at the block's last byte, then absorb this last block
         and switch to squeezing."""
-        for i in range(self._buffer_len, Self.RATE):
+        for i in range(self._buffer_len, Self.Rate):
             self._buffer[i] = 0
         self._buffer[self._buffer_len] ^= Self.DomainSuffix
-        self._buffer[Self.RATE - 1] ^= 0x80
+        self._buffer[Self.Rate - 1] ^= 0x80
         self._absorb_block()
         self._buffer_len = 0
         self._squeezing = True
@@ -131,11 +132,11 @@ struct _Keccak[
 
         var out = data
         while len(out) > 0:
-            if self._squeeze_pos == Self.RATE:
+            if self._squeeze_pos == Self.Rate:
                 Self.permute(self._state)
                 self._squeeze_pos = 0
 
-            var take = min(Self.RATE - self._squeeze_pos, len(out))
+            var take = min(Self.Rate - self._squeeze_pos, len(out))
             for i in range(take):
                 var pos = self._squeeze_pos + i
                 out[i] = UInt8(self._state[pos // 8] >> UInt64(8 * (pos % 8)))
@@ -151,31 +152,36 @@ struct _Keccak[
 
 
 struct _Sha3[
-    RATE: Int,
-    DigestSize: Int,
-    DomainSuffix: UInt8,
     permute: def(mut Array[UInt64, KECCAK_LANES]) thin,
+    *,
+    Rate: Int,
+    OutputSize: Int,
+    DomainSuffix: UInt8,
 ](Copyable, Deinitable, Digest, Movable):
     """
     A fixed-output SHA-3 instance: `_Keccak` squeezed exactly `DigestSize`
     bytes once, per FIPS 202 §6.1's SHA3-224/256/384/512.
     """
 
-    comptime BLOCK_SIZE: Int = Self.RATE
-    comptime OUTPUT_SIZE: Int = Self.DigestSize
+    comptime BLOCK_SIZE: Int = Self.Rate
+    comptime OUTPUT_SIZE: Int = Self.OutputSize
 
-    var _sponge: _Keccak[Self.RATE, Self.DomainSuffix, Self.permute]
+    var _sponge: _Keccak[
+        Rate=Self.Rate, DomainSuffix=Self.DomainSuffix, Self.permute
+    ]
 
     def __init__(out self):
-        self._sponge = _Keccak[Self.RATE, Self.DomainSuffix, Self.permute]()
+        self._sponge = _Keccak[
+            Rate=Self.Rate, DomainSuffix=Self.DomainSuffix, Self.permute
+        ]()
 
     def update[o: Origin](mut self, data: Span[UInt8, o]):
         """Absorb more input."""
         self._sponge.update(data)
 
-    def finalize(var self) -> Array[UInt8, Self.OUTPUT_SIZE]:
+    def finalize(var self) -> Array[UInt8, Self.OutputSize]:
         """Consume self and return the OUTPUT_SIZE-byte digest."""
-        var out = Array[UInt8, Self.OUTPUT_SIZE](uninitialized=True)
+        var out = Array[UInt8, Self.OutputSize](uninitialized=True)
         self._sponge.squeeze(Span(out))
         return out^
 

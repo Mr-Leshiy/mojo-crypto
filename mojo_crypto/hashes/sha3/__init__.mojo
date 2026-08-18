@@ -18,31 +18,43 @@ comptime SHA3_DOMAIN_SUFFIX: UInt8 = 0x06
 comptime SHAKE_DOMAIN_SUFFIX: UInt8 = 0x1F
 
 comptime Sha3_224Naive = _Sha3[
-    SHA3_224_RATE, 28, SHA3_DOMAIN_SUFFIX, naive_permute
+    Rate=SHA3_224_RATE,
+    OutputSize=28,
+    DomainSuffix=SHA3_DOMAIN_SUFFIX,
+    naive_permute,
 ]
 """SHA3-224 (FIPS 202 §6.1)."""
 
 comptime Sha3_256Naive = _Sha3[
-    SHA3_256_RATE, 32, SHA3_DOMAIN_SUFFIX, naive_permute
+    Rate=SHA3_256_RATE,
+    OutputSize=32,
+    DomainSuffix=SHA3_DOMAIN_SUFFIX,
+    naive_permute,
 ]
 """SHA3-256 (FIPS 202 §6.1)."""
 
 comptime Sha3_384Naive = _Sha3[
-    SHA3_384_RATE, 48, SHA3_DOMAIN_SUFFIX, naive_permute
+    Rate=SHA3_384_RATE,
+    OutputSize=48,
+    DomainSuffix=SHA3_DOMAIN_SUFFIX,
+    naive_permute,
 ]
 """SHA3-384 (FIPS 202 §6.1)."""
 
 comptime Sha3_512Naive = _Sha3[
-    SHA3_512_RATE, 64, SHA3_DOMAIN_SUFFIX, naive_permute
+    Rate=SHA3_512_RATE,
+    OutputSize=64,
+    DomainSuffix=SHA3_DOMAIN_SUFFIX,
+    naive_permute,
 ]
 """SHA3-512 (FIPS 202 §6.1)."""
 
 comptime Shake128Naive = _Keccak[
-    SHAKE128_RATE, SHAKE_DOMAIN_SUFFIX, naive_permute
+    Rate=SHAKE128_RATE, DomainSuffix=SHAKE_DOMAIN_SUFFIX, naive_permute
 ]
 """SHAKE128, an extendable-output function (FIPS 202 §6.2)."""
 
 comptime Shake256Naive = _Keccak[
-    SHAKE256_RATE, SHAKE_DOMAIN_SUFFIX, naive_permute
+    Rate=SHAKE256_RATE, DomainSuffix=SHAKE_DOMAIN_SUFFIX, naive_permute
 ]
 """SHAKE256, an extendable-output function (FIPS 202 §6.2)."""
