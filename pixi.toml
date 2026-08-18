@@ -66,7 +66,6 @@ max.workspace = true
 rust = ">=1.80.0,<2"
 hugo = ">=0.163.3,<0.164"
 go = ">=1.26.4,<2"
-gpu_async = { git = "https://github.com/Mr-Leshiy/mojo-gpu-async", branch = "feat/install-section" }
 
 [pypi-dependencies]
 typer = ">=0.12"
