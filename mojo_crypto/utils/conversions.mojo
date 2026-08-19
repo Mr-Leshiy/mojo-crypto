@@ -82,6 +82,7 @@ def store_bytes[
 @always_inline
 def to_bytes[
     dtype: DType,
+    //,
     output_size: Int,
     input_size: Int,
     big_endian: Bool = is_big_endian(),
