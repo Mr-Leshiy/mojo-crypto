@@ -1,7 +1,9 @@
 from std.math import min
+from std.bit import byte_swap
+from std.memory import unsafe_memcpy
 
 from mojo_crypto.hashes.traits import Digest
-from mojo_crypto.utils import load_be
+from mojo_crypto.utils import load_be, to_bytes
 
 comptime SHA2_WORD32_BLOCK_SIZE: Int = 64
 
@@ -155,8 +157,12 @@ struct _Sha2Word32[
         Self.compress(self._state, self._buffer)
 
         var out = Array[UInt8, Self.OUTPUT_SIZE](uninitialized=True)
-        for i in range(Self.OUTPUT_SIZE):
-            out[i] = UInt8(self._state[i // 4] >> UInt32(8 * (3 - i % 4)))
+        var swapped = byte_swap(self._state)
+        unsafe_memcpy(
+            dest=out.unsafe_ptr(),
+            src=Pointer(to=swapped).unsafe_bitcast[Byte](),
+            count=Self.OUTPUT_SIZE,
+        )
         return out^
 
     def reset(mut self):

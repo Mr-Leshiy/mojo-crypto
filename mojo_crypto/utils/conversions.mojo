@@ -1,10 +1,4 @@
-"""Conversions between the container and word representations of key material.
-
-`to_array`/`to_list` move a fixed-size buffer between `Array` and
-`List` (test vectors arrive as lists, the primitives take arrays);
-`load_bytes`/`store_bytes` reinterpret a byte span as a vector and back;
-`load_be` assembles a big-endian word out of a byte span.
-"""
+"""Conversions between the container and word representations of key material."""
 
 from std.sys import size_of, is_big_endian
 
@@ -82,6 +76,7 @@ def store_bytes[
 @always_inline
 def to_bytes[
     dtype: DType,
+    //,
     output_size: Int,
     input_size: Int,
     big_endian: Bool = is_big_endian(),
@@ -123,18 +118,19 @@ def to_bytes[
 def to_array[
     size: Int,
     T: Copyable & Deinitable,
-](data: List[T]) raises -> Array[T, size]:
-    """Copy a `size`-length List into a fixed-size Array.
+    o: Origin,
+](data: Span[T, o]) raises -> Array[T, size]:
+    """Copy a `size`-length span into a fixed-size Array.
 
-    Copies the underlying buffer in a single `Span.copy_from` rather than
-    element-by-element.
+    Checks `len(data) == size` and raises otherwise.
 
     Parameters:
         size: The expected length of `data` and of the resulting array.
         T: The element type.
+        o: The origin of the span.
 
     Args:
-        data: The list to copy from.
+        data: The span to copy from.
 
     Returns:
         An `Array[T, size]` holding a copy of `data`.
@@ -147,7 +143,7 @@ def to_array[
             "expected list of length {}; got {}".format(size, len(data))
         )
     var arr = Array[T, size](uninitialized=True)
-    Span(arr).copy_from(Span(data))
+    Span(arr).copy_from(Span(data)[:size])
     return arr^
 
 
