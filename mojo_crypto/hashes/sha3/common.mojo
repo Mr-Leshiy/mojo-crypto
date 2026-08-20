@@ -172,7 +172,9 @@ struct _Sha3[
 
     def __init__(out self):
         self._sponge = _Keccak[
-            BlockSize=Self.BlockSize, DomainSuffix=Self.DomainSuffix, Self.permute
+            BlockSize=Self.BlockSize,
+            DomainSuffix=Self.DomainSuffix,
+            Self.permute,
         ]()
 
     def update[o: Origin](mut self, data: Span[UInt8, o]):
