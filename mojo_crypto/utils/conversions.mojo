@@ -1,10 +1,4 @@
-"""Conversions between the container and word representations of key material.
-
-`to_array`/`to_list` move a fixed-size buffer between `Array` and
-`List` (test vectors arrive as lists, the primitives take arrays);
-`load_bytes`/`store_bytes` reinterpret a byte span as a vector and back;
-`load_be` assembles a big-endian word out of a byte span.
-"""
+"""Conversions between the container and word representations of key material."""
 
 from std.sys import size_of, is_big_endian
 
@@ -124,18 +118,19 @@ def to_bytes[
 def to_array[
     size: Int,
     T: Copyable & Deinitable,
-](data: List[T]) raises -> Array[T, size]:
-    """Copy a `size`-length List into a fixed-size Array.
+    o: Origin,
+](data: Span[T, o]) raises -> Array[T, size]:
+    """Copy a `size`-length span into a fixed-size Array.
 
-    Copies the underlying buffer in a single `Span.copy_from` rather than
-    element-by-element.
+    Checks `len(data) == size` and raises otherwise.
 
     Parameters:
         size: The expected length of `data` and of the resulting array.
         T: The element type.
+        o: The origin of the span.
 
     Args:
-        data: The list to copy from.
+        data: The span to copy from.
 
     Returns:
         An `Array[T, size]` holding a copy of `data`.
@@ -147,8 +142,40 @@ def to_array[
         raise Error(
             "expected list of length {}; got {}".format(size, len(data))
         )
+    return unsafe_to_array[size](data)
+
+
+@always_inline
+def unsafe_to_array[
+    size: Int,
+    T: Copyable & Deinitable,
+    o: Origin,
+](data: Span[T, o]) -> Array[T, size]:
+    """Copy the first `size` elements of a span into a fixed-size Array.
+
+    The unchecked counterpart of `to_array`: it does not verify
+    `len(data) == size`, only asserts it in debug builds, so it is safe only
+    where the caller already knows the length matches (e.g. a slice taken to
+    exactly `size`).
+
+    Parameters:
+        size: The length of the resulting array.
+        T: The element type.
+        o: The origin of the span.
+
+    Args:
+        data: The span to copy from; must hold at least `size` elements.
+
+    Returns:
+        An `Array[T, size]` holding a copy of the first `size` elements of
+        `data`.
+    """
+    debug_assert(
+        len(data) >= size,
+        "unsafe_to_array: span shorter than the array being filled",
+    )
     var arr = Array[T, size](uninitialized=True)
-    Span(arr).copy_from(Span(data))
+    Span(arr).copy_from(Span(data)[:size])
     return arr^
 
 
