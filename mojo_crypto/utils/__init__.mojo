@@ -1,6 +1,5 @@
 from .conversions import (
     to_array,
-    unsafe_to_array,
     to_list,
     load_be,
     load_bytes,
