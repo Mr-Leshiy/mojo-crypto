@@ -41,6 +41,18 @@ corresponding `test_*.mojo` file.
 | `HMAC-SHA2-512-1.0` | HMAC-SHA-512 | `test_hmac.mojo` |
 | `HMAC-SHA2-512-224-1.0` | HMAC-SHA-512/224 | `test_hmac.mojo` |
 | `HMAC-SHA2-512-256-1.0` | HMAC-SHA-512/256 | `test_hmac.mojo` |
+| `SHA3-224-2.0` | SHA3-224 | `test_sha3.mojo` |
+| `SHA3-256-2.0` | SHA3-256 | `test_sha3.mojo` |
+| `SHA3-384-2.0` | SHA3-384 | `test_sha3.mojo` |
+| `SHA3-512-2.0` | SHA3-512 | `test_sha3.mojo` |
+| `SHAKE-128-1.0` | SHAKE-128 (bit-oriented) | `test_sha3.mojo` |
+| `SHAKE-256-1.0` | SHAKE-256 (bit-oriented) | `test_sha3.mojo` |
+| `SHAKE-128-FIPS202` | SHAKE-128 (byte-aligned) | `test_sha3.mojo` |
+| `SHAKE-256-FIPS202` | SHAKE-256 (byte-aligned) | `test_sha3.mojo` |
+| `HMAC-SHA3-224-2.0` | HMAC-SHA3-224 | not yet covered |
+| `HMAC-SHA3-256-2.0` | HMAC-SHA3-256 | not yet covered |
+| `HMAC-SHA3-384-2.0` | HMAC-SHA3-384 | not yet covered |
+| `HMAC-SHA3-512-2.0` | HMAC-SHA3-512 | not yet covered |
 
 SHA-2 AFT vectors with a non-byte-aligned bit length (allowed for
 SHA-224/384/512-224, whose registration permits bit-granular
@@ -53,3 +65,37 @@ only that many leading bytes of the computed tag, as `test_aes_cmac.mojo`
 does for CMAC. Keys run 8..2048 bits, covering both `K0` derivations: keys
 shorter than the hash block (zero-padded) and longer than it (hashed down
 first).
+
+`SHA3-*-2.0` allows bit-granular `messageLength` (increment 1), the same as
+the SHA-2 sets, so the same byte-alignment skip applies. Each set also
+defines an `LDT` (large-data) group, which is skipped entirely: its smallest
+message is 1 GiB (`fullLength`, built by repeating a short `content` pattern
+up to that size), far too slow to hash in a test run against the naive
+backend — the only one SHA-3 has today. `MCT` groups (each round rehashes
+the previous digest directly — `MSG = MD[i-1]`, no `A || B || C`
+concatenation like SHA-2's) support both the `standard` and `alternate`
+chaining rules, though the downloaded vectors only exercise `standard`;
+`alternate`'s length normalization is a no-op for fixed-output SHA-3, whose
+digest is always exactly one seed-width wide.
+
+`SHAKE-*-1.0` is the bit-oriented revision (registration sets `inBit`/
+`outBit`, with `outputLen` increment 1) and `SHAKE-*-FIPS202` is the newer
+byte-aligned-only revision (`messageLength`/`outputLen` increment 8) — both
+are included since neither supersedes the other in the upstream repo. Test
+cases in both use the same `msg`/`len`/`outLen` fields regardless of
+revision; for `-1.0`, vectors whose message length *or* output length
+doesn't land on a byte boundary are skipped, for the same reason as SHA-2/
+SHA-3's message-length skip — `Xof.update`/`squeeze` only ever consume or
+produce whole bytes. `SHAKE-*-1.0` additionally defines `VOT` (Variable
+Output Test) groups — AFT-shaped vectors that vary `outLen` per test case
+instead of holding it fixed — and `MCT` groups, whose algorithm is not the
+same recurrence as SHA-3's: the output length itself changes every one of
+the 1000 inner rounds (`OutputLen = minOutBytes + (rightmost 16 bits of the
+round's digest mod Range)`, persisting across all 100 outer rounds rather
+than resetting). That recurrence was verified against the downloaded
+`SHAKE-128-1.0` vectors with a standalone `openssl`-based simulation before
+being implemented in Mojo, since the ACVP pseudocode's exact ordering is
+easy to misread. `SHAKE-*-FIPS202` defines `AFT` groups only.
+
+`HMAC-SHA3-*-2.0` was used over `-1.0` since it's a strict superset (adds a
+`msgLen` parameter).
