@@ -5,14 +5,17 @@ test vectors from NIST's [Automated Cryptographic Validation Protocol (ACVP)](ht
 sourced from the [usnistgov/ACVP-Server](https://github.com/usnistgov/ACVP-Server)
 `gen-val/json-files` reference vectors.
 
-Each vector set under `data/` was downloaded as three JSON files:
+Each vector set under `data/` was downloaded as up to five JSON files —
+`internalProjection.json`/`validation.json` are only present for some sets
+(currently the AES ones, plus `validation.json` for `CMAC-AES-1.0`):
 
-- `prompt.json` — test groups/cases (keys, plaintext/ciphertext, IVs, etc.)
-- `expectedResults.json` — the expected output for each test case, keyed by `tcId`
-- `registration.json` — the algorithm/mode parameters used to request the vector set
-
-`internalProjection.json` and `validation.json` are also included per vector
-set but are not consumed by these tests.
+| File | Description | Used |
+| --- | --- | --- |
+| `prompt.json` | Test groups/cases — keys, plaintext/ciphertext, IVs, etc. | True |
+| `expectedResults.json` | The expected output for each test case, keyed by `tcId` | True |
+| `registration.json` | The algorithm/mode parameters used to request the vector set | True |
+| `internalProjection.json` | `prompt.json` and `expectedResults.json` pre-merged into one file, plus NIST-internal-only fields (e.g. `internalTestType`) | False |
+| `validation.json` | A pass/fail disposition per `tcId` from NIST's own reference run — a result record, not test data | False |
 
 Vectors are parsed by `read_acvp_vectors.py` and bridged into Mojo via
 `utils.mojo`'s `load_python_acvp_vectors`, which merges each test case with
@@ -21,35 +24,41 @@ corresponding `test_*.mojo` file.
 
 ## Vector sets
 
-| Directory | Mode | Test file |
-| --- | --- | --- |
-| `ACVP-AES-ECB-1.0` | ECB | `test_aes.mojo` |
-| `ACVP-AES-CBC-1.0` | CBC | `test_aes_cbc.mojo` |
-| `ACVP-AES-CTR-1.0` | CTR | `test_aes_ctr.mojo` |
-| `ACVP-AES-GCM-SIV-1.0` | GCM-SIV | `test_aes_gcm_siv.mojo` |
-| `CMAC-AES-1.0` | CMAC (OMAC1) | `test_aes_cmac.mojo` |
-| `ACVP-AES-GCM-1.0` | GCM | not yet covered |
-| `SHA2-224-1.0` | SHA-224 | `test_sha2.mojo` |
-| `SHA2-256-1.0` | SHA-256 | `test_sha2.mojo` |
-| `SHA2-384-1.0` | SHA-384 | `test_sha2.mojo` |
-| `SHA2-512-1.0` | SHA-512 | `test_sha2.mojo` |
-| `SHA2-512-224-1.0` | SHA-512/224 | `test_sha2.mojo` |
-| `SHA2-512-256-1.0` | SHA-512/256 | `test_sha2.mojo` |
-| `HMAC-SHA2-224-1.0` | HMAC-SHA-224 | `test_hmac.mojo` |
-| `HMAC-SHA2-256-1.0` | HMAC-SHA-256 | `test_hmac.mojo` |
-| `HMAC-SHA2-384-1.0` | HMAC-SHA-384 | `test_hmac.mojo` |
-| `HMAC-SHA2-512-1.0` | HMAC-SHA-512 | `test_hmac.mojo` |
-| `HMAC-SHA2-512-224-1.0` | HMAC-SHA-512/224 | `test_hmac.mojo` |
-| `HMAC-SHA2-512-256-1.0` | HMAC-SHA-512/256 | `test_hmac.mojo` |
+| Directory | Mode | Test file | testtypes.adoc |
+| --- | --- | --- | --- |
+| `ACVP-AES-ECB-1.0` | ECB | `test_aes.mojo` | [symmetric] |
+| `ACVP-AES-CBC-1.0` | CBC | `test_aes_cbc.mojo` | [symmetric] |
+| `ACVP-AES-CTR-1.0` | CTR | `test_aes_ctr.mojo` | [symmetric] |
+| `ACVP-AES-GCM-SIV-1.0` | GCM-SIV | `test_aes_gcm_siv.mojo` | [symmetric] |
+| `CMAC-AES-1.0` | CMAC (OMAC1) | `test_aes_cmac.mojo` | [mac] |
+| `ACVP-AES-GCM-1.0` | GCM | not yet covered | [symmetric] |
+| `SHA2-224-1.0` | SHA-224 | `test_sha2.mojo` | [sha] |
+| `SHA2-256-1.0` | SHA-256 | `test_sha2.mojo` | [sha] |
+| `SHA2-384-1.0` | SHA-384 | `test_sha2.mojo` | [sha] |
+| `SHA2-512-1.0` | SHA-512 | `test_sha2.mojo` | [sha] |
+| `SHA2-512-224-1.0` | SHA-512/224 | `test_sha2.mojo` | [sha] |
+| `SHA2-512-256-1.0` | SHA-512/256 | `test_sha2.mojo` | [sha] |
+| `HMAC-SHA2-224-1.0` | HMAC-SHA-224 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-256-1.0` | HMAC-SHA-256 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-384-1.0` | HMAC-SHA-384 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-512-1.0` | HMAC-SHA-512 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-512-224-1.0` | HMAC-SHA-512/224 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-512-256-1.0` | HMAC-SHA-512/256 | `test_hmac.mojo` | [mac] |
+| `SHA3-224-2.0` | SHA3-224 | `test_sha3.mojo` | [sha3] |
+| `SHA3-256-2.0` | SHA3-256 | `test_sha3.mojo` | [sha3] |
+| `SHA3-384-2.0` | SHA3-384 | `test_sha3.mojo` | [sha3] |
+| `SHA3-512-2.0` | SHA3-512 | `test_sha3.mojo` | [sha3] |
+| `SHAKE-128-1.0` | SHAKE-128 (bit-oriented) | `test_sha3.mojo` | [sha3] |
+| `SHAKE-256-1.0` | SHAKE-256 (bit-oriented) | `test_sha3.mojo` | [sha3] |
+| `SHAKE-128-FIPS202` | SHAKE-128 (byte-aligned) | `test_sha3.mojo` | [sha3] |
+| `SHAKE-256-FIPS202` | SHAKE-256 (byte-aligned) | `test_sha3.mojo` | [sha3] |
+| `HMAC-SHA3-224-2.0` | HMAC-SHA3-224 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA3-256-2.0` | HMAC-SHA3-256 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA3-384-2.0` | HMAC-SHA3-384 | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA3-512-2.0` | HMAC-SHA3-512 | `test_hmac.mojo` | [mac] |
 
-SHA-2 AFT vectors with a non-byte-aligned bit length (allowed for
-SHA-224/384/512-224, whose registration permits bit-granular
-`messageLength`) are skipped: `Digest.update` only consumes whole bytes, so
-there's no way to feed a message ending mid-byte.
+[symmetric]: https://github.com/usnistgov/ACVP/blob/master/src/symmetric/sections/04-testtypes.adoc
+[mac]: https://github.com/usnistgov/ACVP/blob/master/src/mac/sections/04-testtypes.adoc
+[sha]: https://github.com/usnistgov/ACVP/blob/master/src/sha/sections/04-testtypes.adoc
+[sha3]: https://github.com/usnistgov/ACVP/blob/master/src/sha3/sections/04-testtypes.adoc
 
-The HMAC sets define AFT groups only, all byte-aligned. Their `macLen` runs
-80..160 bits — always shorter than the digest — so `test_hmac.mojo` compares
-only that many leading bytes of the computed tag, as `test_aes_cmac.mojo`
-does for CMAC. Keys run 8..2048 bits, covering both `K0` derivations: keys
-shorter than the hash block (zero-padded) and longer than it (hashed down
-first).

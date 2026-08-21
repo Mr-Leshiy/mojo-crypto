@@ -10,6 +10,10 @@ class TestType(Enum):
     # itself mutated periodically; only 100 checkpoint snapshots are given in
     # resultsArray, so the implementation must reproduce the inner loop.
     MCT = "MCT"
+    # Variable Output Test (SHAKE only): AFT-shaped independent vectors, but
+    # each specifies its own output length rather than the fixed one AFT
+    # groups use.
+    VOT = "VOT"
 
 
 def _result_index(expected: dict) -> dict[int, dict]:

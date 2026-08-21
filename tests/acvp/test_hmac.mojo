@@ -14,6 +14,10 @@ from tests.hashes.utils import (
     run_sha512_checks,
     run_sha512_224_checks,
     run_sha512_256_checks,
+    run_sha3_224_checks,
+    run_sha3_256_checks,
+    run_sha3_384_checks,
+    run_sha3_512_checks,
 )
 
 
@@ -119,6 +123,41 @@ def test_hmac_sha512_256_aft() raises:
         "tests/acvp/data/HMAC-SHA2-512-256-1.0", "AFT"
     )
     run_sha512_256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-224-2.0
+# Same AFT-only shape as the HMAC-SHA2 sets (parse_acvp_hmac_aft doesn't
+# reference algorithm-specific fields), just against `-2.0` (see README for
+# why `-2.0` over `-1.0`).
+def test_hmac_sha3_224_aft() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/acvp/data/HMAC-SHA3-224-2.0", "AFT"
+    )
+    run_sha3_224_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-256-2.0
+def test_hmac_sha3_256_aft() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/acvp/data/HMAC-SHA3-256-2.0", "AFT"
+    )
+    run_sha3_256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-384-2.0
+def test_hmac_sha3_384_aft() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/acvp/data/HMAC-SHA3-384-2.0", "AFT"
+    )
+    run_sha3_384_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-512-2.0
+def test_hmac_sha3_512_aft() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/acvp/data/HMAC-SHA3-512-2.0", "AFT"
+    )
+    run_sha3_512_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 def main() raises:

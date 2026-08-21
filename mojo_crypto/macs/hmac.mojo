@@ -1,6 +1,5 @@
 from std.memory import unsafe_memcpy
 
-from mojo_crypto.utils import to_bytes
 from mojo_crypto.hashes.traits import Digest
 from mojo_crypto.macs.traits import Mac
 
@@ -29,16 +28,16 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
     comptime BLOCK_SIZE: Int = Self.H.BLOCK_SIZE
     comptime TAG_SIZE: Int = Self.H.OUTPUT_SIZE
 
-    comptime IPAD = SIMD[DType.uint8, Self.BLOCK_SIZE](0x36)
-    """FIPS 198-1 §4 — the inner pad byte, splatted across a whole block."""
+    comptime IPAD_BYTE: UInt8 = 0x36
+    """FIPS 198-1 §4 — the inner pad byte, applied across a whole block."""
 
-    comptime OPAD = SIMD[DType.uint8, Self.BLOCK_SIZE](0x5C)
-    """FIPS 198-1 §4 — the outer pad byte, splatted across a whole block."""
+    comptime OPAD_BYTE: UInt8 = 0x5C
+    """FIPS 198-1 §4 — the outer pad byte, applied across a whole block."""
 
     var _inner: Self.H
     """The inner hash, primed with `K0 ^ ipad`; absorbs the message itself."""
 
-    var _k0: SIMD[DType.uint8, Self.BLOCK_SIZE]
+    var _k0: Array[UInt8, Self.BLOCK_SIZE]
     """
     `K0`, the block-sized key.
     """
@@ -52,9 +51,7 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
         """
         self._k0 = _k0[Self.BLOCK_SIZE, H=Self.H](key)
         self._inner = Self.H()
-        var inner = to_bytes[
-            input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
-        ](self._k0 ^ Self.IPAD)
+        var inner = _xor_pad(self._k0, Self.IPAD_BYTE)
         self._inner.update(Span(inner))
 
     def update[o: Origin](mut self, data: Span[UInt8, o]) raises:
@@ -73,9 +70,7 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
         `(K0 ^ opad) || H((K0 ^ ipad) || text)` (steps 8-9).
         """
 
-        var outer_block = to_bytes[
-            input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
-        ](self._k0 ^ Self.OPAD)
+        var outer_block = _xor_pad(self._k0, Self.OPAD_BYTE)
 
         # `Digest.finalize` consumes its hash, so the inner hash has to be
         # moved out of `self`. Mojo rejects a partial move out of a `var self`
@@ -99,15 +94,13 @@ struct Hmac[H: Digest & Movable & Deinitable](Deinitable, Mac, Movable):
         re-deriving `K0`.
         """
         self._inner.reset()
-        var inner = to_bytes[
-            input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
-        ](self._k0 ^ Self.IPAD)
+        var inner = _xor_pad(self._k0, Self.IPAD_BYTE)
         self._inner.update(Span(inner))
 
 
 def _k0[
     size: Int, o: Origin, H: Digest
-](key: Span[UInt8, o]) -> SIMD[DType.uint8, size]:
+](key: Span[UInt8, o]) -> Array[UInt8, size]:
     """
     Resize a key of any length to exactly `size` bytes — FIPS 198-1 §3.
 
@@ -120,8 +113,7 @@ def _k0[
       `K0 = K || 00...00`, a no-op when the key is already `size` bytes).
 
     Both branches leave the tail zero for free — `k0` starts zero-filled, so
-    only the leading bytes are ever written. The result is returned as a
-    vector, ready to be XORed with a splatted `ipad`/`opad` byte.
+    only the leading bytes are ever written.
 
     Note that hashing a long key discards the excess: any two keys with the
     same `H(K)` authenticate identically. That is inherent to the standard,
@@ -149,16 +141,34 @@ def _k0[
             dest=k0.unsafe_ptr(), src=key.unsafe_ptr(), count=len(key)
         )
 
-    return SIMD[DType.uint8, size].from_bytes(k0)
+    return k0^
 
 
 @always_inline
-def _xor_to_array[
+def _xor_pad[
     size: Int
-](
-    a: SIMD[DType.uint8, size],
-    b: SIMD[DType.uint8, size],
-) -> Array[
-    UInt8, size
-]:
-    return to_bytes[input_size=size, output_size=size](a ^ b)
+](k0: Array[UInt8, size], pad_byte: UInt8) -> Array[UInt8, size]:
+    """XOR every byte of `k0` against `pad_byte`.
+
+    A plain byte-wise loop rather than a `SIMD` XOR. The previous version
+    built a `SIMD[uint8, size]`, XORed it against a splatted pad byte, and
+    reinterpreted the result as a `size`-byte `Array` via `to_bytes`, which
+    asserts `size_of[SIMD[uint8, size]]() == size`. That equality only holds
+    when `size` is already a power of two: `SIMD`'s in-memory storage is
+    always padded up to the next one, so e.g. `SIMD[uint8, 144]` (SHA3-224's
+    block size) actually occupies 256 bytes, not 144, and the assert failed
+    before HMAC-SHA3 could even compile. SHA-2's block sizes (64/128) are
+    powers of two, which is why this went unnoticed until SHA-3 was wired
+    in. The loop below has no such restriction.
+
+    TODO: this gives up block-sized vector XOR for a scalar byte loop. Worth
+    revisiting with `SIMD` chunked to a fixed power-of-two width (e.g. 32 or
+    64 lanes at a time, looping over `size // width` chunks plus a remainder)
+    if this ever shows up as a hot path — HMAC only pays this cost once per
+    `__init__`/`reset`/`finalize`, not per `update`, so it likely doesn't
+    matter in practice.
+    """
+    var out = Array[UInt8, size](fill=0)
+    for i in range(size):
+        out[i] = k0[i] ^ pad_byte
+    return out^
