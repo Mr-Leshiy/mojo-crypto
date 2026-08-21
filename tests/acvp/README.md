@@ -49,10 +49,10 @@ corresponding `test_*.mojo` file.
 | `SHAKE-256-1.0` | SHAKE-256 (bit-oriented) | `test_sha3.mojo` |
 | `SHAKE-128-FIPS202` | SHAKE-128 (byte-aligned) | `test_sha3.mojo` |
 | `SHAKE-256-FIPS202` | SHAKE-256 (byte-aligned) | `test_sha3.mojo` |
-| `HMAC-SHA3-224-2.0` | HMAC-SHA3-224 | not yet covered |
-| `HMAC-SHA3-256-2.0` | HMAC-SHA3-256 | not yet covered |
-| `HMAC-SHA3-384-2.0` | HMAC-SHA3-384 | not yet covered |
-| `HMAC-SHA3-512-2.0` | HMAC-SHA3-512 | not yet covered |
+| `HMAC-SHA3-224-2.0` | HMAC-SHA3-224 | `test_hmac.mojo` |
+| `HMAC-SHA3-256-2.0` | HMAC-SHA3-256 | `test_hmac.mojo` |
+| `HMAC-SHA3-384-2.0` | HMAC-SHA3-384 | `test_hmac.mojo` |
+| `HMAC-SHA3-512-2.0` | HMAC-SHA3-512 | `test_hmac.mojo` |
 
 SHA-2 AFT vectors with a non-byte-aligned bit length (allowed for
 SHA-224/384/512-224, whose registration permits bit-granular
@@ -98,4 +98,11 @@ being implemented in Mojo, since the ACVP pseudocode's exact ordering is
 easy to misread. `SHAKE-*-FIPS202` defines `AFT` groups only.
 
 `HMAC-SHA3-*-2.0` was used over `-1.0` since it's a strict superset (adds a
-`msgLen` parameter).
+`msgLen` parameter). Adding these vectors surfaced a real bug in `Hmac`
+itself, not just a test gap: its key-padding XOR reinterpreted a
+`BLOCK_SIZE`-lane `SIMD[uint8]` as a `BLOCK_SIZE`-byte array, which only held
+for SHA-2's power-of-two block sizes (64/128) — a `SIMD` vector's storage is
+padded up to the next power of two, so the same trick silently broke for
+SHA-3's Keccak rates (144/136/104/72), which aren't. Fixed in
+`mojo_crypto/macs/hmac.mojo` by XORing the pad byte in a plain byte loop
+instead of via `SIMD`.
