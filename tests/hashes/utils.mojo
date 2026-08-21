@@ -197,3 +197,29 @@ def run_shake256_checks[
     from mojo_crypto.hashes.sha3 import Shake256Naive
 
     check[Shake256Naive, output_len](vectors)
+
+
+# Overloads for callers whose output length isn't known until runtime (e.g.
+# ACVP SHAKE vectors, where `outLen` varies test-case by test-case within
+# one vector file): `output_len` isn't threaded through as a parameter here,
+# so `check` must derive its output length per-vector and squeeze via the
+# runtime `Span`-based overload instead of the fixed-size `squeeze[size]()`
+# one.
+def run_shake128_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: XofEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Shake128Naive
+
+    check[Shake128Naive](vectors)
+
+
+def run_shake256_checks[
+    TestInput: Copyable,
+    //,
+    check: def[T: XofEngine](TestInput) raises capturing[_],
+](vectors: TestInput) raises:
+    from mojo_crypto.hashes.sha3 import Shake256Naive
+
+    check[Shake256Naive](vectors)
