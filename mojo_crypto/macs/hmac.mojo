@@ -143,31 +143,13 @@ def _k0[
 
     return k0^
 
-
+# TODO: revise using SIMD for k0 instead 
 @always_inline
 def _xor_pad[
     size: Int
 ](k0: Array[UInt8, size], pad_byte: UInt8) -> Array[UInt8, size]:
-    """XOR every byte of `k0` against `pad_byte`.
+    """XOR every byte of `k0` against `pad_byte`."""
 
-    A plain byte-wise loop rather than a `SIMD` XOR. The previous version
-    built a `SIMD[uint8, size]`, XORed it against a splatted pad byte, and
-    reinterpreted the result as a `size`-byte `Array` via `to_bytes`, which
-    asserts `size_of[SIMD[uint8, size]]() == size`. That equality only holds
-    when `size` is already a power of two: `SIMD`'s in-memory storage is
-    always padded up to the next one, so e.g. `SIMD[uint8, 144]` (SHA3-224's
-    block size) actually occupies 256 bytes, not 144, and the assert failed
-    before HMAC-SHA3 could even compile. SHA-2's block sizes (64/128) are
-    powers of two, which is why this went unnoticed until SHA-3 was wired
-    in. The loop below has no such restriction.
-
-    TODO: this gives up block-sized vector XOR for a scalar byte loop. Worth
-    revisiting with `SIMD` chunked to a fixed power-of-two width (e.g. 32 or
-    64 lanes at a time, looping over `size // width` chunks plus a remainder)
-    if this ever shows up as a hot path — HMAC only pays this cost once per
-    `__init__`/`reset`/`finalize`, not per `update`, so it likely doesn't
-    matter in practice.
-    """
     var out = Array[UInt8, size](fill=0)
     for i in range(size):
         out[i] = k0[i] ^ pad_byte
