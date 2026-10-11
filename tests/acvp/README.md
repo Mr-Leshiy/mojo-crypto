@@ -1,6 +1,6 @@
 # ACVP tests
 
-Tests in this directory validate the implementations in `mojo_crypto/` against
+Tests in this directory validate the implementations in `src/` against
 test vectors from NIST's [Automated Cryptographic Validation Protocol (ACVP)](https://pages.nist.gov/ACVP/),
 sourced from the [usnistgov/ACVP-Server](https://github.com/usnistgov/ACVP-Server)
 `gen-val/json-files` reference vectors.

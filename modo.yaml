@@ -9,11 +9,11 @@ input:
 
 # Source directories to monitor when running in watch mode.
 source:
-  - mojo_crypto
+  - src
 
 # Full URLs of package sources. Used to create source links.
 source-url:
-  mojo_crypto: https://github.com/Mr-Leshiy/mojo-crypto/blob/main/mojo_crypto
+  mojo_crypto: https://github.com/Mr-Leshiy/mojo-crypto/blob/main/src
 
 # Output directory (Hugo content root).
 output: docs/site/content
@@ -50,7 +50,10 @@ templates: []
 pre-run:
   - |
     echo "Generating API JSON with 'mojo doc'..."
-    mojo doc -I . -o docs/src/mojo_crypto.json mojo_crypto
+    mojo doc -o docs/src/mojo_crypto.json src
+    # `mojo doc` names a package in a `src` directory after the directory
+    # above it (the checkout, `mojo-crypto`); use the importable name instead.
+    python -c "import pathlib; p = pathlib.Path('docs/src/mojo_crypto.json'); p.write_text(p.read_text().replace('mojo-crypto', 'mojo_crypto'))"
     echo "Done."
 
 # Bash scripts to run before build.

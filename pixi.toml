@@ -44,7 +44,7 @@ docs = "python -m pymodo build && hugo --source docs/site"
 # per-runner (see .github/workflows/ci.yml); set it yourself to test a specific
 # backend locally, e.g.
 #   MOJO_TEST_FEATURES=--target-features=+neon,+aes,+sha2,+sha3 pixi run test
-# Unset, the tests build for whatever `mojo run` autodetects on the host. The
+# Unset, the tests build for whatever `mojo build` autodetects on the host. The
 # runner loop lives in a script because pixi's cross-platform task shell has no
 # loops.
 test   = "python scripts/test.py"
@@ -63,6 +63,7 @@ bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.t
 [dependencies]
 mojo.workspace = true
 max.workspace = true
+mojo-crypto = { path = "." }
 rust = ">=1.80.0,<2"
 hugo = ">=0.163.3,<0.164"
 go = ">=1.26.4,<2"
