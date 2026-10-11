@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """Runs the Mojo test suite: every tests/**/test_*.mojo file, in sorted order.
 
+Each file is built into a binary first and then run, rather than run with
+`mojo run`: `assert_aborts` re-runs the test as a separate process, which needs
+a compiled binary to re-run.
+
 The hardware backends are compiled in only when their CPU features are enabled,
 so the caller decides which ones to build via $MOJO_TEST_FEATURES: a
-space-separated list of `mojo run` flags, e.g.
+space-separated list of `mojo build` flags, e.g.
 "--target-features=+neon,+aes,+sha2". CI sets it per-runner (see
 .github/workflows/ci.yml). Nothing is defaulted here — when it is unset the
-tests build for whatever `mojo run` autodetects on the host, which still covers
-the naive backends.
+tests build for whatever `mojo build` autodetects on the host, which still
+covers the naive backends.
 
-Every test file is run even if an earlier one fails; the failures are listed
-again at the end.
+Every test file that's run happens even if an earlier one fails; the failures
+are listed again at the end.
 """
 
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,12 +36,27 @@ def main() -> int:
         return 1
 
     failed = []
-    for test in tests:
-        rel = test.relative_to(ROOT)
-        cmd = ["mojo", "run", *features, "-I", ".", str(rel)]
-        print(f"==> {' '.join(cmd)}", flush=True)
-        if subprocess.run(cmd, cwd=ROOT).returncode != 0:
-            failed.append(rel)
+    with tempfile.TemporaryDirectory() as build_dir:
+        for test in tests:
+            rel = test.relative_to(ROOT)
+            binary = Path(build_dir) / "_".join(rel.with_suffix("").parts)
+            build = [
+                "mojo",
+                "build",
+                *features,
+                "-I",
+                ".",
+                str(rel),
+                "-o",
+                str(binary),
+            ]
+            print(f"==> {' '.join(build)}", flush=True)
+            if subprocess.run(build, cwd=ROOT).returncode != 0:
+                failed.append(rel)
+                continue
+            print(f"==> {binary.name}", flush=True)
+            if subprocess.run([str(binary)], cwd=ROOT).returncode != 0:
+                failed.append(rel)
 
     if failed:
         print(f"\n{len(failed)} test file(s) failed:")

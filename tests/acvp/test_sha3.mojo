@@ -85,7 +85,7 @@ def parse_acvp_sha3_mct(
     return vectors^
 
 
-@parameter
+@__parameter
 def check_sha3_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -111,7 +111,7 @@ def check_sha3_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
 # digest is always exactly one seed-width wide, so "standard" and
 # "alternate" behave identically in practice — the normalization is a
 # no-op — but both are implemented since the registration allows either.
-@parameter
+@__parameter
 def check_sha3_mct[T: DigestEngine](vectors: List[MctTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -215,7 +215,7 @@ def parse_acvp_shake_mct(
     return vectors^
 
 
-@parameter
+@__parameter
 def check_shake_test[T: XofEngine](vectors: List[XofTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -246,7 +246,7 @@ def check_shake_test[T: XofEngine](vectors: List[XofTestVector]) raises:
 #     Output MD[1000] (checkpoint j); SEED = MD[1000]
 # Unlike SHA-3's MCT, the output length itself changes every one of the
 # 1000 inner rounds, driven by the digest that round just produced.
-@parameter
+@__parameter
 def check_shake_mct[T: XofEngine](vectors: List[ShakeMctTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)

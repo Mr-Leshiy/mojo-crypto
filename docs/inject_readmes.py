@@ -14,11 +14,16 @@ import os
 import re
 
 CONTENT_ROOT = "docs/site/content"
+# The sources live in src/, but the generated pages are named after the package.
+PACKAGE = "mojo_crypto"
 
 
 def main() -> None:
-    for readme in glob.glob("mojo_crypto/**/README.md", recursive=True):
-        index = os.path.join(CONTENT_ROOT, os.path.dirname(readme), "_index.md")
+    for readme in glob.glob("src/**/README.md", recursive=True):
+        package_dir = os.path.relpath(os.path.dirname(readme), "src")
+        index = os.path.normpath(
+            os.path.join(CONTENT_ROOT, PACKAGE, package_dir, "_index.md")
+        )
         if not os.path.isfile(index):
             continue
         doc = open(index).read()

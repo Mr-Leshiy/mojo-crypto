@@ -20,7 +20,7 @@ struct CheckInput(Copyable, Movable):
     var expected_hex: String
 
 
-@parameter
+@__parameter
 def check_hash[T: DigestEngine](input: CheckInput) raises:
     var h = T()
     h.update(input.msg.as_bytes())
@@ -29,7 +29,7 @@ def check_hash[T: DigestEngine](input: CheckInput) raises:
     assert_equal(out, expected)
 
 
-@parameter
+@__parameter
 def check_xof[T: XofEngine, output_len: Int](input: CheckInput) raises:
     var h = T()
     h.update(input.msg.as_bytes())

@@ -62,7 +62,7 @@ jobs:
         # instructions, so anything enabled here but missing on the hardware
         # faults. Notably x86 omits +sha512 (the SHA-2 64-bit-word extension,
         # Intel Arrow Lake / Lunar Lake and later), which leaves
-        # mojo_crypto/hashes/sha2/word64/x86.mojo uncovered in CI; add it by
+        # src/hashes/sha2/word64/x86.mojo uncovered in CI; add it by
         # hand on a CPU that has it to exercise that backend locally.
         include:
           - runner: ubuntu-latest
