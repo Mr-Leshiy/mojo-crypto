@@ -12,7 +12,7 @@ def bench_uhash[
 ]() raises:
     var key = Array[UInt8, H.KEY_SIZE](fill=0)
 
-    @parameter
+    @__parameter
     def bench[N: Int, suffix: StringLiteral]() raises:
         # Heap-allocate the input so it isn't a stack constant. `keep` then
         # forces the optimizer to treat the buffer as opaque and to observe the
