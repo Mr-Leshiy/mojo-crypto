@@ -143,7 +143,8 @@ def _k0[
 
     return k0^
 
-# TODO: revise using SIMD for k0 instead 
+
+# TODO: revise using SIMD for k0 instead
 @always_inline
 def _xor_pad[
     size: Int

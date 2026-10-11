@@ -1,21 +1,21 @@
 [workspace]
 authors = ["Mr-Leshiy <leshiy12345678@gmail.com>"]
-channels = ["conda-forge", "https://conda.modular.com/max"]
+channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
 platforms = ["osx-arm64", "linux-aarch64", "linux-64"]
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 preview = ["pixi-build"]
 
 [workspace.dependencies]
-mojo = "1.0.0.*"
-max = "26.5.0.*"
+mojo = "1.1.0.*"
+max = "26.6.0.*"
 
 [package]
 name = "mojo-crypto"
 version = "0.1.0"
 
 [package.build]
-backend = { name = "pixi-build-mojo", version = "0.*" }
+backend = { name = "pixi-build-mojo", version = "0.2.7.*" }
 
 [package.host-dependencies]
 mojo.workspace = true

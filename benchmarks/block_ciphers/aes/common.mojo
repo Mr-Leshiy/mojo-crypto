@@ -23,16 +23,14 @@ def bench_cipher[
     def bench[N: Int, suffix: StringLiteral]() raises:
         var data = Array[UInt8, N](fill=0)
 
-        @parameter
-        def do_encrypt() raises:
+        def do_encrypt() raises {mut data, mut cipher}:
             cipher.encrypt(data)
 
-        @parameter
-        def do_decrypt() raises:
+        def do_decrypt() raises {mut data, mut cipher}:
             cipher.decrypt(data)
 
-        run[do_encrypt]().print(prefix + "_encrypt_" + suffix)
-        run[do_decrypt]().print(prefix + "_decrypt_" + suffix)
+        run(do_encrypt).print(prefix + "_encrypt_" + suffix)
+        run(do_decrypt).print(prefix + "_decrypt_" + suffix)
 
     bench[BLOCKS_4K, "4kb"]()
     bench[BLOCKS_8K, "8kb"]()

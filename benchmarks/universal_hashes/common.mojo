@@ -20,15 +20,14 @@ def bench_uhash[
         # hash is dead-code-eliminated, producing meaningless (~1e-17 s) timings.
         var data = List[UInt8](length=N, fill=0)
 
-        @parameter
-        def do_hash() raises:
+        def do_hash() raises {imm data, imm key}:
             keep(data.unsafe_ptr())
             var hash = H(key.copy())
             hash.update(Span(data))
             var tag = hash^.finalize()
             keep(tag.unsafe_ptr())
 
-        run[do_hash]().print(prefix + "_" + suffix)
+        run(do_hash).print(prefix + "_" + suffix)
 
     bench[BYTES_1K, "1kb"]()
     bench[BYTES_16K, "16kb"]()
