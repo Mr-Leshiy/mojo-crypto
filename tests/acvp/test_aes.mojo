@@ -1,12 +1,20 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
+from warp import Executor
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
+from tests.block_ciphers.utils import (
+    run_aes_checks,
+    run_async_aes_checks,
+    encrypt_async,
+    decrypt_async,
+    BlockCipherEngine,
+    AsyncBlockCipherEngine,
+)
 
 
 # Dedicated to the ECB AFT/MCT vectors only: no iv/aad/tag/test_passed
@@ -127,6 +135,58 @@ def check_aes_ecb_mct[
         assert_equal(block, expected, msg=msg)
 
 
+def check_aes_ecb_aft_async[
+    C: AsyncBlockCipherEngine,
+    KeySize: Int,
+    //,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
+](mut executor: Executor, vectors: List[EcbTestVector]) raises:
+    for v in vectors:
+        if len(v.key) != KeySize:
+            continue
+
+        var msg = "[{}], count={}".format(reflect[C].name(), v.count)
+
+        var cipher = cipher_init(to_array[KeySize](v.key))
+
+        var pt = v.pt.copy()
+        encrypt_async(executor, cipher, pt[:])
+        assert_equal(pt, v.ct, msg=msg)
+
+        var ct = v.ct.copy()
+        decrypt_async(executor, cipher, ct[:])
+        assert_equal(ct, v.pt, msg=msg)
+
+
+def check_aes_ecb_mct_async[
+    C: AsyncBlockCipherEngine,
+    KeySize: Int,
+    //,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
+](mut executor: Executor, vectors: List[EcbTestVector]) raises:
+    # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
+    # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
+    comptime MCT_INNER_ITERATIONS: Int = 1000
+
+    for v in vectors:
+        if len(v.key) != KeySize:
+            continue
+
+        var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
+        var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
+        var key = to_array[KeySize](v.key)
+
+        var cipher = cipher_init(key)
+        for _ in range(MCT_INNER_ITERATIONS):
+            if v.is_encrypt:
+                encrypt_async(executor, cipher, block[:])
+            else:
+                decrypt_async(executor, cipher, block[:])
+
+        var msg = "[{}], count={}".format(reflect[C].name(), v.count)
+        assert_equal(block, expected, msg=msg)
+
+
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_aft() raises:
     var raw = load_python_acvp_vectors(
@@ -143,6 +203,26 @@ def test_aes_mct() raises:
         "tests/acvp/data/ACVP-AES-ECB-1.0", "MCT"
     )
     run_aes_checks[List[EcbTestVector], check_aes_ecb_mct](
+        parse_acvp_aes_ecb_mct(raw)
+    )
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
+def test_aes_aft_async() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/acvp/data/ACVP-AES-ECB-1.0", "AFT"
+    )
+    run_async_aes_checks[List[EcbTestVector], check_aes_ecb_aft_async](
+        parse_acvp_aes_ecb_aft(raw)
+    )
+
+
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
+def test_aes_mct_async() raises:
+    var raw = load_python_acvp_vectors(
+        "tests/acvp/data/ACVP-AES-ECB-1.0", "MCT"
+    )
+    run_async_aes_checks[List[EcbTestVector], check_aes_ecb_mct_async](
         parse_acvp_aes_ecb_mct(raw)
     )
 
