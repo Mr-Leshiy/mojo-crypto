@@ -1,3 +1,4 @@
+from std.builtin.globals import global_constant
 from std.math import min
 
 from ...traits import Digest
@@ -54,9 +55,7 @@ def _compress(
     var g = state[6]
     var h = state[7]
 
-    # The round loop indexes K32 with a runtime counter, so the comptime table
-    # has to be materialized into a runtime value first.
-    var k = materialize[K32]()
+    ref k = global_constant[K32]()
 
     for t in range(ROUNDS_32):
         var s1 = (

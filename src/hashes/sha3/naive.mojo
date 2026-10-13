@@ -1,3 +1,5 @@
+from std.builtin.globals import global_constant
+
 from .common import KECCAK_LANES, KECCAK_ROUNDS, RC, RHO
 
 
@@ -11,11 +13,9 @@ def _rotl(x: UInt64, n: UInt64) -> UInt64:
 
 # FIPS 202 §3.3 — one round of the Keccak-f[1600] permutation: θ, ρ, π, χ,
 # then ι with the round's constant.
-def _round(
-    mut a: Array[UInt64, KECCAK_LANES],
-    rho: Array[UInt64, KECCAK_LANES],
-    rc: UInt64,
-):
+def _round(mut a: Array[UInt64, KECCAK_LANES], rc: UInt64):
+    ref rho = global_constant[RHO]()
+
     # θ: XOR each lane with the parity of the two neighboring columns.
     var c = Array[UInt64, 5](uninitialized=True)
     for x in range(5):
@@ -51,7 +51,6 @@ def _round(
 # FIPS 202 §3.3 — the naive, portable Keccak-f[1600] permutation: 24 rounds
 # of `_round`, each lane handled as a plain scalar.
 def _permute(mut state: Array[UInt64, KECCAK_LANES]):
-    var rc = materialize[RC]()
-    var rho = materialize[RHO]()
+    ref rc = global_constant[RC]()
     for round in range(KECCAK_ROUNDS):
-        _round(state, rho, rc[round])
+        _round(state, rc[round])

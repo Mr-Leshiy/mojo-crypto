@@ -3,6 +3,7 @@
 # LLVM AArch64 intrinsic definitions (no separate doc page exists; .td is authoritative):
 #   https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/IntrinsicsAArch64.td
 
+from std.builtin.globals import global_constant
 from std.sys.intrinsics import llvm_intrinsic
 
 from ..errors import BlockSizeError
@@ -130,10 +131,8 @@ comptime RCON: Array[UInt8, 10] = [
 def _expand_enc_rks[
     NR: Int, NK: Int, KEY_SIZE: Int
 ](key: Array[UInt8, KEY_SIZE]) -> Array[SIMD[DType.uint8, 16], NR + 1]:
-    # Both tables are comptime values, so materialize them once here rather
-    # than at every lookup inside the loop below.
-    var sbox = materialize[SBOX]()
-    var rcon = materialize[RCON]()
+    ref sbox = global_constant[SBOX]()
+    ref rcon = global_constant[RCON]()
 
     var kb = Array[UInt8, (NR + 1) * 16](uninitialized=True)
     for i in range(KEY_SIZE):
