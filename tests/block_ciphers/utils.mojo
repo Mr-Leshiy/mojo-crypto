@@ -1,12 +1,13 @@
 from std.sys import has_accelerator
 from max.gpu.host import DeviceContext
-from warp import Executor
+from warp import Runtime
 
 from mojo_crypto.utils import target_triple_contains_any, has_target_feature
 from mojo_crypto.block_ciphers.aes import (
     AesNaive,
     AesAarch64,
     AesX86,
+    AesGpu,
 )
 from mojo_crypto.block_ciphers.traits import (
     AsyncBlockCipherDecryptable,
@@ -82,25 +83,20 @@ def run_async_aes_checks[
         KeySize: Int,
         //,
         cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-    ](mut Executor, TestInput) raises capturing[_],
+    ](mut Runtime, TestInput) raises capturing[_],
 ](input: TestInput) raises:
     comptime if has_accelerator():
         with DeviceContext() as ctx:
-            var executor = Executor(ctx)
-            # TODO: run `check` against `AesGpu` once it implements the async
-            # traits.
-            _ = executor^
+            var runtime = Runtime(ctx)
 
+            @__parameter
+            def aes_gpu[
+                KeySize: Int
+            ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
+                return runtime.block_on(
+                    AesGpu[KeySize].create(runtime.context(), key)
+                )
 
-def encrypt_async[
-    C: AsyncBlockCipherEncryptable, o: MutOrigin
-](mut executor: Executor, cipher: C, data: Span[UInt8, o]) raises:
-    var task = executor.add(cipher.encrypt(executor.context(), data))
-    task^.wait()
-
-
-def decrypt_async[
-    C: AsyncBlockCipherDecryptable, o: MutOrigin
-](mut executor: Executor, cipher: C, data: Span[UInt8, o]) raises:
-    var task = executor.add(cipher.decrypt(executor.context(), data))
-    task^.wait()
+            check[aes_gpu[16]](runtime, input)
+            check[aes_gpu[24]](runtime, input)
+            check[aes_gpu[32]](runtime, input)

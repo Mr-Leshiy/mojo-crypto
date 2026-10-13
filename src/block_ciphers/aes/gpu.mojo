@@ -1,12 +1,13 @@
-from max.gpu.host import DeviceContext, DeviceBuffer
+from max.gpu.host import DeviceBuffer
 from max.gpu.memory import AddressSpace
 from max.gpu.sync import barrier
 from max.gpu import thread_idx, block_idx
-from std.memory import stack_allocation
+from std.memory import stack_allocation, unsafe_memcpy
+from warp import Context
 
 from ..traits import (
-    BlockCipherDecryptable,
-    BlockCipherEncryptable,
+    AsyncBlockCipherDecryptable,
+    AsyncBlockCipherEncryptable,
 )
 from ..errors import BlockSizeError
 from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
@@ -14,8 +15,8 @@ from .naive import _key_expansion
 
 
 struct AesGpu[KEY_SIZE: Int](
-    BlockCipherDecryptable,
-    BlockCipherEncryptable,
+    AsyncBlockCipherDecryptable,
+    AsyncBlockCipherEncryptable,
     Copyable,
     Deinitable,
     Movable,
@@ -26,73 +27,107 @@ struct AesGpu[KEY_SIZE: Int](
     comptime NR: Int = Self.NK + 6
     comptime WORDS_SIZE: Int = NB * (Self.NR + 1)
 
-    var ctx: DeviceContext
     var w: DeviceBuffer[DType.uint32]
     var sbox: DeviceBuffer[DType.uint32]
     var sbox_inv: DeviceBuffer[DType.uint8]
 
     def __init__(
-        out self, ctx: DeviceContext, key: Array[UInt8, Self.KEY_SIZE]
-    ) raises:
+        out self,
+        *,
+        var w: DeviceBuffer[DType.uint32],
+        var sbox: DeviceBuffer[DType.uint32],
+        var sbox_inv: DeviceBuffer[DType.uint8],
+    ):
+        self.w = w^
+        self.sbox = sbox^
+        self.sbox_inv = sbox_inv^
+
+    @staticmethod
+    async def create(
+        ctx: Context, key: Array[UInt8, Self.KEY_SIZE]
+    ) raises -> Self:
+        """Upload the key schedule and S-boxes, and return the cipher once they
+        have landed on the device."""
         _check_key_size[Self.KEY_SIZE]()
 
-        self.ctx = ctx
         var w = _key_expansion[WORDS_SIZE=Self.WORDS_SIZE, NK=Self.NK](key)
-        self.w = ctx.enqueue_create_buffer[DType.uint32](Self.WORDS_SIZE)
-        self.w.enqueue_copy_from(w)
-
         # Both tables are comptime values; materialize them so the upload has
         # a runtime buffer to read from.
         var sbox = materialize[SBOX]()
-        self.sbox = ctx.enqueue_create_buffer[DType.uint32](256)
-        self.sbox.enqueue_copy_from(sbox.unsafe_ptr())
-
         var sbox_inv = materialize[SBOX_INV]()
-        self.sbox_inv = ctx.enqueue_create_buffer[DType.uint8](256)
-        self.sbox_inv.enqueue_copy_from(sbox_inv.unsafe_ptr())
 
-        # The three uploads above all read from locals of this function, so
-        # they have to land before it returns and those locals die.
-        ctx.synchronize()
+        # The uploads read from the three locals above, which live in this
+        # coroutine's frame and so stay alive across the `await`.
+        var cipher = Self(
+            w=ctx.enqueue_device_buffer(w),
+            sbox=ctx.enqueue_device_buffer(sbox),
+            sbox_inv=ctx.enqueue_device_buffer(sbox_inv),
+        )
+        await ctx.synchronize()
+        return cipher^
 
-    def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    async def encrypt[
+        o: MutOrigin
+    ](self, ctx: Context, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
-        var size = len(data)
-        var num_blocks = size // BLOCK_SIZE
-        comptime kernel = _cipher[Self.NR]
-
-        var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
-        buf.enqueue_copy_from(data.unsafe_ptr())
-
-        self.ctx.enqueue_function[kernel](
-            buf,
-            self.w,
-            self.sbox,
-            grid_dim=num_blocks,
-            block_dim=BLOCK_SIZE,
+        var device = ctx.enqueue_device_buffer(data)
+        _launch_cipher[Self.NR](ctx, device, self.w, self.sbox)
+        var host = ctx.enqueue_host_buffer(device)
+        await ctx.synchronize()
+        unsafe_memcpy(
+            dest=data.unsafe_ptr(), src=host.unsafe_ptr(), count=len(data)
         )
-        self.ctx.synchronize()
-        buf.enqueue_copy_to(data.unsafe_ptr())
 
-    def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
+    async def decrypt[
+        o: MutOrigin
+    ](self, ctx: Context, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
-        var size = len(data)
-        var num_blocks = size // BLOCK_SIZE
-        comptime kernel = _decipher[Self.NR]
 
-        var buf = self.ctx.enqueue_create_buffer[DType.uint8](size)
-        buf.enqueue_copy_from(data.unsafe_ptr())
-
-        self.ctx.enqueue_function[kernel](
-            buf,
-            self.w,
-            self.sbox_inv,
-            grid_dim=num_blocks,
-            block_dim=BLOCK_SIZE,
+        var device = ctx.enqueue_device_buffer(data)
+        _launch_decipher[Self.NR](ctx, device, self.w, self.sbox_inv)
+        var host = ctx.enqueue_host_buffer(device)
+        await ctx.synchronize()
+        unsafe_memcpy(
+            dest=data.unsafe_ptr(), src=host.unsafe_ptr(), count=len(data)
         )
-        self.ctx.synchronize()
-        buf.enqueue_copy_to(data.unsafe_ptr())
+
+
+# `enqueue_function` called directly inside an `async def` crashes the
+# compiler (https://github.com/modular/modular/issues/7249), so the kernel
+# launches live in plain `def`s.
+def _launch_cipher[
+    NR: Int
+](
+    ctx: Context,
+    buf: DeviceBuffer[DType.uint8],
+    w: DeviceBuffer[DType.uint32],
+    sbox: DeviceBuffer[DType.uint32],
+) raises:
+    ctx.gpu_ctx().enqueue_function[_cipher[NR]](
+        buf,
+        w,
+        sbox,
+        grid_dim=len(buf) // BLOCK_SIZE,
+        block_dim=BLOCK_SIZE,
+    )
+
+
+def _launch_decipher[
+    NR: Int
+](
+    ctx: Context,
+    buf: DeviceBuffer[DType.uint8],
+    w: DeviceBuffer[DType.uint32],
+    sbox_inv: DeviceBuffer[DType.uint8],
+) raises:
+    ctx.gpu_ctx().enqueue_function[_decipher[NR]](
+        buf,
+        w,
+        sbox_inv,
+        grid_dim=len(buf) // BLOCK_SIZE,
+        block_dim=BLOCK_SIZE,
+    )
 
 
 # FIPS 197 §5.1 Cipher()

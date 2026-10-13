@@ -1,6 +1,6 @@
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
-from warp import Executor
+from warp import Runtime
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
@@ -12,8 +12,6 @@ from mojo_crypto.block_ciphers.traits import (
 from tests.block_ciphers.utils import (
     run_aes_checks,
     run_async_aes_checks,
-    encrypt_async,
-    decrypt_async,
     BlockCipherEngine,
     AsyncBlockCipherEngine,
 )
@@ -54,7 +52,7 @@ def check_aes_async[
     KeySize: Int,
     //,
     cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](mut executor: Executor, vectors: List[AesTestVector]) raises:
+](mut runtime: Runtime, vectors: List[AesTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:
             continue
@@ -64,11 +62,11 @@ def check_aes_async[
         var cipher = cipher_init(to_array[KeySize](v.key))
 
         var pt = v.pt.copy()
-        encrypt_async(executor, cipher, pt[:])
+        runtime.block_on(cipher.encrypt(runtime.context(), pt[:]))
         assert_equal(pt, v.ct, msg=msg)
 
         var ct = v.ct.copy()
-        decrypt_async(executor, cipher, ct[:])
+        runtime.block_on(cipher.decrypt(runtime.context(), ct[:]))
         assert_equal(ct, v.pt, msg=msg)
 
 

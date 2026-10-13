@@ -1,7 +1,7 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
-from warp import Executor
+from warp import Runtime
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
@@ -10,8 +10,6 @@ from tests.acvp.utils import load_python_acvp_vectors
 from tests.block_ciphers.utils import (
     run_aes_checks,
     run_async_aes_checks,
-    encrypt_async,
-    decrypt_async,
     BlockCipherEngine,
     AsyncBlockCipherEngine,
 )
@@ -140,7 +138,7 @@ def check_aes_ecb_aft_async[
     KeySize: Int,
     //,
     cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](mut executor: Executor, vectors: List[EcbTestVector]) raises:
+](mut runtime: Runtime, vectors: List[EcbTestVector]) raises:
     for v in vectors:
         if len(v.key) != KeySize:
             continue
@@ -150,11 +148,11 @@ def check_aes_ecb_aft_async[
         var cipher = cipher_init(to_array[KeySize](v.key))
 
         var pt = v.pt.copy()
-        encrypt_async(executor, cipher, pt[:])
+        runtime.block_on(cipher.encrypt(runtime.context(), pt[:]))
         assert_equal(pt, v.ct, msg=msg)
 
         var ct = v.ct.copy()
-        decrypt_async(executor, cipher, ct[:])
+        runtime.block_on(cipher.decrypt(runtime.context(), ct[:]))
         assert_equal(ct, v.pt, msg=msg)
 
 
@@ -163,7 +161,7 @@ def check_aes_ecb_mct_async[
     KeySize: Int,
     //,
     cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](mut executor: Executor, vectors: List[EcbTestVector]) raises:
+](mut runtime: Runtime, vectors: List[EcbTestVector]) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
@@ -179,9 +177,9 @@ def check_aes_ecb_mct_async[
         var cipher = cipher_init(key)
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
-                encrypt_async(executor, cipher, block[:])
+                runtime.block_on(cipher.encrypt(runtime.context(), block[:]))
             else:
-                decrypt_async(executor, cipher, block[:])
+                runtime.block_on(cipher.decrypt(runtime.context(), block[:]))
 
         var msg = "[{}], count={}".format(reflect[C].name(), v.count)
         assert_equal(block, expected, msg=msg)
