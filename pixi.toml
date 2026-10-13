@@ -9,6 +9,7 @@ preview = ["pixi-build"]
 [workspace.dependencies]
 mojo = "1.1.0.*"
 max = "26.6.0.*"
+warp = { git = "https://github.com/Mr-Leshiy/warp.git", branch = "main" }
 
 [package]
 name = "mojo-crypto"
@@ -20,13 +21,16 @@ backend = { name = "pixi-build-mojo", version = "0.2.7.*" }
 [package.host-dependencies]
 mojo.workspace = true
 max.workspace = true
+warp.workspace = true
 
 [package.build-dependencies]
 mojo.workspace = true
 max.workspace = true
+warp.workspace = true
 
 [package.run-dependencies]
 mojo.workspace = true
+warp.workspace = true
 
 [tasks]
 fmt    = "mojo format ."
@@ -63,6 +67,7 @@ bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.t
 [dependencies]
 mojo.workspace = true
 max.workspace = true
+warp.workspace = true
 mojo-crypto = { path = "." }
 rust = ">=1.80.0,<2"
 hugo = ">=0.163.3,<0.164"

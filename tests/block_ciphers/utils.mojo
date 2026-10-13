@@ -1,5 +1,6 @@
 from std.sys import has_accelerator
 from max.gpu.host import DeviceContext
+from warp import Runtime
 
 from mojo_crypto.utils import target_triple_contains_any, has_target_feature
 from mojo_crypto.block_ciphers.aes import (
@@ -9,12 +10,21 @@ from mojo_crypto.block_ciphers.aes import (
     AesGpu,
 )
 from mojo_crypto.block_ciphers.traits import (
+    AsyncBlockCipherDecryptable,
+    AsyncBlockCipherEncryptable,
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
 
 comptime BlockCipherEngine = (
     BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable
+)
+
+comptime AsyncBlockCipherEngine = (
+    AsyncBlockCipherEncryptable
+    & AsyncBlockCipherDecryptable
+    & Copyable
+    & Deinitable
 )
 
 
@@ -27,19 +37,6 @@ def run_aes_checks[
         cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
     ](TestInput) raises capturing[_],
 ](input: TestInput) raises:
-    comptime if has_accelerator():
-        with DeviceContext() as ctx:
-
-            @__parameter
-            def aes_gpu[
-                KeySize: Int
-            ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
-                return AesGpu[KeySize](ctx, key)
-
-            check[aes_gpu[16]](input)
-            check[aes_gpu[24]](input)
-            check[aes_gpu[32]](input)
-
     comptime if target_triple_contains_any(
         ["aarch64", "arm64"]
     ) and has_target_feature["aes"]():
@@ -77,3 +74,29 @@ def run_aes_checks[
     check[aes_cpu[16]](input)
     check[aes_cpu[24]](input)
     check[aes_cpu[32]](input)
+
+
+def run_async_aes_checks[
+    TestInput: Copyable,
+    check: def[
+        C: AsyncBlockCipherEngine,
+        KeySize: Int,
+        //,
+        cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
+    ](mut Runtime, TestInput) raises capturing[_],
+](input: TestInput) raises:
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+            var runtime = Runtime(ctx)
+
+            @__parameter
+            def aes_gpu[
+                KeySize: Int
+            ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
+                return runtime.block_on(
+                    AesGpu[KeySize].create(runtime.context(), key)
+                )
+
+            check[aes_gpu[16]](runtime, input)
+            check[aes_gpu[24]](runtime, input)
+            check[aes_gpu[32]](runtime, input)

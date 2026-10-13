@@ -1,5 +1,6 @@
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
+from warp import Runtime
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
@@ -8,7 +9,12 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
-from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
+from tests.block_ciphers.utils import (
+    run_aes_checks,
+    run_async_aes_checks,
+    BlockCipherEngine,
+    AsyncBlockCipherEngine,
+)
 
 
 @fieldwise_init
@@ -41,11 +47,34 @@ def check_aes[
         assert_equal(ct, v.pt, msg=msg)
 
 
+def check_aes_async[
+    C: AsyncBlockCipherEngine,
+    KeySize: Int,
+    //,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
+](mut runtime: Runtime, vectors: List[AesTestVector]) raises:
+    for v in vectors:
+        if len(v.key) != KeySize:
+            continue
+
+        var msg = "[{}], key_size={}".format(reflect[C].name(), KeySize)
+
+        var cipher = cipher_init(to_array[KeySize](v.key))
+
+        var pt = v.pt.copy()
+        runtime.block_on(cipher.encrypt(runtime.context(), pt[:]))
+        assert_equal(pt, v.ct, msg=msg)
+
+        var ct = v.ct.copy()
+        runtime.block_on(cipher.decrypt(runtime.context(), ct[:]))
+        assert_equal(ct, v.pt, msg=msg)
+
+
 # Single-block known-answer vectors for AES-128/192/256
 # from FIPS 197 Appendix C
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
-def test_aes_fips197_kat() raises:
-    var vectors: List[AesTestVector] = [
+def fips197_vectors() raises -> List[AesTestVector]:
+    return [
         AesTestVector(
             key=hex_decode("000102030405060708090a0b0c0d0e0f"),
             pt=hex_decode("00112233445566778899aabbccddeeff"),
@@ -64,7 +93,16 @@ def test_aes_fips197_kat() raises:
             ct=hex_decode("8ea2b7ca516745bfeafc49904b496089"),
         ),
     ]
-    run_aes_checks[List[AesTestVector], check_aes](vectors)
+
+
+def test_aes_fips197_kat() raises:
+    run_aes_checks[List[AesTestVector], check_aes](fips197_vectors())
+
+
+def test_aes_fips197_kat_async() raises:
+    run_async_aes_checks[List[AesTestVector], check_aes_async](
+        fips197_vectors()
+    )
 
 
 def main() raises:
