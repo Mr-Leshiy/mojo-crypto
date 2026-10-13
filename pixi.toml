@@ -7,8 +7,8 @@ license = "MIT OR Apache-2.0"
 preview = ["pixi-build"]
 
 [workspace.dependencies]
-mojo = "1.1.0.*"
-max = "26.6.0.*"
+mojo = "*"
+max = "*"
 warp = { git = "https://github.com/Mr-Leshiy/warp.git", branch = "main" }
 
 [package]

@@ -22,7 +22,7 @@ trait BlockCipherDecryptable:
 trait AsyncBlockCipherEncryptable:
     comptime BLOCK_SIZE: Int
 
-    async def encrypt[
+    __async def encrypt[
         o: MutOrigin
     ](self, ctx: Context, data: Span[UInt8, o]) raises:
         ...
@@ -31,7 +31,7 @@ trait AsyncBlockCipherEncryptable:
 trait AsyncBlockCipherDecryptable:
     comptime BLOCK_SIZE: Int
 
-    async def decrypt[
+    __async def decrypt[
         o: MutOrigin
     ](self, ctx: Context, data: Span[UInt8, o]) raises:
         ...

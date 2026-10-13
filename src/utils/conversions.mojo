@@ -1,6 +1,6 @@
 """Conversions between the container and word representations of key material."""
 
-from std.sys import size_of, is_big_endian
+from std.sys import Endian, size_of
 
 
 @always_inline
@@ -17,7 +17,7 @@ def load_bytes[
 
     Byte order is the target's own — this is a raw memory reinterpretation,
     so it round-trips with `store_bytes` but is not endianness-neutral. Use
-    `SIMD.from_bytes[big_endian=...]` or `load_be` where the wire order
+    `SIMD.from_bytes[endian=...]` or `load_be` where the wire order
     matters.
 
     Parameters:
@@ -79,7 +79,7 @@ def to_bytes[
     //,
     output_size: Int,
     input_size: Int,
-    big_endian: Bool = is_big_endian(),
+    endian: Endian = Endian.native(),
 ](input: SIMD[dtype, input_size]) -> Array[UInt8, output_size]:
     """Reinterpret a SIMD vector as its `output_size` bytes.
 
@@ -95,8 +95,8 @@ def to_bytes[
         dtype: The lane type of the input vector.
         output_size: The length of the returned byte array.
         input_size: The number of lanes in the input vector.
-        big_endian: Whether to emit each lane big-endian; defaults to the
-            target's own byte order, matching a raw memory reinterpretation.
+        endian: The byte order to emit each lane in; defaults to the
+            target's own, matching a raw memory reinterpretation.
 
     Args:
         input: The vector to reinterpret.
@@ -109,7 +109,7 @@ def to_bytes[
     ), "to_bytes: output_size must equal the byte width of the input vector"
 
     return rebind_var[Array[UInt8, output_size]](
-        input.as_bytes[big_endian=big_endian]()
+        input.as_bytes[endian=endian]()
     )
 
 

@@ -3,6 +3,7 @@
 # LLVM AArch64 intrinsic definitions (no separate doc page exists; .td is authoritative):
 #   https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/IntrinsicsAArch64.td
 
+from std.sys import Endian
 from std.sys.intrinsics import llvm_intrinsic
 
 from .common import K64, SHA2_WORD64_BLOCK_SIZE
@@ -25,10 +26,10 @@ def _compress(
     var gh = state.slice[2, offset=6]()
 
     # FIPS 180-4 §6.4.2 step 1 — the first 16 message-schedule words, two to a
-    # vector. `big_endian=True` does the byte-order work of `vrev64q_u8`: the
+    # vector. `endian=Endian.big` does the byte-order work of `vrev64q_u8`: the
     # block is big-endian on the wire, and each word is swapped into the
     # host's native order on the way in.
-    var w = SIMD[DType.uint64, 16].from_bytes[big_endian=True](block)
+    var w = SIMD[DType.uint64, 16].from_bytes[endian=Endian.big](block)
     var s0 = w.slice[2]()
     var s1 = w.slice[2, offset=2]()
     var s2 = w.slice[2, offset=4]()
