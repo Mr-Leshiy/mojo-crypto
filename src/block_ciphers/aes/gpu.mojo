@@ -43,7 +43,7 @@ struct AesGpu[KEY_SIZE: Int](
         self.sbox_inv = sbox_inv^
 
     @staticmethod
-    async def create(
+    __async def create(
         ctx: Context, key: Array[UInt8, Self.KEY_SIZE]
     ) raises -> Self:
         """Upload the key schedule and S-boxes, and return the cipher once they
@@ -63,10 +63,10 @@ struct AesGpu[KEY_SIZE: Int](
             sbox=ctx.enqueue_device_buffer(sbox),
             sbox_inv=ctx.enqueue_device_buffer(sbox_inv),
         )
-        await ctx.synchronize()
+        __await ctx.synchronize()
         return cipher^
 
-    async def encrypt[
+    __async def encrypt[
         o: MutOrigin
     ](self, ctx: Context, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
@@ -74,12 +74,12 @@ struct AesGpu[KEY_SIZE: Int](
         var device = ctx.enqueue_device_buffer(data)
         _launch_cipher[Self.NR](ctx, device, self.w, self.sbox)
         var host = ctx.enqueue_host_buffer(device)
-        await ctx.synchronize()
+        __await ctx.synchronize()
         unsafe_memcpy(
             dest=data.unsafe_ptr(), src=host.unsafe_ptr(), count=len(data)
         )
 
-    async def decrypt[
+    __async def decrypt[
         o: MutOrigin
     ](self, ctx: Context, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
@@ -87,7 +87,7 @@ struct AesGpu[KEY_SIZE: Int](
         var device = ctx.enqueue_device_buffer(data)
         _launch_decipher[Self.NR](ctx, device, self.w, self.sbox_inv)
         var host = ctx.enqueue_host_buffer(device)
-        await ctx.synchronize()
+        __await ctx.synchronize()
         unsafe_memcpy(
             dest=data.unsafe_ptr(), src=host.unsafe_ptr(), count=len(data)
         )

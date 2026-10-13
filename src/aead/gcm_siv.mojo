@@ -1,3 +1,5 @@
+from std.sys import Endian
+
 from ..utils import load_bytes
 from .traits import AeadDecryptable, AeadEncryptable
 from .errors import AuthenticationError
@@ -115,7 +117,7 @@ struct GcmSiv[
         )
 
         # POLYVAL is keyed with mac_key; `_cipher` is keyed with enc_key.
-        return Self(cipher_init(enc_key^), Self.G(mac_key^), nonce.copy())
+        return Self(cipher_init(enc_key), Self.G(mac_key^), nonce.copy())
 
     @staticmethod
     def _assert_valid_params():
@@ -238,11 +240,11 @@ struct GcmSiv[
 
         # Final POLYVAL block: AAD bit-length and payload bit-length as two
         # little-endian u64s. Unlike GHASH (big-endian), POLYVAL is
-        # little-endian, so `as_bytes[big_endian=False]` lays the two lengths out
-        # little-endian regardless of host endianness.
+        # little-endian, so `as_bytes[endian=Endian.little]` lays the two
+        # lengths out little-endian regardless of host endianness.
         var length_block = SIMD[DType.uint64, 2](
             UInt64(aad_len) * 8, UInt64(buffer_len) * 8
-        ).as_bytes[big_endian=False]()
+        ).as_bytes[endian=Endian.little]()
 
         self._polyval.update_block(
             rebind_var[Array[UInt8, Self.G.BLOCK_SIZE]](length_block^)
@@ -326,7 +328,7 @@ def _derive_subkey[
     var block = Array[UInt8, C.BLOCK_SIZE](fill=0)
     for chunk in range(N // 8):
         # block[0:4] = counter as a little-endian u32, host-independent.
-        var counter_bytes = counter.as_bytes[big_endian=False]()
+        var counter_bytes = counter.as_bytes[endian=Endian.little]()
         Span(block)[:4].copy_from(Span(counter_bytes))
 
         # block[4:16] = nonce.
