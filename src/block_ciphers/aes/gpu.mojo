@@ -2,6 +2,7 @@ from max.gpu.host import DeviceBuffer
 from max.gpu.memory import AddressSpace
 from max.gpu.sync import barrier
 from max.gpu import thread_idx, block_idx
+from std.builtin.globals import global_constant
 from std.memory import stack_allocation, unsafe_memcpy
 from warp import Context
 
@@ -51,17 +52,14 @@ struct AesGpu[KEY_SIZE: Int](
         _check_key_size[Self.KEY_SIZE]()
 
         var w = _key_expansion[WORDS_SIZE=Self.WORDS_SIZE, NK=Self.NK](key)
-        # Both tables are comptime values; materialize them so the upload has
-        # a runtime buffer to read from.
-        var sbox = materialize[SBOX]()
-        var sbox_inv = materialize[SBOX_INV]()
 
-        # The uploads read from the three locals above, which live in this
-        # coroutine's frame and so stay alive across the `await`.
+        # The S-box uploads read from the binary's read-only data, which lives
+        # for the whole program. `w` is a local in this coroutine's frame, so
+        # it too stays alive across the `await`.
         var cipher = Self(
             w=ctx.enqueue_device_buffer(w),
-            sbox=ctx.enqueue_device_buffer(sbox),
-            sbox_inv=ctx.enqueue_device_buffer(sbox_inv),
+            sbox=ctx.enqueue_device_buffer(global_constant[SBOX]()),
+            sbox_inv=ctx.enqueue_device_buffer(global_constant[SBOX_INV]()),
         )
         __await ctx.synchronize()
         return cipher^

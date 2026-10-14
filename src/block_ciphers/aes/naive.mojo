@@ -1,3 +1,5 @@
+from std.builtin.globals import global_constant
+
 from ..errors import BlockSizeError
 from ..traits import (
     BlockCipherDecryptable,
@@ -31,24 +33,15 @@ struct AesNaive[KEY_SIZE: Int](
 
     def encrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
-        # The S-box is a comptime table, and a comptime value is not usable
-        # from runtime code until it is materialized; do it once per call and
-        # hand the table down, rather than once per round.
-        var sbox = materialize[SBOX]()
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            _cipher[NR=Self.NR](
-                data[offset : offset + BLOCK_SIZE], self.w, sbox
-            )
+            _cipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
 
     def decrypt[o: MutOrigin](self, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
-        var sbox_inv = materialize[SBOX_INV]()
         for i in range(len(data) // BLOCK_SIZE):
             var offset = i * BLOCK_SIZE
-            _decipher[NR=Self.NR](
-                data[offset : offset + BLOCK_SIZE], self.w, sbox_inv
-            )
+            _decipher[NR=Self.NR](data[offset : offset + BLOCK_SIZE], self.w)
 
 
 # FIPS 197 §5.1 Cipher()
@@ -57,18 +50,14 @@ struct AesNaive[KEY_SIZE: Int](
 # that index mapping: state[r][c] ↔ state[r + 4*c].
 def _cipher[
     NR: Int, WORDS_SIZE: Int, o: MutOrigin
-](
-    state: Span[UInt8, o],
-    w: Array[UInt32, WORDS_SIZE],
-    sbox: Array[UInt32, 256],
-):
+](state: Span[UInt8, o], w: Array[UInt32, WORDS_SIZE]):
     _add_round_key(state, 0, w)
     for r in range(1, NR):
-        _sub_bytes(state, sbox)
+        _sub_bytes(state)
         _shift_rows(state)
         _mix_columns(state)
         _add_round_key(state, r, w)
-    _sub_bytes(state, sbox)
+    _sub_bytes(state)
     _shift_rows(state)
     _add_round_key(state, NR, w)
 
@@ -76,19 +65,15 @@ def _cipher[
 # FIPS 197 §5.3 InvCipher()
 def _decipher[
     NR: Int, WORDS_SIZE: Int, o: MutOrigin
-](
-    state: Span[UInt8, o],
-    w: Array[UInt32, WORDS_SIZE],
-    sbox_inv: Array[UInt8, 256],
-):
+](state: Span[UInt8, o], w: Array[UInt32, WORDS_SIZE]):
     _add_round_key(state, NR, w)
     for r in range(NR - 1, 0, -1):
         _inv_shift_rows(state)
-        _inv_sub_bytes(state, sbox_inv)
+        _inv_sub_bytes(state)
         _add_round_key(state, r, w)
         _inv_mix_columns(state)
     _inv_shift_rows(state)
-    _inv_sub_bytes(state, sbox_inv)
+    _inv_sub_bytes(state)
     _add_round_key(state, 0, w)
 
 
@@ -105,15 +90,15 @@ def _add_round_key[
 
 
 # FIPS 197 §5.1.1 SubBytes() — apply S-box to every byte of the state
-def _sub_bytes[o: MutOrigin](state: Span[UInt8, o], sbox: Array[UInt32, 256]):
+def _sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
+    ref sbox = global_constant[SBOX]()
     for i in range(16):
         state[i] = UInt8(sbox[Int(state[i])])
 
 
 # FIPS 197 §5.3.2 InvSubBytes() — apply inverse S-box to every byte
-def _inv_sub_bytes[
-    o: MutOrigin
-](state: Span[UInt8, o], sbox_inv: Array[UInt8, 256]):
+def _inv_sub_bytes[o: MutOrigin](state: Span[UInt8, o]):
+    ref sbox_inv = global_constant[SBOX_INV]()
     for i in range(16):
         state[i] = sbox_inv[Int(state[i])]
 
@@ -223,10 +208,7 @@ comptime RCON: Array[UInt32, 10] = [
 def _key_expansion[
     WORDS_SIZE: Int, NK: Int, KEY_SIZE: Int
 ](key: Array[UInt8, KEY_SIZE]) -> Array[UInt32, WORDS_SIZE]:
-    # Both tables are comptime values, so materialize them once here rather
-    # than at every lookup inside the loop below.
-    var sbox = materialize[SBOX]()
-    var rcon = materialize[RCON]()
+    ref rcon = global_constant[RCON]()
 
     var w = Array[UInt32, WORDS_SIZE](uninitialized=True)
     for i in range(NK):
@@ -239,9 +221,9 @@ def _key_expansion[
     for i in range(NK, WORDS_SIZE):
         var temp = w[i - 1]
         if i % NK == 0:
-            temp = _sub_word(_rot_word(temp), sbox) ^ rcon[i / NK - 1]
+            temp = _sub_word(_rot_word(temp)) ^ rcon[i / NK - 1]
         elif NK > 6 and i % NK == 4:
-            temp = _sub_word(temp, sbox)
+            temp = _sub_word(temp)
         w[i] = w[i - NK] ^ temp
     return w^
 
@@ -253,7 +235,8 @@ def _rot_word(w: UInt32) -> UInt32:
 
 
 @always_inline
-def _sub_word(w: UInt32, sbox: Array[UInt32, 256]) -> UInt32:
+def _sub_word(w: UInt32) -> UInt32:
+    ref sbox = global_constant[SBOX]()
     var a0 = sbox[w >> 24] << 24
     var a1 = sbox[w >> 16 & 0xFF] << 16
     var a2 = sbox[w >> 8 & 0xFF] << 8

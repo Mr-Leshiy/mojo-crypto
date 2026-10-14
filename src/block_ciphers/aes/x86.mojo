@@ -5,6 +5,7 @@
 # Intel AES-NI reference:
 #   https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=aes
 
+from std.builtin.globals import global_constant
 from std.sys.intrinsics import llvm_intrinsic
 
 from ..errors import BlockSizeError
@@ -142,10 +143,8 @@ comptime RCON: Array[UInt8, 10] = [
 def _expand_enc_rks[
     NR: Int, NK: Int, KEY_SIZE: Int
 ](key: Array[UInt8, KEY_SIZE]) -> Array[SIMD[DType.uint64, 2], NR + 1]:
-    # Both tables are comptime values, so materialize them once here rather
-    # than at every lookup inside the loop below.
-    var sbox = materialize[SBOX]()
-    var rcon = materialize[RCON]()
+    ref sbox = global_constant[SBOX]()
+    ref rcon = global_constant[RCON]()
 
     var kb = Array[UInt8, (NR + 1) * 16](uninitialized=True)
     for i in range(KEY_SIZE):
