@@ -53,6 +53,12 @@ docs = "python -m pymodo build && hugo --source docs/site"
 # loops.
 test   = "python scripts/test.py"
 
+# The ACVP server the tests in tests/acvp request their vectors from (see
+# tests/acvp/README.md). Needs Docker with the compose plugin; the first
+# `acvp-up` builds NIST's ACVP Gen/Vals image, which takes a few minutes.
+acvp-up   = "docker compose -f tests/acvp/server/docker-compose.yml up --detach --wait --build"
+acvp-down = "docker compose -f tests/acvp/server/docker-compose.yml down"
+
 bench  = "python -m benchmarks.cli"
 bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
 

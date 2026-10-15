@@ -16,7 +16,7 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: latest
+          pixi-version: v0.81.0
           cache: true
 
       - name: Run formatter
@@ -35,7 +35,7 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: latest
+          pixi-version: v0.81.0
           cache: true
 
       - name: Compile benchmarks (no run)
@@ -76,11 +76,18 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: latest
+          pixi-version: v0.81.0
           cache: true
+
+      - name: Start the ACVP server
+        run: pixi run acvp-up
 
       - name: Run tests
         run: pixi run test
         env:
           MOJO_TEST_FEATURES: ${{ matrix.features }}
+
+      - name: Stop the ACVP server
+        if: always()
+        run: pixi run acvp-down
 
