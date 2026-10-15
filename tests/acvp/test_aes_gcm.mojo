@@ -112,9 +112,7 @@ def check_aes_gcm_aft[
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-1.0
 # AES-GCM only defines AFT groups (no MCT).
 def test_aes_gcm_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-GCM-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-GCM-1.0", "AFT")
     var vectors = parse_acvp_aes_gcm_aft(raw)
     # The ACVP-AES-GCM-1.0 set uses two (nonce, tag) byte-size combinations.
     # `_` unbinds `cipher_init`, which `run_aes_checks` supplies per backend;

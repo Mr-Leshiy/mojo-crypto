@@ -112,9 +112,7 @@ def check_aes_gcm_siv_aft[
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-SIV-1.0
 # AES-GCM-SIV only defines AFT groups (no MCT).
 def test_aes_gcm_siv_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-GCM-SIV-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-GCM-SIV-1.0", "AFT")
     run_aes_checks[List[GcmSivTestVector], check_aes_gcm_siv_aft](
         parse_acvp_aes_gcm_siv_aft(raw)
     )

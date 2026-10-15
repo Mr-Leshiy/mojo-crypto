@@ -1,0 +1,33 @@
+# Local ACVP server for the tests in tests/acvp (see tests/acvp/README.md).
+#
+#   docker compose -f tests/acvp/server/docker-compose.yml up -d --wait
+#   docker compose -f tests/acvp/server/docker-compose.yml down
+#
+# or `pixi run acvp-up` / `pixi run acvp-down`.
+
+services:
+  # The Orleans node that does the crypto for vector generation. The
+  # GenValAppRunner CLI is baked into the same image: tests/acvp/
+  # read_acvp_vectors.py `exec`s it inside this container, since upstream
+  # hardcodes localhost clustering and the node only accepts clients on its
+  # own loopback interface.
+  acvp-server:
+    image: mojo-crypto/acvp-server:v1.1.0.43
+    build:
+      context: .
+      args:
+        ACVP_SERVER_VERSION: v1.1.0.43
+    volumes:
+      # Scratch space shared with tests/acvp/read_acvp_vectors.py: it writes a
+      # registration here, and the CLI writes the generated vector set next
+      # to it.
+      - ./work:/work
+    ports:
+      # Orleans dashboard, handy for watching CPU load during generation.
+      - "127.0.0.1:8081:8081"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/30000"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 5s

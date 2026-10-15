@@ -1,0 +1,22 @@
+{
+  "vsId": 0,
+  "algorithm": "ACVP-AES-GCM-SIV",
+  "revision": "1.0",
+  "isSample": true,
+  "conformances": [],
+  "direction": [
+    "encrypt",
+    "decrypt"
+  ],
+  "keyLen": [
+    128
+  ],
+  "payloadLen": [
+    0,
+    120
+  ],
+  "aadLen": [
+    0,
+    120
+  ]
+}

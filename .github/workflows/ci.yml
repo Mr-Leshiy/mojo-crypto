@@ -79,8 +79,15 @@ jobs:
           pixi-version: latest
           cache: true
 
+      - name: Start the ACVP server
+        run: pixi run acvp-up
+
       - name: Run tests
         run: pixi run test
         env:
           MOJO_TEST_FEATURES: ${{ matrix.features }}
+
+      - name: Stop the ACVP server
+        if: always()
+        run: pixi run acvp-down
 
