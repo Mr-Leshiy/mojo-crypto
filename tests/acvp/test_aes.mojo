@@ -187,9 +187,7 @@ def check_aes_ecb_mct_async[
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-ECB-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
     run_aes_checks[List[EcbTestVector], check_aes_ecb_aft](
         parse_acvp_aes_ecb_aft(raw)
     )
@@ -197,9 +195,7 @@ def test_aes_aft() raises:
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_mct() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-ECB-1.0", "MCT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
     run_aes_checks[List[EcbTestVector], check_aes_ecb_mct](
         parse_acvp_aes_ecb_mct(raw)
     )
@@ -207,9 +203,7 @@ def test_aes_mct() raises:
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_aft_async() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-ECB-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
     run_async_aes_checks[List[EcbTestVector], check_aes_ecb_aft_async](
         parse_acvp_aes_ecb_aft(raw)
     )
@@ -217,9 +211,7 @@ def test_aes_aft_async() raises:
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_mct_async() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-ECB-1.0", "MCT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
     run_async_aes_checks[List[EcbTestVector], check_aes_ecb_mct_async](
         parse_acvp_aes_ecb_mct(raw)
     )

@@ -79,49 +79,37 @@ def check_hmac_aft[T: DigestEngine](vectors: List[HmacTestVector]) raises:
 # paths are covered: shorter than the block (zero-padded) and longer than it
 # (hashed down first).
 def test_hmac_sha224_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA2-224-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA2-224", "AFT")
     run_sha224_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-256-1.0
 def test_hmac_sha256_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA2-256-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA2-256", "AFT")
     run_sha256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-384-1.0
 def test_hmac_sha384_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA2-384-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA2-384", "AFT")
     run_sha384_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-512-1.0
 def test_hmac_sha512_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA2-512-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA2-512", "AFT")
     run_sha512_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-512-224-1.0
 def test_hmac_sha512_224_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA2-512-224-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA2-512-224", "AFT")
     run_sha512_224_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-512-256-1.0
 def test_hmac_sha512_256_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA2-512-256-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA2-512-256", "AFT")
     run_sha512_256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
@@ -130,33 +118,25 @@ def test_hmac_sha512_256_aft() raises:
 # reference algorithm-specific fields), just against `-2.0` (see README for
 # why `-2.0` over `-1.0`).
 def test_hmac_sha3_224_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA3-224-2.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA3-224", "AFT")
     run_sha3_224_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-256-2.0
 def test_hmac_sha3_256_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA3-256-2.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA3-256", "AFT")
     run_sha3_256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-384-2.0
 def test_hmac_sha3_384_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA3-384-2.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA3-384", "AFT")
     run_sha3_384_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-512-2.0
 def test_hmac_sha3_512_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/HMAC-SHA3-512-2.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("HMAC-SHA3-512", "AFT")
     run_sha3_512_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
 
 

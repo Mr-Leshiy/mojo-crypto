@@ -144,9 +144,7 @@ def check_aes_cbc_mct[
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_aes_cbc_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-CBC-1.0", "AFT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
     run_aes_checks[List[CbcTestVector], check_aes_cbc_aft](
         parse_acvp_aes_cbc_aft(raw)
     )
@@ -154,9 +152,7 @@ def test_aes_cbc_aft() raises:
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_aes_cbc_mct() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/ACVP-AES-CBC-1.0", "MCT"
-    )
+    var raw = load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
     run_aes_checks[List[CbcTestVector], check_aes_cbc_mct](
         parse_acvp_aes_cbc_mct(raw)
     )

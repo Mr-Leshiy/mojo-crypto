@@ -284,94 +284,90 @@ def check_shake_mct[T: XofEngine](vectors: List[ShakeMctTestVector]) raises:
 # backend (the only one SHA-3 has today) is far too slow to hash in a test
 # run.
 def test_sha3_224_aft() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-224-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-224", "AFT")
     run_sha3_224_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_224_mct() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-224-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-224", "MCT")
     run_sha3_224_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-256-2.0
 def test_sha3_256_aft() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-256-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-256", "AFT")
     run_sha3_256_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_256_mct() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-256-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-256", "MCT")
     run_sha3_256_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-384-2.0
 def test_sha3_384_aft() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-384-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-384", "AFT")
     run_sha3_384_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_384_mct() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-384-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-384", "MCT")
     run_sha3_384_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-512-2.0
 def test_sha3_512_aft() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-512-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-512", "AFT")
     run_sha3_512_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_512_mct() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHA3-512-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-512", "MCT")
     run_sha3_512_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-128-1.0
 def test_shake128_aft() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHAKE-128-1.0", "AFT")
+    var raw = load_python_acvp_vectors("SHAKE-128-1.0", "AFT")
     run_shake128_checks[check_shake_test](parse_acvp_shake_test(raw))
 
 
 def test_shake128_vot() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHAKE-128-1.0", "VOT")
+    var raw = load_python_acvp_vectors("SHAKE-128-1.0", "VOT")
     run_shake128_checks[check_shake_test](parse_acvp_shake_test(raw))
 
 
 def test_shake128_mct() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHAKE-128-1.0", "MCT")
+    var raw = load_python_acvp_vectors("SHAKE-128-1.0", "MCT")
     run_shake128_checks[check_shake_mct](parse_acvp_shake_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-256-1.0
 def test_shake256_aft() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHAKE-256-1.0", "AFT")
+    var raw = load_python_acvp_vectors("SHAKE-256-1.0", "AFT")
     run_shake256_checks[check_shake_test](parse_acvp_shake_test(raw))
 
 
 def test_shake256_vot() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHAKE-256-1.0", "VOT")
+    var raw = load_python_acvp_vectors("SHAKE-256-1.0", "VOT")
     run_shake256_checks[check_shake_test](parse_acvp_shake_test(raw))
 
 
 def test_shake256_mct() raises:
-    var raw = load_python_acvp_vectors("tests/acvp/data/SHAKE-256-1.0", "MCT")
+    var raw = load_python_acvp_vectors("SHAKE-256-1.0", "MCT")
     run_shake256_checks[check_shake_mct](parse_acvp_shake_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-128-FIPS202
 # Byte-aligned-only revision: AFT is the only group type it defines.
 def test_shake128_fips202_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/SHAKE-128-FIPS202", "AFT"
-    )
+    var raw = load_python_acvp_vectors("SHAKE-128-FIPS202", "AFT")
     run_shake128_checks[check_shake_test](parse_acvp_shake_test(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-256-FIPS202
 def test_shake256_fips202_aft() raises:
-    var raw = load_python_acvp_vectors(
-        "tests/acvp/data/SHAKE-256-FIPS202", "AFT"
-    )
+    var raw = load_python_acvp_vectors("SHAKE-256-FIPS202", "AFT")
     run_shake256_checks[check_shake_test](parse_acvp_shake_test(raw))
 
 
