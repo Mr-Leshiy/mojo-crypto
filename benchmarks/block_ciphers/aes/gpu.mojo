@@ -31,10 +31,10 @@ def bench_cipher[
     def bench[N: Int, suffix: StringLiteral]() raises:
         var data = Array[UInt8, N](fill=0)
 
-        def do_encrypt() raises {mut data, mut runtime, cipher}:
+        def do_encrypt() raises {mut data, mut runtime, mut cipher}:
             runtime.block_on(cipher.encrypt(runtime.context(), Span(data)))
 
-        def do_decrypt() raises {mut data, mut runtime, cipher}:
+        def do_decrypt() raises {mut data, mut runtime, mut cipher}:
             runtime.block_on(cipher.decrypt(runtime.context(), Span(data)))
 
         run(do_encrypt).print(prefix + "_encrypt_" + suffix)

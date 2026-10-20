@@ -15,16 +15,12 @@ trait BlockCipherDecryptable:
         ...
 
 
-# Async counterparts for device-backed ciphers, run as coroutines on a warp
-# `Executor`. `ctx` hands out the executor's `DeviceContext`, and awaiting
-# `ctx.synchronize()` yields to the other queued tasks instead of blocking.
-# `self` is immutable, so several tasks can share one cipher.
 trait AsyncBlockCipherEncryptable:
     comptime BLOCK_SIZE: Int
 
     __async def encrypt[
         o: MutOrigin
-    ](self, ctx: Context, data: Span[UInt8, o]) raises:
+    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
         ...
 
 
@@ -33,5 +29,5 @@ trait AsyncBlockCipherDecryptable:
 
     __async def decrypt[
         o: MutOrigin
-    ](self, ctx: Context, data: Span[UInt8, o]) raises:
+    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
         ...

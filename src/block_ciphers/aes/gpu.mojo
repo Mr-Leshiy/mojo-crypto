@@ -66,7 +66,7 @@ struct AesGpu[KEY_SIZE: Int](
 
     __async def encrypt[
         o: MutOrigin
-    ](self, ctx: Context, data: Span[UInt8, o]) raises:
+    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)
@@ -79,7 +79,7 @@ struct AesGpu[KEY_SIZE: Int](
 
     __async def decrypt[
         o: MutOrigin
-    ](self, ctx: Context, data: Span[UInt8, o]) raises:
+    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)
