@@ -284,45 +284,45 @@ def check_shake_mct[T: XofEngine](vectors: List[ShakeMctTestVector]) raises:
 # backend (the only one SHA-3 has today) is far too slow to hash in a test
 # run.
 def test_sha3_224_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-224-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-224", "AFT")
     run_sha3_224_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_224_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-224-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-224", "MCT")
     run_sha3_224_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-256-2.0
 def test_sha3_256_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-256-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-256", "AFT")
     run_sha3_256_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_256_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-256-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-256", "MCT")
     run_sha3_256_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-384-2.0
 def test_sha3_384_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-384-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-384", "AFT")
     run_sha3_384_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_384_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-384-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-384", "MCT")
     run_sha3_384_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-512-2.0
 def test_sha3_512_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-512-2.0", "AFT")
+    var raw = load_python_acvp_vectors("SHA3-512", "AFT")
     run_sha3_512_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
 
 
 def test_sha3_512_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-512-2.0", "MCT")
+    var raw = load_python_acvp_vectors("SHA3-512", "MCT")
     run_sha3_512_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
 
 

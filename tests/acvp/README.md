@@ -56,36 +56,36 @@ the server include the expected result of every test case in the vector set.
 
 | Vector set | Mode | Registration | Test file | testtypes.adoc |
 | --- | --- | --- | --- | --- |
-| `ACVP-AES-ECB-1.0` | ECB | [`ACVP-AES-ECB-1.0.json`](registrations/ACVP-AES-ECB-1.0.json) | `test_aes.mojo` | [symmetric] |
-| `ACVP-AES-CBC-1.0` | CBC | [`ACVP-AES-CBC-1.0.json`](registrations/ACVP-AES-CBC-1.0.json) | `test_aes_cbc.mojo` | [symmetric] |
-| `ACVP-AES-CTR-1.0` | CTR | [`ACVP-AES-CTR-1.0.json`](registrations/ACVP-AES-CTR-1.0.json) | `test_aes_ctr.mojo` | [symmetric] |
-| `ACVP-AES-GCM-SIV-1.0` | GCM-SIV | [`ACVP-AES-GCM-SIV-1.0.json`](registrations/ACVP-AES-GCM-SIV-1.0.json) | `test_aes_gcm_siv.mojo` | [symmetric] |
-| `CMAC-AES-1.0` | CMAC (OMAC1) | [`CMAC-AES-1.0.json`](registrations/CMAC-AES-1.0.json) | `test_aes_cmac.mojo` | [mac] |
-| `ACVP-AES-GCM-1.0` | GCM | [`ACVP-AES-GCM-1.0.json`](registrations/ACVP-AES-GCM-1.0.json) | not yet covered | [symmetric] |
-| `SHA2-224-1.0` | SHA-224 | [`SHA2-224-1.0.json`](registrations/SHA2-224-1.0.json) | `test_sha2.mojo` | [sha] |
-| `SHA2-256-1.0` | SHA-256 | [`SHA2-256-1.0.json`](registrations/SHA2-256-1.0.json) | `test_sha2.mojo` | [sha] |
-| `SHA2-384-1.0` | SHA-384 | [`SHA2-384-1.0.json`](registrations/SHA2-384-1.0.json) | `test_sha2.mojo` | [sha] |
-| `SHA2-512-1.0` | SHA-512 | [`SHA2-512-1.0.json`](registrations/SHA2-512-1.0.json) | `test_sha2.mojo` | [sha] |
-| `SHA2-512-224-1.0` | SHA-512/224 | [`SHA2-512-224-1.0.json`](registrations/SHA2-512-224-1.0.json) | `test_sha2.mojo` | [sha] |
-| `SHA2-512-256-1.0` | SHA-512/256 | [`SHA2-512-256-1.0.json`](registrations/SHA2-512-256-1.0.json) | `test_sha2.mojo` | [sha] |
-| `HMAC-SHA2-224-1.0` | HMAC-SHA-224 | [`HMAC-SHA2-224-1.0.json`](registrations/HMAC-SHA2-224-1.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA2-256-1.0` | HMAC-SHA-256 | [`HMAC-SHA2-256-1.0.json`](registrations/HMAC-SHA2-256-1.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA2-384-1.0` | HMAC-SHA-384 | [`HMAC-SHA2-384-1.0.json`](registrations/HMAC-SHA2-384-1.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA2-512-1.0` | HMAC-SHA-512 | [`HMAC-SHA2-512-1.0.json`](registrations/HMAC-SHA2-512-1.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA2-512-224-1.0` | HMAC-SHA-512/224 | [`HMAC-SHA2-512-224-1.0.json`](registrations/HMAC-SHA2-512-224-1.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA2-512-256-1.0` | HMAC-SHA-512/256 | [`HMAC-SHA2-512-256-1.0.json`](registrations/HMAC-SHA2-512-256-1.0.json) | `test_hmac.mojo` | [mac] |
-| `SHA3-224-2.0` | SHA3-224 | [`SHA3-224-2.0.json`](registrations/SHA3-224-2.0.json) | `test_sha3.mojo` | [sha3] |
-| `SHA3-256-2.0` | SHA3-256 | [`SHA3-256-2.0.json`](registrations/SHA3-256-2.0.json) | `test_sha3.mojo` | [sha3] |
-| `SHA3-384-2.0` | SHA3-384 | [`SHA3-384-2.0.json`](registrations/SHA3-384-2.0.json) | `test_sha3.mojo` | [sha3] |
-| `SHA3-512-2.0` | SHA3-512 | [`SHA3-512-2.0.json`](registrations/SHA3-512-2.0.json) | `test_sha3.mojo` | [sha3] |
+| `ACVP-AES-ECB-1.0` | ECB | [`ACVP-AES-ECB.json`](registrations/ACVP-AES-ECB.json) | `test_aes.mojo` | [symmetric] |
+| `ACVP-AES-CBC-1.0` | CBC | [`ACVP-AES-CBC.json`](registrations/ACVP-AES-CBC.json) | `test_aes_cbc.mojo` | [symmetric] |
+| `ACVP-AES-CTR-1.0` | CTR | [`ACVP-AES-CTR.json`](registrations/ACVP-AES-CTR.json) | `test_aes_ctr.mojo` | [symmetric] |
+| `ACVP-AES-GCM-SIV-1.0` | GCM-SIV | [`ACVP-AES-GCM-SIV.json`](registrations/ACVP-AES-GCM-SIV.json) | `test_aes_gcm_siv.mojo` | [symmetric] |
+| `CMAC-AES-1.0` | CMAC (OMAC1) | [`CMAC-AES.json`](registrations/CMAC-AES.json) | `test_aes_cmac.mojo` | [mac] |
+| `ACVP-AES-GCM-1.0` | GCM | [`ACVP-AES-GCM.json`](registrations/ACVP-AES-GCM.json) | not yet covered | [symmetric] |
+| `SHA2-224-1.0` | SHA-224 | [`SHA2-224.json`](registrations/SHA2-224.json) | `test_sha2.mojo` | [sha] |
+| `SHA2-256-1.0` | SHA-256 | [`SHA2-256.json`](registrations/SHA2-256.json) | `test_sha2.mojo` | [sha] |
+| `SHA2-384-1.0` | SHA-384 | [`SHA2-384.json`](registrations/SHA2-384.json) | `test_sha2.mojo` | [sha] |
+| `SHA2-512-1.0` | SHA-512 | [`SHA2-512.json`](registrations/SHA2-512.json) | `test_sha2.mojo` | [sha] |
+| `SHA2-512-224-1.0` | SHA-512/224 | [`SHA2-512-224.json`](registrations/SHA2-512-224.json) | `test_sha2.mojo` | [sha] |
+| `SHA2-512-256-1.0` | SHA-512/256 | [`SHA2-512-256.json`](registrations/SHA2-512-256.json) | `test_sha2.mojo` | [sha] |
+| `HMAC-SHA2-224-1.0` | HMAC-SHA-224 | [`HMAC-SHA2-224.json`](registrations/HMAC-SHA2-224.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-256-1.0` | HMAC-SHA-256 | [`HMAC-SHA2-256.json`](registrations/HMAC-SHA2-256.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-384-1.0` | HMAC-SHA-384 | [`HMAC-SHA2-384.json`](registrations/HMAC-SHA2-384.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-512-1.0` | HMAC-SHA-512 | [`HMAC-SHA2-512.json`](registrations/HMAC-SHA2-512.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-512-224-1.0` | HMAC-SHA-512/224 | [`HMAC-SHA2-512-224.json`](registrations/HMAC-SHA2-512-224.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA2-512-256-1.0` | HMAC-SHA-512/256 | [`HMAC-SHA2-512-256.json`](registrations/HMAC-SHA2-512-256.json) | `test_hmac.mojo` | [mac] |
+| `SHA3-224-2.0` | SHA3-224 | [`SHA3-224.json`](registrations/SHA3-224.json) | `test_sha3.mojo` | [sha3] |
+| `SHA3-256-2.0` | SHA3-256 | [`SHA3-256.json`](registrations/SHA3-256.json) | `test_sha3.mojo` | [sha3] |
+| `SHA3-384-2.0` | SHA3-384 | [`SHA3-384.json`](registrations/SHA3-384.json) | `test_sha3.mojo` | [sha3] |
+| `SHA3-512-2.0` | SHA3-512 | [`SHA3-512.json`](registrations/SHA3-512.json) | `test_sha3.mojo` | [sha3] |
 | `SHAKE-128-1.0` | SHAKE-128 (bit-oriented) | [`SHAKE-128-1.0.json`](registrations/SHAKE-128-1.0.json) | `test_sha3.mojo` | [sha3] |
 | `SHAKE-256-1.0` | SHAKE-256 (bit-oriented) | [`SHAKE-256-1.0.json`](registrations/SHAKE-256-1.0.json) | `test_sha3.mojo` | [sha3] |
 | `SHAKE-128-FIPS202` | SHAKE-128 (byte-aligned) | [`SHAKE-128-FIPS202.json`](registrations/SHAKE-128-FIPS202.json) | `test_sha3.mojo` | [sha3] |
 | `SHAKE-256-FIPS202` | SHAKE-256 (byte-aligned) | [`SHAKE-256-FIPS202.json`](registrations/SHAKE-256-FIPS202.json) | `test_sha3.mojo` | [sha3] |
-| `HMAC-SHA3-224-2.0` | HMAC-SHA3-224 | [`HMAC-SHA3-224-2.0.json`](registrations/HMAC-SHA3-224-2.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA3-256-2.0` | HMAC-SHA3-256 | [`HMAC-SHA3-256-2.0.json`](registrations/HMAC-SHA3-256-2.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA3-384-2.0` | HMAC-SHA3-384 | [`HMAC-SHA3-384-2.0.json`](registrations/HMAC-SHA3-384-2.0.json) | `test_hmac.mojo` | [mac] |
-| `HMAC-SHA3-512-2.0` | HMAC-SHA3-512 | [`HMAC-SHA3-512-2.0.json`](registrations/HMAC-SHA3-512-2.0.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA3-224-2.0` | HMAC-SHA3-224 | [`HMAC-SHA3-224.json`](registrations/HMAC-SHA3-224.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA3-256-2.0` | HMAC-SHA3-256 | [`HMAC-SHA3-256.json`](registrations/HMAC-SHA3-256.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA3-384-2.0` | HMAC-SHA3-384 | [`HMAC-SHA3-384.json`](registrations/HMAC-SHA3-384.json) | `test_hmac.mojo` | [mac] |
+| `HMAC-SHA3-512-2.0` | HMAC-SHA3-512 | [`HMAC-SHA3-512.json`](registrations/HMAC-SHA3-512.json) | `test_hmac.mojo` | [mac] |
 
 [symmetric]: https://github.com/usnistgov/ACVP/blob/master/src/symmetric/sections/04-testtypes.adoc
 [mac]: https://github.com/usnistgov/ACVP/blob/master/src/mac/sections/04-testtypes.adoc

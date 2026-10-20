@@ -92,7 +92,7 @@ def check_aes_cmac_aft[
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/CMAC-AES-1.0
 # CMAC only defines AFT groups (no MCT).
 def test_aes_cmac_aft() raises:
-    var raw = load_python_acvp_vectors("CMAC-AES-1.0", "AFT")
+    var raw = load_python_acvp_vectors("CMAC-AES", "AFT")
     run_aes_checks[List[CmacTestVector], check_aes_cmac_aft](
         parse_acvp_aes_cmac_aft(raw)
     )
