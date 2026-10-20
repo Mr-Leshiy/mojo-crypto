@@ -1,7 +1,6 @@
 {
   "vsId": 0,
   "algorithm": "ACVP-AES-CTR",
-  "mode": "",
   "revision": "1.0",
   "isSample": true,
   "conformances": [
