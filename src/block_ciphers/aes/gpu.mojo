@@ -6,6 +6,7 @@ from std.builtin.globals import global_constant
 from std.memory import stack_allocation, unsafe_memcpy
 from warp import Context
 
+from ...utils import yield_now
 from ..traits import (
     AsyncBlockCipherDecryptable,
     AsyncBlockCipherEncryptable,
@@ -67,6 +68,7 @@ struct AesGpu[KEY_SIZE: Int](
     __async def encrypt[
         o: MutOrigin
     ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        __await yield_now(ctx)
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)
@@ -80,6 +82,7 @@ struct AesGpu[KEY_SIZE: Int](
     __async def decrypt[
         o: MutOrigin
     ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        __await yield_now(ctx)
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)

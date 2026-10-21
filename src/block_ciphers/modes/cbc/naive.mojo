@@ -1,9 +1,9 @@
-from ....utils import load_bytes, store_bytes
 from ...traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
 from ...errors import BlockSizeError
+from .common import _block, _load_block, _xor_block
 
 
 struct CbcMode[
@@ -35,46 +35,23 @@ struct CbcMode[
         var iv: Array[UInt8, Self.BLOCK_SIZE],
     ):
         self._cipher = cipher^
-        self._iv = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](iv)
+        self._iv = _load_block[Self.BLOCK_SIZE](Span(iv))
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
 
-        var num_blocks = len(data) // Self.BLOCK_SIZE
-
-        for i in range(num_blocks):
-            var offset = i * Self.BLOCK_SIZE
-
-            var data_span = data[offset : offset + Self.BLOCK_SIZE]
-            var data_simd = load_bytes[
-                dtype=DType.uint8, width=Self.BLOCK_SIZE
-            ](data_span)
-
-            data_simd ^= self._iv
-            store_bytes(data_span, data_simd)
-
-            self._cipher.encrypt(data_span)
-
-            self._iv = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](
-                data_span
-            )
+        for i in range(len(data) // Self.BLOCK_SIZE):
+            var block = _block[Self.BLOCK_SIZE](data, i)
+            _xor_block(block, self._iv)
+            self._cipher.encrypt(block)
+            self._iv = _load_block[Self.BLOCK_SIZE](block)
 
     def decrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
-        var num_blocks = len(data) // Self.BLOCK_SIZE
-        for i in range(num_blocks):
-            var offset = i * Self.BLOCK_SIZE
-            var data_span = data[offset : offset + Self.BLOCK_SIZE]
-            var saved = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](
-                data_span
-            )
 
-            self._cipher.decrypt(data_span)
-
-            var data_simd = load_bytes[
-                dtype=DType.uint8, width=Self.BLOCK_SIZE
-            ](data_span)
-            data_simd ^= self._iv
-            store_bytes(data_span, data_simd)
-
+        for i in range(len(data) // Self.BLOCK_SIZE):
+            var block = _block[Self.BLOCK_SIZE](data, i)
+            var saved = _load_block[Self.BLOCK_SIZE](block)
+            self._cipher.decrypt(block)
+            _xor_block(block, self._iv)
             self._iv = saved
