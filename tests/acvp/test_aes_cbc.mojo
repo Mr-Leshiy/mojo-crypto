@@ -5,7 +5,7 @@ from warp import Runtime
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.modes import AsyncCbcMode, CbcMode
+from mojo_crypto.block_ciphers.modes import CbcMode, GpuCbcMode
 
 from tests.acvp.utils import load_python_acvp_vectors
 from tests.block_ciphers.utils import (
@@ -158,7 +158,7 @@ def check_aes_cbc_aft_async[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[AsyncCbcMode[{}]], count={}".format(
+        var msg = "[GpuCbcMode[{}]], count={}".format(
             reflect[C].name(), v.count
         )
 
@@ -166,12 +166,12 @@ def check_aes_cbc_aft_async[
         var iv = to_array[C.BLOCK_SIZE](v.iv)
         var pt = v.pt.copy()
 
-        var cbc_enc = AsyncCbcMode[C](cipher_init(key), iv.copy())
+        var cbc_enc = GpuCbcMode[C](cipher_init(key), iv.copy())
         runtime.block_on(cbc_enc.encrypt(runtime.context(), pt[:]))
         assert_equal(pt, v.ct, msg=msg)
 
         var ct = v.ct.copy()
-        var cbc_dec = AsyncCbcMode[C](cipher_init(key), iv^)
+        var cbc_dec = GpuCbcMode[C](cipher_init(key), iv^)
         runtime.block_on(cbc_dec.decrypt(runtime.context(), ct[:]))
         assert_equal(ct, v.pt, msg=msg)
 
@@ -188,7 +188,7 @@ def check_aes_cbc_mct_async[
         if len(v.key) != KeySize:
             continue
 
-        var msg = "[AsyncCbcMode[{}]], count={}".format(
+        var msg = "[GpuCbcMode[{}]], count={}".format(
             reflect[C].name(), v.count
         )
 
@@ -198,7 +198,7 @@ def check_aes_cbc_mct_async[
         var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
         var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
         var next_block = v.iv.copy()
-        var cbc = AsyncCbcMode[C](cipher_init(key), iv^)
+        var cbc = GpuCbcMode[C](cipher_init(key), iv^)
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
                 runtime.block_on(cbc.encrypt(runtime.context(), block[:]))

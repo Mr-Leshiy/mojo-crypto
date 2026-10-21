@@ -5,10 +5,11 @@ from ...traits import (
     AsyncBlockCipherEncryptable,
 )
 from ...errors import BlockSizeError
+from ....utils import yield_now
 from .common import _block, _load_block, _xor_block
 
 
-struct AsyncCbcMode[
+struct GpuCbcMode[
     Cipher: AsyncBlockCipherEncryptable
     & AsyncBlockCipherDecryptable
     & Copyable
@@ -25,9 +26,7 @@ struct AsyncCbcMode[
     See [NIST SP 800-38A](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf),
     Section 6.2.
 
-    Encryption chains every block through the previous ciphertext, so it awaits
-    one cipher call per block. Decryption has no such dependency: all blocks go
-    to the cipher in a single call, and the chaining XOR is applied afterwards.
+    Both directions await one cipher call per block.
     """
 
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
@@ -46,6 +45,7 @@ struct AsyncCbcMode[
     __async def encrypt[
         o: MutOrigin
     ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        __await yield_now(ctx)
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
 
         for i in range(len(data) // Self.BLOCK_SIZE):
@@ -57,16 +57,12 @@ struct AsyncCbcMode[
     __async def decrypt[
         o: MutOrigin
     ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        __await yield_now(ctx)
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
 
-        # Keep the ciphertext: block i is XORed with ciphertext block i - 1
-        # once the whole span has been decrypted in place.
-        var saved = List[UInt8](data)
-
-        __await self._cipher.decrypt(ctx, data)
-
         for i in range(len(data) // Self.BLOCK_SIZE):
-            _xor_block(_block[Self.BLOCK_SIZE](data, i), self._iv)
-            self._iv = _load_block[Self.BLOCK_SIZE](
-                _block[Self.BLOCK_SIZE](Span(saved), i)
-            )
+            var block = _block[Self.BLOCK_SIZE](data, i)
+            var saved = _load_block[Self.BLOCK_SIZE](block)
+            __await self._cipher.decrypt(ctx, block)
+            _xor_block(block, self._iv)
+            self._iv = saved

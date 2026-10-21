@@ -12,5 +12,5 @@ as specified in:
 | Mode | File | Specification |
 |------|------|---------------|
 | CBC (Cipher Block Chaining) | `cbc/`     | SP 800-38A § 6.2 |
-| CTR (Counter)               | `ctr.mojo` | SP 800-38A § 6.5 |
+| CTR (Counter)               | `ctr/`     | SP 800-38A § 6.5 |
 
