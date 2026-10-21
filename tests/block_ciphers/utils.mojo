@@ -1,4 +1,3 @@
-from std.sys import has_accelerator
 from max.gpu.host import DeviceContext
 from warp import Runtime
 
@@ -76,7 +75,7 @@ def run_aes_checks[
     check[aes_cpu[32]](input)
 
 
-def run_async_aes_checks[
+def run_gpu_aes_checks[
     TestInput: Copyable,
     check: def[
         C: AsyncBlockCipherEngine,
@@ -85,18 +84,17 @@ def run_async_aes_checks[
         cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
     ](mut Runtime, TestInput) raises capturing[_],
 ](input: TestInput) raises:
-    comptime if has_accelerator():
-        with DeviceContext() as ctx:
-            var runtime = Runtime(ctx)
+    with DeviceContext() as ctx:
+        var runtime = Runtime(ctx)
 
-            @__parameter
-            def aes_gpu[
-                KeySize: Int
-            ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
-                return runtime.block_on(
-                    AesGpu[KeySize].create(runtime.context(), key)
-                )
+        @__parameter
+        def aes_gpu[
+            KeySize: Int
+        ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
+            return runtime.block_on(
+                AesGpu[KeySize].create(runtime.context(), key)
+            )
 
-            check[aes_gpu[16]](runtime, input)
-            check[aes_gpu[24]](runtime, input)
-            check[aes_gpu[32]](runtime, input)
+        check[aes_gpu[16]](runtime, input)
+        check[aes_gpu[24]](runtime, input)
+        check[aes_gpu[32]](runtime, input)

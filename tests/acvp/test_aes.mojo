@@ -1,3 +1,4 @@
+from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
@@ -9,7 +10,7 @@ from mojo_crypto.utils.hex import hex_decode
 from tests.acvp.utils import load_python_acvp_vectors
 from tests.block_ciphers.utils import (
     run_aes_checks,
-    run_async_aes_checks,
+    run_gpu_aes_checks,
     BlockCipherEngine,
     AsyncBlockCipherEngine,
 )
@@ -202,20 +203,24 @@ def test_aes_mct() raises:
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_aft_async() raises:
+def test_aes_aft_gpu() raises:
     var raw = load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
-    run_async_aes_checks[List[EcbTestVector], check_aes_ecb_aft_async](
+    run_gpu_aes_checks[List[EcbTestVector], check_aes_ecb_aft_async](
         parse_acvp_aes_ecb_aft(raw)
     )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_mct_async() raises:
+def test_aes_mct_gpu() raises:
     var raw = load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
-    run_async_aes_checks[List[EcbTestVector], check_aes_ecb_mct_async](
+    run_gpu_aes_checks[List[EcbTestVector], check_aes_ecb_mct_async](
         parse_acvp_aes_ecb_mct(raw)
     )
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite.discover_tests[__functions_in_module()]()
+    comptime if not has_accelerator():
+        suite.skip[test_aes_aft_gpu]()
+        suite.skip[test_aes_mct_gpu]()
+    suite^.run()

@@ -1,3 +1,4 @@
+from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
 from warp import Runtime
@@ -8,7 +9,7 @@ from mojo_crypto.block_ciphers.modes import CtrMode, GpuCtrMode
 
 from tests.block_ciphers.utils import (
     run_aes_checks,
-    run_async_aes_checks,
+    run_gpu_aes_checks,
     BlockCipherEngine,
     AsyncBlockCipherEngine,
 )
@@ -192,9 +193,12 @@ def test_ctr_32_aes() raises:
     run_aes_checks[List[CtrTestVector], check_ctr](ctr32_vectors())
 
 
-def test_ctr_32_aes_async() raises:
-    run_async_aes_checks[List[CtrTestVector], check_ctr_async](ctr32_vectors())
+def test_ctr_32_aes_gpu() raises:
+    run_gpu_aes_checks[List[CtrTestVector], check_ctr_async](ctr32_vectors())
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite.discover_tests[__functions_in_module()]()
+    comptime if not has_accelerator():
+        suite.skip[test_ctr_32_aes_gpu]()
+    suite^.run()

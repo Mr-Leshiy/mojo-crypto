@@ -1,3 +1,4 @@
+from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
@@ -10,7 +11,7 @@ from mojo_crypto.block_ciphers.modes import CtrMode, GpuCtrMode
 from tests.acvp.utils import load_python_acvp_vectors
 from tests.block_ciphers.utils import (
     run_aes_checks,
-    run_async_aes_checks,
+    run_gpu_aes_checks,
     BlockCipherEngine,
     AsyncBlockCipherEngine,
 )
@@ -125,12 +126,15 @@ def test_aes_ctr_aft() raises:
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
-def test_aes_ctr_aft_async() raises:
+def test_aes_ctr_aft_gpu() raises:
     var raw = load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
-    run_async_aes_checks[List[CtrTestVector], check_aes_ctr_aft_async](
+    run_gpu_aes_checks[List[CtrTestVector], check_aes_ctr_aft_async](
         parse_acvp_aes_ctr_aft(raw)
     )
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite.discover_tests[__functions_in_module()]()
+    comptime if not has_accelerator():
+        suite.skip[test_aes_ctr_aft_gpu]()
+    suite^.run()
