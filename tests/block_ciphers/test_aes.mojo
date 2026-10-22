@@ -101,9 +101,7 @@ def test_aes_fips197_kat() raises:
 
 
 def test_aes_fips197_kat_gpu() raises:
-    run_gpu_aes_checks[List[AesTestVector], check_aes_async](
-        fips197_vectors()
-    )
+    run_gpu_aes_checks[List[AesTestVector], check_aes_async](fips197_vectors())
 
 
 def main() raises:
