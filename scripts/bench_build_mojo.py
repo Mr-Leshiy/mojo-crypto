@@ -36,10 +36,22 @@ GPU = ["--target-accelerator=sm_80"]
 
 # (output name, source file, extra `mojo build` flags)
 TARGETS = [
-    ("aes_naive", "benchmarks/block_ciphers/aes/naive.mojo", []),
-    ("aes_aarch64", "benchmarks/block_ciphers/aes/aarch64.mojo", AARCH64),
-    ("aes_x86", "benchmarks/block_ciphers/aes/x86.mojo", X86_AES),
-    ("aes_gpu", "benchmarks/block_ciphers/aes/gpu.mojo", GPU),
+    # The AES benchmarks pick their mode of operation at build time, so each
+    # mode is a separate build.
+    *[
+        (
+            f"aes_{backend}_{mode}",
+            f"benchmarks/block_ciphers/aes/{backend}.mojo",
+            [*flags, f"-DMODE={mode}"],
+        )
+        for backend, flags in [
+            ("naive", []),
+            ("aarch64", AARCH64),
+            ("x86", X86_AES),
+            ("gpu", GPU),
+        ]
+        for mode in ["ecb", "cbc", "ctr"]
+    ],
     ("ghash_naive", "benchmarks/universal_hashes/ghash/naive.mojo", []),
     ("ghash_aarch64", "benchmarks/universal_hashes/ghash/aarch64.mojo", AARCH64),
     ("ghash_x86", "benchmarks/universal_hashes/ghash/x86.mojo", X86_PCLMUL),

@@ -28,10 +28,15 @@ comptime AsyncBlockCipherEngine = (
 )
 
 
-struct BlockOn[Engine: AsyncBlockCipherEngine](
+struct BlockOn[
+    Engine: AsyncBlockCipherEncryptable
+    & AsyncBlockCipherDecryptable
+    & Movable
+    & Deinitable
+](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
-    Copyable,
+    Copyable where conforms_to(Engine, Copyable),
     Deinitable,
     Movable,
 ):
