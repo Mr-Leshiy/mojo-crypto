@@ -1,17 +1,13 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
-from warp import Runtime
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.modes import CtrMode, GpuCtrMode
+from mojo_crypto.block_ciphers.modes import CtrMode
 
 from tests.block_ciphers.utils import (
     run_aes_checks,
-    run_gpu_aes_checks,
     BlockCipherEngine,
-    AsyncBlockCipherEngine,
 )
 
 # Width in bytes of the incrementing counter field (CTR-32).
@@ -57,39 +53,6 @@ def check_ctr[
             enc.encrypt(pt[:])
             var dec = CTR(cipher_init(key), iv^)
             dec.decrypt(ct[:])
-        assert_equal(pt, v.ct, msg=msg)
-        assert_equal(ct, v.pt, msg=msg)
-
-
-def check_ctr_async[
-    C: AsyncBlockCipherEngine,
-    KeySize: Int,
-    //,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](mut runtime: Runtime, vectors: List[CtrTestVector]) raises:
-    for v in vectors:
-        if len(v.key) != KeySize:
-            continue
-
-        var msg = "[GpuCtrMode[{}]], {}".format(reflect[C].name(), v.name)
-
-        var key = to_array[KeySize](v.key)
-        var iv = to_array[C.BLOCK_SIZE](v.iv)
-
-        var pt = v.pt.copy()
-        var ct = v.ct.copy()
-        if v.big_endian:
-            comptime CTR = GpuCtrMode[C, CTR_SIZE, BIG_ENDIAN=True]
-            var enc = CTR(cipher_init(key), iv.copy())
-            runtime.block_on(enc.encrypt(runtime.context(), pt[:]))
-            var dec = CTR(cipher_init(key), iv^)
-            runtime.block_on(dec.decrypt(runtime.context(), ct[:]))
-        else:
-            comptime CTR = GpuCtrMode[C, CTR_SIZE, BIG_ENDIAN=False]
-            var enc = CTR(cipher_init(key), iv.copy())
-            runtime.block_on(enc.encrypt(runtime.context(), pt[:]))
-            var dec = CTR(cipher_init(key), iv^)
-            runtime.block_on(dec.decrypt(runtime.context(), ct[:]))
         assert_equal(pt, v.ct, msg=msg)
         assert_equal(ct, v.pt, msg=msg)
 
@@ -190,19 +153,9 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
 
 
 def test_ctr_32_aes() raises:
-    run_aes_checks[List[CtrTestVector], check_ctr](ctr32_vectors())
-
-
-def test_ctr_32_aes_gpu() raises:
-    run_gpu_aes_checks[List[CtrTestVector], check_ctr_async](ctr32_vectors())
+    var vectors = ctr32_vectors()
+    run_aes_checks[List[CtrTestVector], check_ctr](vectors)
 
 
 def main() raises:
-    var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_ctr_32_aes_gpu]()
-    else:
-        # TODO: skipped due to https://github.com/modular/modular/issues/7368,
-        # remove this branch once fixed.
-        suite.skip[test_ctr_32_aes_gpu]()
-    suite^.run()
+    TestSuite.discover_tests[__functions_in_module()]().run()

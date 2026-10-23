@@ -1,7 +1,5 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
-from warp import Runtime
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
@@ -12,9 +10,7 @@ from mojo_crypto.block_ciphers.traits import (
 
 from tests.block_ciphers.utils import (
     run_aes_checks,
-    run_gpu_aes_checks,
     BlockCipherEngine,
-    AsyncBlockCipherEngine,
 )
 
 
@@ -48,29 +44,6 @@ def check_aes[
         assert_equal(ct, v.pt, msg=msg)
 
 
-def check_aes_async[
-    C: AsyncBlockCipherEngine,
-    KeySize: Int,
-    //,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](mut runtime: Runtime, vectors: List[AesTestVector]) raises:
-    for v in vectors:
-        if len(v.key) != KeySize:
-            continue
-
-        var msg = "[{}], key_size={}".format(reflect[C].name(), KeySize)
-
-        var cipher = cipher_init(to_array[KeySize](v.key))
-
-        var pt = v.pt.copy()
-        runtime.block_on(cipher.encrypt(runtime.context(), pt[:]))
-        assert_equal(pt, v.ct, msg=msg)
-
-        var ct = v.ct.copy()
-        runtime.block_on(cipher.decrypt(runtime.context(), ct[:]))
-        assert_equal(ct, v.pt, msg=msg)
-
-
 # Single-block known-answer vectors for AES-128/192/256
 # from FIPS 197 Appendix C
 # https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
@@ -97,15 +70,9 @@ def fips197_vectors() raises -> List[AesTestVector]:
 
 
 def test_aes_fips197_kat() raises:
-    run_aes_checks[List[AesTestVector], check_aes](fips197_vectors())
-
-
-def test_aes_fips197_kat_gpu() raises:
-    run_gpu_aes_checks[List[AesTestVector], check_aes_async](fips197_vectors())
+    var vectors = fips197_vectors()
+    run_aes_checks[List[AesTestVector], check_aes](vectors)
 
 
 def main() raises:
-    var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_aes_fips197_kat_gpu]()
-    suite^.run()
+    TestSuite.discover_tests[__functions_in_module()]().run()

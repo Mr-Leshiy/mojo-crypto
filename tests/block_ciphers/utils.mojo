@@ -28,6 +28,39 @@ comptime AsyncBlockCipherEngine = (
 )
 
 
+struct BlockOn[
+    Engine: AsyncBlockCipherEncryptable
+    & AsyncBlockCipherDecryptable
+    & Movable
+    & Deinitable
+](
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+    Copyable where conforms_to(Engine, Copyable),
+    Deinitable,
+    Movable,
+):
+    """Drives an async engine to completion on every call, so that the sync
+    checks can run against it."""
+
+    comptime BLOCK_SIZE: Int = Self.Engine.BLOCK_SIZE
+
+    var _runtime: Runtime
+    var _engine: Self.Engine
+
+    def __init__(out self, runtime: Runtime, var engine: Self.Engine):
+        self._runtime = runtime.copy()
+        self._engine = engine^
+
+    def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
+        var ctx = self._runtime.context()
+        self._runtime.block_on(self._engine.encrypt(ctx, data))
+
+    def decrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
+        var ctx = self._runtime.context()
+        self._runtime.block_on(self._engine.decrypt(ctx, data))
+
+
 def run_aes_checks[
     TestInput: Copyable,
     check: def[
@@ -75,18 +108,8 @@ def run_aes_checks[
     check[aes_cpu[24]](input)
     check[aes_cpu[32]](input)
 
-
-def run_gpu_aes_checks[
-    TestInput: Copyable,
-    check: def[
-        C: AsyncBlockCipherEngine,
-        KeySize: Int,
-        //,
-        cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-    ](mut Runtime, TestInput) raises capturing[_],
-](input: TestInput) raises:
     # Compile-time guard: without an accelerator the GPU kernels cannot even
-    # be compiled, so skipping the test at runtime is not enough.
+    # be compiled, so skipping at runtime is not enough.
     comptime if has_accelerator():
         with DeviceContext() as ctx:
             var runtime = Runtime(ctx)
@@ -94,11 +117,12 @@ def run_gpu_aes_checks[
             @__parameter
             def aes_gpu[
                 KeySize: Int
-            ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
-                return runtime.block_on(
+            ](key: Array[UInt8, KeySize]) raises -> BlockOn[AesGpu[KeySize]]:
+                var cipher = runtime.block_on(
                     AesGpu[KeySize].create(runtime.context(), key)
                 )
+                return BlockOn(runtime, cipher^)
 
-            check[aes_gpu[16]](runtime, input)
-            check[aes_gpu[24]](runtime, input)
-            check[aes_gpu[32]](runtime, input)
+            check[aes_gpu[16]](input)
+            check[aes_gpu[24]](input)
+            check[aes_gpu[32]](input)
