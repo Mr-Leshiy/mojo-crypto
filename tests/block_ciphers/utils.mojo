@@ -76,7 +76,7 @@ def run_aes_checks[
     check[aes_cpu[32]](input)
 
 
-def run_async_aes_checks[
+def run_gpu_aes_checks[
     TestInput: Copyable,
     check: def[
         C: AsyncBlockCipherEngine,
@@ -85,6 +85,8 @@ def run_async_aes_checks[
         cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
     ](mut Runtime, TestInput) raises capturing[_],
 ](input: TestInput) raises:
+    # Compile-time guard: without an accelerator the GPU kernels cannot even
+    # be compiled, so skipping the test at runtime is not enough.
     comptime if has_accelerator():
         with DeviceContext() as ctx:
             var runtime = Runtime(ctx)

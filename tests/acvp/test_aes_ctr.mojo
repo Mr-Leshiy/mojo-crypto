@@ -1,13 +1,20 @@
+from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
+from warp import Runtime
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.modes import CtrMode
+from mojo_crypto.block_ciphers.modes import CtrMode, GpuCtrMode
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
+from tests.block_ciphers.utils import (
+    run_aes_checks,
+    run_gpu_aes_checks,
+    BlockCipherEngine,
+    AsyncBlockCipherEngine,
+)
 
 
 @fieldwise_init
@@ -80,6 +87,35 @@ def check_aes_ctr_aft[
             assert_equal(ct, v.pt, msg=msg)
 
 
+def check_aes_ctr_aft_async[
+    C: AsyncBlockCipherEngine,
+    KeySize: Int,
+    //,
+    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
+](mut runtime: Runtime, vectors: List[CtrTestVector]) raises:
+    for v in vectors:
+        if len(v.key) != KeySize:
+            continue
+
+        var msg = "[GpuCtrMode[{}]], count={}".format(
+            reflect[C].name(), v.count
+        )
+
+        var key = to_array[KeySize](v.key)
+        var iv = to_array[C.BLOCK_SIZE](v.iv)
+
+        if v.is_encrypt:
+            var pt = v.pt.copy()
+            var ctr = GpuCtrMode[C](cipher_init(key), iv^)
+            runtime.block_on(ctr.encrypt(runtime.context(), pt[:]))
+            assert_equal(pt, v.ct, msg=msg)
+        else:
+            var ct = v.ct.copy()
+            var ctr = GpuCtrMode[C](cipher_init(key), iv^)
+            runtime.block_on(ctr.decrypt(runtime.context(), ct[:]))
+            assert_equal(ct, v.pt, msg=msg)
+
+
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
 # AES-CTR only defines AFT groups (no MCT).
 def test_aes_ctr_aft() raises:
@@ -89,5 +125,20 @@ def test_aes_ctr_aft() raises:
     )
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
+def test_aes_ctr_aft_gpu() raises:
+    var raw = load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+    run_gpu_aes_checks[List[CtrTestVector], check_aes_ctr_aft_async](
+        parse_acvp_aes_ctr_aft(raw)
+    )
+
+
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite.discover_tests[__functions_in_module()]()
+    comptime if not has_accelerator():
+        suite.skip[test_aes_ctr_aft_gpu]()
+    else:
+        # TODO: skipped due to https://github.com/modular/modular/issues/7368,
+        # remove this branch once fixed.
+        suite.skip[test_aes_ctr_aft_gpu]()
+    suite^.run()

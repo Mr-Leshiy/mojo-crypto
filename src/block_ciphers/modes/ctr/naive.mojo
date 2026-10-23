@@ -1,8 +1,9 @@
-from ...utils import load_bytes, store_bytes, to_bytes
-from ..traits import (
+from ....utils import load_bytes, to_bytes
+from ...traits import (
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
+from .common import _check_params, _increment_ctr, _xor_keystream
 
 
 struct CtrMode[
@@ -31,17 +32,9 @@ struct CtrMode[
     """
 
     comptime BLOCK_SIZE: Int = Self.C.BLOCK_SIZE
-    comptime NONCE_SIZE: Int = Self.BLOCK_SIZE - Self.SIZE
 
     var _cipher: Self.C
     var _ctr: SIMD[DType.uint8, Self.BLOCK_SIZE]
-
-    @staticmethod
-    def _assert_valid_params():
-        comptime assert Self.SIZE > 0, "counter SIZE must be positive"
-        comptime assert (
-            Self.SIZE <= Self.BLOCK_SIZE
-        ), "counter SIZE cannot exceed BLOCK_SIZE"
 
     def __init__(
         out self,
@@ -50,7 +43,7 @@ struct CtrMode[
     ):
         """Initialize from a fully-assembled initial counter block."""
 
-        Self._assert_valid_params()
+        _check_params[Self.BLOCK_SIZE, Self.SIZE]()
 
         self._cipher = cipher^
         self._ctr = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](ctr)
@@ -65,45 +58,14 @@ struct CtrMode[
         var offset = 0
         while offset < len(data):
             # The keystream block is E(counter). The cipher works on bytes, so
-            # the counter goes out as an array and the result comes back as a
-            # vector to be XOR'd over the data a whole block at a time.
+            # the counter goes out as an array.
             var keystream = to_bytes[
                 input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
             ](self._ctr)
             self._cipher.encrypt(keystream)
 
             var end = min(offset + Self.BLOCK_SIZE, len(data))
-            var block = data[offset:end]
-            if len(block) == Self.BLOCK_SIZE:
-                var ks = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](
-                    keystream
-                )
-                var s = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](
-                    block
-                )
-                store_bytes(block, s ^ ks)
-            else:
-                # Trailing partial block — CTR is a stream cipher, so only the
-                # bytes that exist are XOR'd. A vector load would run off the
-                # end of `data`, so this tail stays byte-wise.
-                for j in range(len(block)):
-                    block[j] ^= keystream[j]
+            _xor_keystream[Self.BLOCK_SIZE](data[offset:end], Span(keystream))
 
-            self._increment_ctr()
+            _increment_ctr[Self.SIZE, Self.BIG_ENDIAN](self._ctr)
             offset += Self.BLOCK_SIZE
-
-    def _increment_ctr(mut self):
-        # Increment is confined to the SIZE-byte counter field; the nonce bytes
-        # are never carried into (NIST SP 800-38A).
-        comptime if Self.BIG_ENDIAN:
-            # counter = last SIZE bytes, big-endian
-            for i in range(Self.BLOCK_SIZE - 1, Self.NONCE_SIZE - 1, -1):
-                self._ctr[i] += 1
-                if self._ctr[i] != 0:
-                    break
-        else:
-            # counter = first SIZE bytes, little-endian
-            for i in range(Self.SIZE):
-                self._ctr[i] += 1
-                if self._ctr[i] != 0:
-                    break

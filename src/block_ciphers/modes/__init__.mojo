@@ -1,2 +1,2 @@
-from .cbc import CbcMode
-from .ctr import CtrMode
+from .cbc import CbcMode, GpuCbcMode
+from .ctr import CtrMode, GpuCtrMode
