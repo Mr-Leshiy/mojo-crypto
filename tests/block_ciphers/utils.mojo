@@ -1,3 +1,4 @@
+from std.sys import has_accelerator
 from max.gpu.host import DeviceContext
 from warp import Runtime
 
@@ -84,17 +85,20 @@ def run_gpu_aes_checks[
         cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
     ](mut Runtime, TestInput) raises capturing[_],
 ](input: TestInput) raises:
-    with DeviceContext() as ctx:
-        var runtime = Runtime(ctx)
+    # Compile-time guard: without an accelerator the GPU kernels cannot even
+    # be compiled, so skipping the test at runtime is not enough.
+    comptime if has_accelerator():
+        with DeviceContext() as ctx:
+            var runtime = Runtime(ctx)
 
-        @__parameter
-        def aes_gpu[
-            KeySize: Int
-        ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
-            return runtime.block_on(
-                AesGpu[KeySize].create(runtime.context(), key)
-            )
+            @__parameter
+            def aes_gpu[
+                KeySize: Int
+            ](key: Array[UInt8, KeySize]) raises -> AesGpu[KeySize]:
+                return runtime.block_on(
+                    AesGpu[KeySize].create(runtime.context(), key)
+                )
 
-        check[aes_gpu[16]](runtime, input)
-        check[aes_gpu[24]](runtime, input)
-        check[aes_gpu[32]](runtime, input)
+            check[aes_gpu[16]](runtime, input)
+            check[aes_gpu[24]](runtime, input)
+            check[aes_gpu[32]](runtime, input)
