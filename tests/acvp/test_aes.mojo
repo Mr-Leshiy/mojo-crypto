@@ -1,4 +1,3 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
@@ -188,39 +187,21 @@ def check_aes_ecb_mct_async[
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_aft() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
-    run_aes_checks[List[EcbTestVector], check_aes_ecb_aft](
-        parse_acvp_aes_ecb_aft(raw)
+    var vectors = parse_acvp_aes_ecb_aft(
+        load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
     )
+    run_aes_checks[List[EcbTestVector], check_aes_ecb_aft](vectors)
+    run_gpu_aes_checks[List[EcbTestVector], check_aes_ecb_aft_async](vectors)
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def test_aes_mct() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
-    run_aes_checks[List[EcbTestVector], check_aes_ecb_mct](
-        parse_acvp_aes_ecb_mct(raw)
+    var vectors = parse_acvp_aes_ecb_mct(
+        load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
     )
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_aft_gpu() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
-    run_gpu_aes_checks[List[EcbTestVector], check_aes_ecb_aft_async](
-        parse_acvp_aes_ecb_aft(raw)
-    )
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_mct_gpu() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
-    run_gpu_aes_checks[List[EcbTestVector], check_aes_ecb_mct_async](
-        parse_acvp_aes_ecb_mct(raw)
-    )
+    run_aes_checks[List[EcbTestVector], check_aes_ecb_mct](vectors)
+    run_gpu_aes_checks[List[EcbTestVector], check_aes_ecb_mct_async](vectors)
 
 
 def main() raises:
-    var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_aes_aft_gpu]()
-        suite.skip[test_aes_mct_gpu]()
-    suite^.run()
+    TestSuite.discover_tests[__functions_in_module()]().run()

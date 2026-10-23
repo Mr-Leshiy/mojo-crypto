@@ -1,4 +1,3 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
 from warp import Runtime
@@ -97,15 +96,10 @@ def fips197_vectors() raises -> List[AesTestVector]:
 
 
 def test_aes_fips197_kat() raises:
-    run_aes_checks[List[AesTestVector], check_aes](fips197_vectors())
-
-
-def test_aes_fips197_kat_gpu() raises:
-    run_gpu_aes_checks[List[AesTestVector], check_aes_async](fips197_vectors())
+    var vectors = fips197_vectors()
+    run_aes_checks[List[AesTestVector], check_aes](vectors)
+    run_gpu_aes_checks[List[AesTestVector], check_aes_async](vectors)
 
 
 def main() raises:
-    var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_aes_fips197_kat_gpu]()
-    suite^.run()
+    TestSuite.discover_tests[__functions_in_module()]().run()

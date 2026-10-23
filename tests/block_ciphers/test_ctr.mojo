@@ -1,4 +1,3 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
 from warp import Runtime
@@ -16,6 +15,10 @@ from tests.block_ciphers.utils import (
 
 # Width in bytes of the incrementing counter field (CTR-32).
 comptime CTR_SIZE: Int = 4
+
+# TODO: the GPU checks crash due to https://github.com/modular/modular/issues/7368,
+# flip this once fixed.
+comptime RUN_GPU_CHECKS = False
 
 
 @fieldwise_init
@@ -190,19 +193,11 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
 
 
 def test_ctr_32_aes() raises:
-    run_aes_checks[List[CtrTestVector], check_ctr](ctr32_vectors())
-
-
-def test_ctr_32_aes_gpu() raises:
-    run_gpu_aes_checks[List[CtrTestVector], check_ctr_async](ctr32_vectors())
+    var vectors = ctr32_vectors()
+    run_aes_checks[List[CtrTestVector], check_ctr](vectors)
+    if RUN_GPU_CHECKS:
+        run_gpu_aes_checks[List[CtrTestVector], check_ctr_async](vectors)
 
 
 def main() raises:
-    var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_ctr_32_aes_gpu]()
-    else:
-        # TODO: skipped due to https://github.com/modular/modular/issues/7368,
-        # remove this branch once fixed.
-        suite.skip[test_ctr_32_aes_gpu]()
-    suite^.run()
+    TestSuite.discover_tests[__functions_in_module()]().run()

@@ -1,4 +1,3 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
@@ -15,6 +14,11 @@ from tests.block_ciphers.utils import (
     BlockCipherEngine,
     AsyncBlockCipherEngine,
 )
+
+
+# TODO: the GPU checks crash due to https://github.com/modular/modular/issues/7368,
+# flip this once fixed.
+comptime RUN_GPU_CHECKS = False
 
 
 @fieldwise_init
@@ -213,44 +217,27 @@ def check_aes_cbc_mct_async[
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_aes_cbc_aft() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
-    run_aes_checks[List[CbcTestVector], check_aes_cbc_aft](
-        parse_acvp_aes_cbc_aft(raw)
+    var vectors = parse_acvp_aes_cbc_aft(
+        load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
     )
+    run_aes_checks[List[CbcTestVector], check_aes_cbc_aft](vectors)
+    if RUN_GPU_CHECKS:
+        run_gpu_aes_checks[List[CbcTestVector], check_aes_cbc_aft_async](
+            vectors
+        )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def test_aes_cbc_mct() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
-    run_aes_checks[List[CbcTestVector], check_aes_cbc_mct](
-        parse_acvp_aes_cbc_mct(raw)
+    var vectors = parse_acvp_aes_cbc_mct(
+        load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
     )
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def test_aes_cbc_aft_gpu() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
-    run_gpu_aes_checks[List[CbcTestVector], check_aes_cbc_aft_async](
-        parse_acvp_aes_cbc_aft(raw)
-    )
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def test_aes_cbc_mct_gpu() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
-    run_gpu_aes_checks[List[CbcTestVector], check_aes_cbc_mct_async](
-        parse_acvp_aes_cbc_mct(raw)
-    )
+    run_aes_checks[List[CbcTestVector], check_aes_cbc_mct](vectors)
+    if RUN_GPU_CHECKS:
+        run_gpu_aes_checks[List[CbcTestVector], check_aes_cbc_mct_async](
+            vectors
+        )
 
 
 def main() raises:
-    var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_aes_cbc_aft_gpu]()
-        suite.skip[test_aes_cbc_mct_gpu]()
-    else:
-        # TODO: skipped due to https://github.com/modular/modular/issues/7368,
-        # remove this branch once fixed.
-        suite.skip[test_aes_cbc_aft_gpu]()
-        suite.skip[test_aes_cbc_mct_gpu]()
-    suite^.run()
+    TestSuite.discover_tests[__functions_in_module()]().run()
