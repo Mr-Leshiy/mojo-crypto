@@ -1,4 +1,3 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
@@ -245,7 +244,8 @@ def test_aes_cbc_mct_gpu() raises:
 
 def main() raises:
     var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_aes_cbc_aft_gpu]()
-        suite.skip[test_aes_cbc_mct_gpu]()
+    # TODO: skipped due to https://github.com/modular/modular/issues/7368,
+    # restore the `comptime if not has_accelerator()` guard once fixed.
+    suite.skip[test_aes_cbc_aft_gpu]()
+    suite.skip[test_aes_cbc_mct_gpu]()
     suite^.run()

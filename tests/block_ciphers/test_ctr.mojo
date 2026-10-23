@@ -1,4 +1,3 @@
-from std.sys import has_accelerator
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
 from warp import Runtime
@@ -199,6 +198,7 @@ def test_ctr_32_aes_gpu() raises:
 
 def main() raises:
     var suite = TestSuite.discover_tests[__functions_in_module()]()
-    comptime if not has_accelerator():
-        suite.skip[test_ctr_32_aes_gpu]()
+    # TODO: skipped due to https://github.com/modular/modular/issues/7368,
+    # restore the `comptime if not has_accelerator()` guard once fixed.
+    suite.skip[test_ctr_32_aes_gpu]()
     suite^.run()
