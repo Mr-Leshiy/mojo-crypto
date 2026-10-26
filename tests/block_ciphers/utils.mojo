@@ -1,8 +1,6 @@
-from std.sys import has_accelerator
 from max.gpu.host import DeviceContext
 from warp import Runtime
 
-from mojo_crypto.utils import target_triple_contains_any, has_target_feature
 from mojo_crypto.block_ciphers.aes import (
     AesNaive,
     AesAarch64,
@@ -16,6 +14,8 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
+from tests.platform import HAS_AES_AARCH64, HAS_AES_X86, HAS_GPU
+
 comptime BlockCipherEngine = (
     BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable
 )
@@ -26,18 +26,6 @@ comptime AsyncBlockCipherEngine = (
     & Copyable
     & Deinitable
 )
-
-# Which AES backends the current build can run. A test suite registers the
-# tests of a backend only when its flag is set: the hardware backends are
-# compiled in only for their target, and without an accelerator the GPU
-# kernels cannot even be compiled.
-comptime HAS_AES_AARCH64 = target_triple_contains_any(
-    ["aarch64", "arm64"]
-) and has_target_feature["aes"]()
-comptime HAS_AES_X86 = target_triple_contains_any(
-    ["x86_64"]
-) and has_target_feature["aes"]()
-comptime HAS_AES_GPU = has_accelerator()
 
 
 trait AesFactory:
@@ -176,7 +164,7 @@ def run_aes_checks[
 
     # Compile-time guard: without an accelerator the GPU kernels cannot even
     # be compiled, so skipping at runtime is not enough.
-    comptime if HAS_AES_GPU:
+    comptime if HAS_GPU:
         with DeviceContext() as ctx:
             var runtime = Runtime(ctx)
 

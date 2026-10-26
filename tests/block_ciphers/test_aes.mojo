@@ -11,10 +11,8 @@ from tests.block_ciphers.utils import (
     AesGpuFactory,
     AesNaiveFactory,
     AesX86Factory,
-    HAS_AES_AARCH64,
-    HAS_AES_GPU,
-    HAS_AES_X86,
 )
+from tests.platform import HAS_AES_AARCH64, HAS_AES_X86, HAS_GPU
 
 
 @fieldwise_init
@@ -141,7 +139,7 @@ def main() raises:
         suite.test[test_aes192_fips197_x86]()
         suite.test[test_aes256_fips197_x86]()
 
-    comptime if HAS_AES_GPU:
+    comptime if HAS_GPU:
         suite.test[test_aes128_fips197_gpu]()
         suite.test[test_aes192_fips197_gpu]()
         suite.test[test_aes256_fips197_gpu]()
