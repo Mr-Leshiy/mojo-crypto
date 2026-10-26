@@ -9,7 +9,7 @@ from mojo_crypto.universal_hashes.ghash import GHashNaive
 from mojo_crypto.aead.gcm import Gcm
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import (
+from tests.block_ciphers.factories.aes import (
     AesFactory,
     AesAarch64Factory,
     AesGpuFactory,

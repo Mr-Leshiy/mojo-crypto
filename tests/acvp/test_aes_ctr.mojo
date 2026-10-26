@@ -1,19 +1,19 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
-from max.gpu.host import DeviceContext
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import (
+from tests.block_ciphers.factories.aes import (
     AesAarch64Factory,
     AesNaiveFactory,
     AesX86Factory,
+)
+from tests.block_ciphers.factories.ctr import (
     CtrFactory,
     CtrModeFactory,
-    GpuCtrModeFactory,
 )
 from tests.platform import register_platform_tests
 
@@ -150,34 +150,10 @@ def test_aes256_ctr_aft_x86() raises:
     )
 
 
-def test_aes128_ctr_aft_gpu() raises:
-    with DeviceContext() as ctx:
-        check_aes_ctr_aft(
-            GpuCtrModeFactory[16](ctx),
-            parse_acvp_aes_ctr_aft(
-                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
-            ),
-        )
-
-
-def test_aes192_ctr_aft_gpu() raises:
-    with DeviceContext() as ctx:
-        check_aes_ctr_aft(
-            GpuCtrModeFactory[24](ctx),
-            parse_acvp_aes_ctr_aft(
-                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
-            ),
-        )
-
-
-def test_aes256_ctr_aft_gpu() raises:
-    with DeviceContext() as ctx:
-        check_aes_ctr_aft(
-            GpuCtrModeFactory[32](ctx),
-            parse_acvp_aes_ctr_aft(
-                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
-            ),
-        )
+# The GPU-backed CTR tests are disabled until
+# https://github.com/modular/modular/issues/7368 is fixed. Every function in
+# this module is compiled even when it is not registered, so they cannot just
+# be left unregistered. Restore them with `GpuCtrModeFactory`.
 
 
 def main() raises:

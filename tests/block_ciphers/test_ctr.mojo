@@ -1,17 +1,17 @@
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
-from max.gpu.host import DeviceContext
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 
-from tests.block_ciphers.utils import (
+from tests.block_ciphers.factories.aes import (
     AesAarch64Factory,
     AesNaiveFactory,
     AesX86Factory,
+)
+from tests.block_ciphers.factories.ctr import (
     CtrFactory,
     CtrModeFactory,
-    GpuCtrModeFactory,
 )
 from tests.platform import register_platform_tests
 
@@ -186,20 +186,10 @@ def test_ctr32_be_aes128_x86() raises:
     )
 
 
-def test_ctr32_le_aes128_gpu() raises:
-    with DeviceContext() as ctx:
-        check_ctr(
-            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=False](ctx),
-            ctr32_le_aes128_vectors(),
-        )
-
-
-def test_ctr32_be_aes128_gpu() raises:
-    with DeviceContext() as ctx:
-        check_ctr(
-            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=True](ctx),
-            ctr32_be_aes128_vectors(),
-        )
+# The GPU-backed CTR tests are disabled until
+# https://github.com/modular/modular/issues/7368 is fixed. Every function in
+# this module is compiled even when it is not registered, so they cannot just
+# be left unregistered. Restore them with `GpuCtrModeFactory`.
 
 
 def main() raises:
