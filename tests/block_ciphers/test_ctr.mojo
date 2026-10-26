@@ -4,14 +4,14 @@ from max.gpu.host import DeviceContext
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.modes import CtrMode
 
 from tests.block_ciphers.utils import (
-    AesFactory,
     AesAarch64Factory,
-    AesGpuFactory,
     AesNaiveFactory,
     AesX86Factory,
+    CtrFactory,
+    CtrModeFactory,
+    GpuCtrModeFactory,
 )
 from tests.platform import register_platform_tests
 
@@ -28,23 +28,20 @@ struct CtrTestVector(Copyable, Movable):
     var ct: List[UInt8]
 
 
-def check_ctr[
-    F: AesFactory, //, BIG_ENDIAN: Bool
-](factory: F, vectors: List[CtrTestVector]) raises:
-    comptime CTR = CtrMode[F.Cipher, CTR_SIZE, BIG_ENDIAN=BIG_ENDIAN]
+def check_ctr[F: CtrFactory](factory: F, vectors: List[CtrTestVector]) raises:
     for v in vectors:
-        var msg = "[CtrMode[{}]], {}".format(reflect[F.Cipher].name(), v.name)
+        var msg = "[{}], {}".format(reflect[F.Mode].name(), v.name)
 
         var key = to_array[F.KEY_SIZE](v.key)
-        var iv = to_array[F.Cipher.BLOCK_SIZE](v.iv)
+        var iv = to_array[F.BLOCK_SIZE](v.iv)
 
         var pt = v.pt.copy()
-        var enc = CTR(factory.create(key), iv.copy())
+        var enc = factory.create(key, iv.copy())
         enc.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
 
         var ct = v.ct.copy()
-        var dec = CTR(factory.create(key), iv^)
+        var dec = factory.create(key, iv^)
         dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
@@ -148,46 +145,60 @@ def ctr32_be_aes128_vectors() raises -> List[CtrTestVector]:
 
 
 def test_ctr32_le_aes128_naive() raises:
-    check_ctr[BIG_ENDIAN=False](
-        AesNaiveFactory[16](), ctr32_le_aes128_vectors()
+    check_ctr(
+        CtrModeFactory[CTR_SIZE, BIG_ENDIAN=False](AesNaiveFactory[16]()),
+        ctr32_le_aes128_vectors(),
     )
 
 
 def test_ctr32_be_aes128_naive() raises:
-    check_ctr[BIG_ENDIAN=True](AesNaiveFactory[16](), ctr32_be_aes128_vectors())
+    check_ctr(
+        CtrModeFactory[CTR_SIZE, BIG_ENDIAN=True](AesNaiveFactory[16]()),
+        ctr32_be_aes128_vectors(),
+    )
 
 
 def test_ctr32_le_aes128_aarch64() raises:
-    check_ctr[BIG_ENDIAN=False](
-        AesAarch64Factory[16](), ctr32_le_aes128_vectors()
+    check_ctr(
+        CtrModeFactory[CTR_SIZE, BIG_ENDIAN=False](AesAarch64Factory[16]()),
+        ctr32_le_aes128_vectors(),
     )
 
 
 def test_ctr32_be_aes128_aarch64() raises:
-    check_ctr[BIG_ENDIAN=True](
-        AesAarch64Factory[16](), ctr32_be_aes128_vectors()
+    check_ctr(
+        CtrModeFactory[CTR_SIZE, BIG_ENDIAN=True](AesAarch64Factory[16]()),
+        ctr32_be_aes128_vectors(),
     )
 
 
 def test_ctr32_le_aes128_x86() raises:
-    check_ctr[BIG_ENDIAN=False](AesX86Factory[16](), ctr32_le_aes128_vectors())
+    check_ctr(
+        CtrModeFactory[CTR_SIZE, BIG_ENDIAN=False](AesX86Factory[16]()),
+        ctr32_le_aes128_vectors(),
+    )
 
 
 def test_ctr32_be_aes128_x86() raises:
-    check_ctr[BIG_ENDIAN=True](AesX86Factory[16](), ctr32_be_aes128_vectors())
+    check_ctr(
+        CtrModeFactory[CTR_SIZE, BIG_ENDIAN=True](AesX86Factory[16]()),
+        ctr32_be_aes128_vectors(),
+    )
 
 
 def test_ctr32_le_aes128_gpu() raises:
     with DeviceContext() as ctx:
-        check_ctr[BIG_ENDIAN=False](
-            AesGpuFactory[16](ctx), ctr32_le_aes128_vectors()
+        check_ctr(
+            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=False](ctx),
+            ctr32_le_aes128_vectors(),
         )
 
 
 def test_ctr32_be_aes128_gpu() raises:
     with DeviceContext() as ctx:
-        check_ctr[BIG_ENDIAN=True](
-            AesGpuFactory[16](ctx), ctr32_be_aes128_vectors()
+        check_ctr(
+            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=True](ctx),
+            ctr32_be_aes128_vectors(),
         )
 
 
