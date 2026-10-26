@@ -14,6 +14,8 @@ from mojo_crypto.block_ciphers.traits import (
     BlockCipherEncryptable,
 )
 
+from tests.platform import HAS_GPU
+
 comptime BlockCipherEngine = (
     BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable
 )
@@ -97,7 +99,12 @@ struct BlockOn[
     Movable,
 ):
     """Drives an async engine to completion on every call, so that the sync
-    checks can run against it."""
+    checks can run against it.
+
+    Without an accelerator the engine's GPU kernels cannot even be compiled, so
+    every call raises instead. This keeps GPU tests compilable on any build;
+    they are only registered when an accelerator is present.
+    """
 
     comptime BLOCK_SIZE: Int = Self.Engine.BLOCK_SIZE
 
@@ -109,9 +116,15 @@ struct BlockOn[
         self._engine = engine^
 
     def encrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
-        var ctx = self._runtime.context()
-        self._runtime.block_on(self._engine.encrypt(ctx, data))
+        comptime if HAS_GPU:
+            var ctx = self._runtime.context()
+            self._runtime.block_on(self._engine.encrypt(ctx, data))
+        else:
+            raise Error("BlockOn.encrypt: no accelerator in this build")
 
     def decrypt[o: MutOrigin](mut self, data: Span[UInt8, o]) raises:
-        var ctx = self._runtime.context()
-        self._runtime.block_on(self._engine.decrypt(ctx, data))
+        comptime if HAS_GPU:
+            var ctx = self._runtime.context()
+            self._runtime.block_on(self._engine.decrypt(ctx, data))
+        else:
+            raise Error("BlockOn.decrypt: no accelerator in this build")

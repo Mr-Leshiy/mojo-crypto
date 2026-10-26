@@ -13,7 +13,7 @@ from tests.block_ciphers.utils import (
     AesNaiveFactory,
     AesX86Factory,
 )
-from tests.platform import HAS_AES_AARCH64, HAS_AES_X86, HAS_GPU
+from tests.platform import register_platform_tests
 
 # Width in bytes of the incrementing counter field (CTR-32).
 comptime CTR_SIZE: Int = 4
@@ -193,20 +193,5 @@ def test_ctr32_be_aes128_gpu() raises:
 
 def main() raises:
     var suite = TestSuite()
-
-    suite.test[test_ctr32_le_aes128_naive]()
-    suite.test[test_ctr32_be_aes128_naive]()
-
-    comptime if HAS_AES_AARCH64:
-        suite.test[test_ctr32_le_aes128_aarch64]()
-        suite.test[test_ctr32_be_aes128_aarch64]()
-
-    comptime if HAS_AES_X86:
-        suite.test[test_ctr32_le_aes128_x86]()
-        suite.test[test_ctr32_be_aes128_x86]()
-
-    comptime if HAS_GPU:
-        suite.test[test_ctr32_le_aes128_gpu]()
-        suite.test[test_ctr32_be_aes128_gpu]()
-
+    register_platform_tests[__functions_in_module()](suite)
     suite^.run()

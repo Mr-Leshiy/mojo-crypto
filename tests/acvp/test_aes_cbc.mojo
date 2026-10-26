@@ -15,7 +15,7 @@ from tests.block_ciphers.utils import (
     AesNaiveFactory,
     AesX86Factory,
 )
-from tests.platform import HAS_AES_AARCH64, HAS_AES_X86, HAS_GPU
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -338,36 +338,5 @@ def test_aes256_cbc_mct_gpu() raises:
 
 def main() raises:
     var suite = TestSuite()
-
-    suite.test[test_aes128_cbc_aft_naive]()
-    suite.test[test_aes128_cbc_mct_naive]()
-    suite.test[test_aes192_cbc_aft_naive]()
-    suite.test[test_aes192_cbc_mct_naive]()
-    suite.test[test_aes256_cbc_aft_naive]()
-    suite.test[test_aes256_cbc_mct_naive]()
-
-    comptime if HAS_AES_AARCH64:
-        suite.test[test_aes128_cbc_aft_aarch64]()
-        suite.test[test_aes128_cbc_mct_aarch64]()
-        suite.test[test_aes192_cbc_aft_aarch64]()
-        suite.test[test_aes192_cbc_mct_aarch64]()
-        suite.test[test_aes256_cbc_aft_aarch64]()
-        suite.test[test_aes256_cbc_mct_aarch64]()
-
-    comptime if HAS_AES_X86:
-        suite.test[test_aes128_cbc_aft_x86]()
-        suite.test[test_aes128_cbc_mct_x86]()
-        suite.test[test_aes192_cbc_aft_x86]()
-        suite.test[test_aes192_cbc_mct_x86]()
-        suite.test[test_aes256_cbc_aft_x86]()
-        suite.test[test_aes256_cbc_mct_x86]()
-
-    comptime if HAS_GPU:
-        suite.test[test_aes128_cbc_aft_gpu]()
-        suite.test[test_aes128_cbc_mct_gpu]()
-        suite.test[test_aes192_cbc_aft_gpu]()
-        suite.test[test_aes192_cbc_mct_gpu]()
-        suite.test[test_aes256_cbc_aft_gpu]()
-        suite.test[test_aes256_cbc_mct_gpu]()
-
+    register_platform_tests[__functions_in_module()](suite)
     suite^.run()
