@@ -34,6 +34,9 @@ struct GcmSivTestVector(Copyable, Movable):
     var test_passed: Bool
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-SIV-1.0
+# AES-GCM-SIV only defines AFT groups (no MCT). The registration covers
+# AES-128 only.
 def parse_acvp_aes_gcm_siv_aft(
     python_vectors: PythonObject,
 ) raises -> List[GcmSivTestVector]:
@@ -122,30 +125,41 @@ def check_aes_gcm_siv_aft[
                     gcm_siv.decrypt(v.aad[:], data[:], tag)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-SIV-1.0
-# AES-GCM-SIV only defines AFT groups (no MCT). The registration covers
-# AES-128 only.
-def aes_gcm_siv_aft_vectors() raises -> List[GcmSivTestVector]:
-    return parse_acvp_aes_gcm_siv_aft(
-        load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+def test_aes128_gcm_siv_aft_naive() raises:
+    check_aes_gcm_siv_aft(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_gcm_siv_aft(
+            load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+        ),
     )
 
 
-def test_aes128_gcm_siv_aft_naive() raises:
-    check_aes_gcm_siv_aft(AesNaiveFactory[16](), aes_gcm_siv_aft_vectors())
-
-
 def test_aes128_gcm_siv_aft_aarch64() raises:
-    check_aes_gcm_siv_aft(AesAarch64Factory[16](), aes_gcm_siv_aft_vectors())
+    check_aes_gcm_siv_aft(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_gcm_siv_aft(
+            load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+        ),
+    )
 
 
 def test_aes128_gcm_siv_aft_x86() raises:
-    check_aes_gcm_siv_aft(AesX86Factory[16](), aes_gcm_siv_aft_vectors())
+    check_aes_gcm_siv_aft(
+        AesX86Factory[16](),
+        parse_acvp_aes_gcm_siv_aft(
+            load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+        ),
+    )
 
 
 def test_aes128_gcm_siv_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_gcm_siv_aft(AesGpuFactory[16](ctx), aes_gcm_siv_aft_vectors())
+        check_aes_gcm_siv_aft(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_gcm_siv_aft(
+                load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+            ),
+        )
 
 
 def main() raises:

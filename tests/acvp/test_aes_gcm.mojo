@@ -35,6 +35,9 @@ struct GcmTestVector(Copyable, Movable):
     var test_passed: Bool
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-1.0
+# AES-GCM only defines AFT groups (no MCT). The registration covers AES-128
+# only, with two (nonce, tag) byte-size combinations: (12, 16) and (15, 4).
 def parse_acvp_aes_gcm_aft(
     python_vectors: PythonObject,
 ) raises -> List[GcmTestVector]:
@@ -116,47 +119,66 @@ def check_aes_gcm_aft[
                     gcm.decrypt[TAG_SIZE](v.aad[:], data[:], tag)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-1.0
-# AES-GCM only defines AFT groups (no MCT). The registration covers AES-128
-# only, with two (nonce, tag) byte-size combinations: (12, 16) and (15, 4).
-def aes_gcm_aft_vectors() raises -> List[GcmTestVector]:
-    return parse_acvp_aes_gcm_aft(
-        load_python_acvp_vectors("ACVP-AES-GCM", "AFT")
+def test_aes128_gcm_aft_nonce12_tag16_naive() raises:
+    check_aes_gcm_aft[12, 16](
+        AesNaiveFactory[16](),
+        parse_acvp_aes_gcm_aft(load_python_acvp_vectors("ACVP-AES-GCM", "AFT")),
     )
 
 
-def test_aes128_gcm_aft_nonce12_tag16_naive() raises:
-    check_aes_gcm_aft[12, 16](AesNaiveFactory[16](), aes_gcm_aft_vectors())
-
-
 def test_aes128_gcm_aft_nonce15_tag4_naive() raises:
-    check_aes_gcm_aft[15, 4](AesNaiveFactory[16](), aes_gcm_aft_vectors())
+    check_aes_gcm_aft[15, 4](
+        AesNaiveFactory[16](),
+        parse_acvp_aes_gcm_aft(load_python_acvp_vectors("ACVP-AES-GCM", "AFT")),
+    )
 
 
 def test_aes128_gcm_aft_nonce12_tag16_aarch64() raises:
-    check_aes_gcm_aft[12, 16](AesAarch64Factory[16](), aes_gcm_aft_vectors())
+    check_aes_gcm_aft[12, 16](
+        AesAarch64Factory[16](),
+        parse_acvp_aes_gcm_aft(load_python_acvp_vectors("ACVP-AES-GCM", "AFT")),
+    )
 
 
 def test_aes128_gcm_aft_nonce15_tag4_aarch64() raises:
-    check_aes_gcm_aft[15, 4](AesAarch64Factory[16](), aes_gcm_aft_vectors())
+    check_aes_gcm_aft[15, 4](
+        AesAarch64Factory[16](),
+        parse_acvp_aes_gcm_aft(load_python_acvp_vectors("ACVP-AES-GCM", "AFT")),
+    )
 
 
 def test_aes128_gcm_aft_nonce12_tag16_x86() raises:
-    check_aes_gcm_aft[12, 16](AesX86Factory[16](), aes_gcm_aft_vectors())
+    check_aes_gcm_aft[12, 16](
+        AesX86Factory[16](),
+        parse_acvp_aes_gcm_aft(load_python_acvp_vectors("ACVP-AES-GCM", "AFT")),
+    )
 
 
 def test_aes128_gcm_aft_nonce15_tag4_x86() raises:
-    check_aes_gcm_aft[15, 4](AesX86Factory[16](), aes_gcm_aft_vectors())
+    check_aes_gcm_aft[15, 4](
+        AesX86Factory[16](),
+        parse_acvp_aes_gcm_aft(load_python_acvp_vectors("ACVP-AES-GCM", "AFT")),
+    )
 
 
 def test_aes128_gcm_aft_nonce12_tag16_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_gcm_aft[12, 16](AesGpuFactory[16](ctx), aes_gcm_aft_vectors())
+        check_aes_gcm_aft[12, 16](
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_gcm_aft(
+                load_python_acvp_vectors("ACVP-AES-GCM", "AFT")
+            ),
+        )
 
 
 def test_aes128_gcm_aft_nonce15_tag4_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_gcm_aft[15, 4](AesGpuFactory[16](ctx), aes_gcm_aft_vectors())
+        check_aes_gcm_aft[15, 4](
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_gcm_aft(
+                load_python_acvp_vectors("ACVP-AES-GCM", "AFT")
+            ),
+        )
 
 
 def main() raises:

@@ -30,6 +30,8 @@ struct CmacTestVector(Copyable, Movable):
     var test_passed: Bool
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/CMAC-AES-1.0
+# CMAC only defines AFT groups (no MCT).
 def parse_acvp_aes_cmac_aft(
     python_vectors: PythonObject,
 ) raises -> List[CmacTestVector]:
@@ -96,61 +98,97 @@ def check_aes_cmac_aft[
             assert_equal(actual_mac == v.tag, v.test_passed, msg=msg)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/CMAC-AES-1.0
-# CMAC only defines AFT groups (no MCT).
-def aes_cmac_aft_vectors() raises -> List[CmacTestVector]:
-    return parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT"))
-
-
 def test_aes128_cmac_aft_naive() raises:
-    check_aes_cmac_aft(AesNaiveFactory[16](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes192_cmac_aft_naive() raises:
-    check_aes_cmac_aft(AesNaiveFactory[24](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesNaiveFactory[24](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes256_cmac_aft_naive() raises:
-    check_aes_cmac_aft(AesNaiveFactory[32](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesNaiveFactory[32](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes128_cmac_aft_aarch64() raises:
-    check_aes_cmac_aft(AesAarch64Factory[16](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes192_cmac_aft_aarch64() raises:
-    check_aes_cmac_aft(AesAarch64Factory[24](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesAarch64Factory[24](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes256_cmac_aft_aarch64() raises:
-    check_aes_cmac_aft(AesAarch64Factory[32](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesAarch64Factory[32](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes128_cmac_aft_x86() raises:
-    check_aes_cmac_aft(AesX86Factory[16](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesX86Factory[16](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes192_cmac_aft_x86() raises:
-    check_aes_cmac_aft(AesX86Factory[24](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesX86Factory[24](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes256_cmac_aft_x86() raises:
-    check_aes_cmac_aft(AesX86Factory[32](), aes_cmac_aft_vectors())
+    check_aes_cmac_aft(
+        AesX86Factory[32](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
 
 
 def test_aes128_cmac_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cmac_aft(AesGpuFactory[16](ctx), aes_cmac_aft_vectors())
+        check_aes_cmac_aft(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_cmac_aft(
+                load_python_acvp_vectors("CMAC-AES", "AFT")
+            ),
+        )
 
 
 def test_aes192_cmac_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cmac_aft(AesGpuFactory[24](ctx), aes_cmac_aft_vectors())
+        check_aes_cmac_aft(
+            AesGpuFactory[24](ctx),
+            parse_acvp_aes_cmac_aft(
+                load_python_acvp_vectors("CMAC-AES", "AFT")
+            ),
+        )
 
 
 def test_aes256_cmac_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cmac_aft(AesGpuFactory[32](ctx), aes_cmac_aft_vectors())
+        check_aes_cmac_aft(
+            AesGpuFactory[32](ctx),
+            parse_acvp_aes_cmac_aft(
+                load_python_acvp_vectors("CMAC-AES", "AFT")
+            ),
+        )
 
 
 def main() raises:

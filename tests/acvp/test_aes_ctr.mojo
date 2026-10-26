@@ -28,6 +28,8 @@ struct CtrTestVector(Copyable, Movable):
     var ct: List[UInt8]
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
+# AES-CTR only defines AFT groups (no MCT).
 def parse_acvp_aes_ctr_aft(
     python_vectors: PythonObject,
 ) raises -> List[CtrTestVector]:
@@ -87,63 +89,97 @@ def check_aes_ctr_aft[
             assert_equal(ct, v.pt, msg=msg)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CTR-1.0
-# AES-CTR only defines AFT groups (no MCT).
-def aes_ctr_aft_vectors() raises -> List[CtrTestVector]:
-    return parse_acvp_aes_ctr_aft(
-        load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+def test_aes128_ctr_aft_naive() raises:
+    check_aes_ctr_aft(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
-def test_aes128_ctr_aft_naive() raises:
-    check_aes_ctr_aft(AesNaiveFactory[16](), aes_ctr_aft_vectors())
-
-
 def test_aes192_ctr_aft_naive() raises:
-    check_aes_ctr_aft(AesNaiveFactory[24](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesNaiveFactory[24](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes256_ctr_aft_naive() raises:
-    check_aes_ctr_aft(AesNaiveFactory[32](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesNaiveFactory[32](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes128_ctr_aft_aarch64() raises:
-    check_aes_ctr_aft(AesAarch64Factory[16](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes192_ctr_aft_aarch64() raises:
-    check_aes_ctr_aft(AesAarch64Factory[24](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesAarch64Factory[24](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes256_ctr_aft_aarch64() raises:
-    check_aes_ctr_aft(AesAarch64Factory[32](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesAarch64Factory[32](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes128_ctr_aft_x86() raises:
-    check_aes_ctr_aft(AesX86Factory[16](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesX86Factory[16](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes192_ctr_aft_x86() raises:
-    check_aes_ctr_aft(AesX86Factory[24](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesX86Factory[24](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes256_ctr_aft_x86() raises:
-    check_aes_ctr_aft(AesX86Factory[32](), aes_ctr_aft_vectors())
+    check_aes_ctr_aft(
+        AesX86Factory[32](),
+        parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
+    )
 
 
 def test_aes128_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_ctr_aft(AesGpuFactory[16](ctx), aes_ctr_aft_vectors())
+        check_aes_ctr_aft(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_ctr_aft(
+                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+            ),
+        )
 
 
 def test_aes192_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_ctr_aft(AesGpuFactory[24](ctx), aes_ctr_aft_vectors())
+        check_aes_ctr_aft(
+            AesGpuFactory[24](ctx),
+            parse_acvp_aes_ctr_aft(
+                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+            ),
+        )
 
 
 def test_aes256_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_ctr_aft(AesGpuFactory[32](ctx), aes_ctr_aft_vectors())
+        check_aes_ctr_aft(
+            AesGpuFactory[32](ctx),
+            parse_acvp_aes_ctr_aft(
+                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+            ),
+        )
 
 
 def main() raises:

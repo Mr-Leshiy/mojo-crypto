@@ -28,6 +28,7 @@ struct CbcTestVector(Copyable, Movable):
     var ct: List[UInt8]
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def parse_acvp_aes_cbc_aft(
     python_vectors: PythonObject,
 ) raises -> List[CbcTestVector]:
@@ -60,6 +61,7 @@ def parse_acvp_aes_cbc_aft(
     return vectors^
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
 def parse_acvp_aes_cbc_mct(
     python_vectors: PythonObject,
 ) raises -> List[CbcTestVector]:
@@ -148,120 +150,190 @@ def check_aes_cbc_mct[
             assert_equal(next_block, v.pt, msg=msg)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def aes_cbc_aft_vectors() raises -> List[CbcTestVector]:
-    return parse_acvp_aes_cbc_aft(
-        load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
-    )
-
-
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-CBC-1.0
-def aes_cbc_mct_vectors() raises -> List[CbcTestVector]:
-    return parse_acvp_aes_cbc_mct(
-        load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
-    )
-
-
 def test_aes128_cbc_aft_naive() raises:
-    check_aes_cbc_aft(AesNaiveFactory[16](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes128_cbc_mct_naive() raises:
-    check_aes_cbc_mct(AesNaiveFactory[16](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes192_cbc_aft_naive() raises:
-    check_aes_cbc_aft(AesNaiveFactory[24](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesNaiveFactory[24](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes192_cbc_mct_naive() raises:
-    check_aes_cbc_mct(AesNaiveFactory[24](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesNaiveFactory[24](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes256_cbc_aft_naive() raises:
-    check_aes_cbc_aft(AesNaiveFactory[32](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesNaiveFactory[32](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes256_cbc_mct_naive() raises:
-    check_aes_cbc_mct(AesNaiveFactory[32](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesNaiveFactory[32](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes128_cbc_aft_aarch64() raises:
-    check_aes_cbc_aft(AesAarch64Factory[16](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes128_cbc_mct_aarch64() raises:
-    check_aes_cbc_mct(AesAarch64Factory[16](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes192_cbc_aft_aarch64() raises:
-    check_aes_cbc_aft(AesAarch64Factory[24](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesAarch64Factory[24](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes192_cbc_mct_aarch64() raises:
-    check_aes_cbc_mct(AesAarch64Factory[24](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesAarch64Factory[24](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes256_cbc_aft_aarch64() raises:
-    check_aes_cbc_aft(AesAarch64Factory[32](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesAarch64Factory[32](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes256_cbc_mct_aarch64() raises:
-    check_aes_cbc_mct(AesAarch64Factory[32](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesAarch64Factory[32](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes128_cbc_aft_x86() raises:
-    check_aes_cbc_aft(AesX86Factory[16](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesX86Factory[16](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes128_cbc_mct_x86() raises:
-    check_aes_cbc_mct(AesX86Factory[16](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesX86Factory[16](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes192_cbc_aft_x86() raises:
-    check_aes_cbc_aft(AesX86Factory[24](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesX86Factory[24](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes192_cbc_mct_x86() raises:
-    check_aes_cbc_mct(AesX86Factory[24](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesX86Factory[24](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes256_cbc_aft_x86() raises:
-    check_aes_cbc_aft(AesX86Factory[32](), aes_cbc_aft_vectors())
+    check_aes_cbc_aft(
+        AesX86Factory[32](),
+        parse_acvp_aes_cbc_aft(load_python_acvp_vectors("ACVP-AES-CBC", "AFT")),
+    )
 
 
 def test_aes256_cbc_mct_x86() raises:
-    check_aes_cbc_mct(AesX86Factory[32](), aes_cbc_mct_vectors())
+    check_aes_cbc_mct(
+        AesX86Factory[32](),
+        parse_acvp_aes_cbc_mct(load_python_acvp_vectors("ACVP-AES-CBC", "MCT")),
+    )
 
 
 def test_aes128_cbc_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cbc_aft(AesGpuFactory[16](ctx), aes_cbc_aft_vectors())
+        check_aes_cbc_aft(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_cbc_aft(
+                load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
+            ),
+        )
 
 
 def test_aes128_cbc_mct_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cbc_mct(AesGpuFactory[16](ctx), aes_cbc_mct_vectors())
+        check_aes_cbc_mct(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_cbc_mct(
+                load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
+            ),
+        )
 
 
 def test_aes192_cbc_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cbc_aft(AesGpuFactory[24](ctx), aes_cbc_aft_vectors())
+        check_aes_cbc_aft(
+            AesGpuFactory[24](ctx),
+            parse_acvp_aes_cbc_aft(
+                load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
+            ),
+        )
 
 
 def test_aes192_cbc_mct_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cbc_mct(AesGpuFactory[24](ctx), aes_cbc_mct_vectors())
+        check_aes_cbc_mct(
+            AesGpuFactory[24](ctx),
+            parse_acvp_aes_cbc_mct(
+                load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
+            ),
+        )
 
 
 def test_aes256_cbc_aft_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cbc_aft(AesGpuFactory[32](ctx), aes_cbc_aft_vectors())
+        check_aes_cbc_aft(
+            AesGpuFactory[32](ctx),
+            parse_acvp_aes_cbc_aft(
+                load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
+            ),
+        )
 
 
 def test_aes256_cbc_mct_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes_cbc_mct(AesGpuFactory[32](ctx), aes_cbc_mct_vectors())
+        check_aes_cbc_mct(
+            AesGpuFactory[32](ctx),
+            parse_acvp_aes_cbc_mct(
+                load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
+            ),
+        )
 
 
 def main() raises:
