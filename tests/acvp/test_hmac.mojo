@@ -4,21 +4,36 @@ from std.reflection import reflect
 
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.macs import Hmac
+from mojo_crypto.hashes.sha2 import (
+    Sha224Aarch64,
+    Sha224Naive,
+    Sha224X86,
+    Sha256Aarch64,
+    Sha256Naive,
+    Sha256X86,
+    Sha384Aarch64,
+    Sha384Naive,
+    Sha384X86,
+    Sha512Aarch64,
+    Sha512Naive,
+    Sha512X86,
+    Sha512_224Aarch64,
+    Sha512_224Naive,
+    Sha512_224X86,
+    Sha512_256Aarch64,
+    Sha512_256Naive,
+    Sha512_256X86,
+)
+from mojo_crypto.hashes.sha3 import (
+    Sha3_224Naive,
+    Sha3_256Naive,
+    Sha3_384Naive,
+    Sha3_512Naive,
+)
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.hashes.utils import (
-    DigestEngine,
-    run_sha224_checks,
-    run_sha256_checks,
-    run_sha384_checks,
-    run_sha512_checks,
-    run_sha512_224_checks,
-    run_sha512_256_checks,
-    run_sha3_224_checks,
-    run_sha3_256_checks,
-    run_sha3_384_checks,
-    run_sha3_512_checks,
-)
+from tests.hashes.utils import DigestEngine
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -54,7 +69,6 @@ def parse_acvp_hmac_aft(
     return vectors^
 
 
-@__parameter
 def check_hmac_aft[T: DigestEngine](vectors: List[HmacTestVector]) raises:
     for v in vectors:
         var msg = "[Hmac[{}]], count={}".format(reflect[T].name(), v.count)
@@ -78,67 +92,163 @@ def check_hmac_aft[T: DigestEngine](vectors: List[HmacTestVector]) raises:
 # HMAC only defines AFT groups (no MCT). Keys run 8..2048 bits, so both key
 # paths are covered: shorter than the block (zero-padded) and longer than it
 # (hashed down first).
-def test_hmac_sha224_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA2-224", "AFT")
-    run_sha224_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha224_aft_naive() raises:
+    check_hmac_aft[Sha224Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-224", "AFT"))
+    )
+
+
+def test_hmac_sha224_aft_aarch64() raises:
+    check_hmac_aft[Sha224Aarch64](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-224", "AFT"))
+    )
+
+
+def test_hmac_sha224_aft_x86() raises:
+    check_hmac_aft[Sha224X86](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-224", "AFT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-256-1.0
-def test_hmac_sha256_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA2-256", "AFT")
-    run_sha256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha256_aft_naive() raises:
+    check_hmac_aft[Sha256Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-256", "AFT"))
+    )
+
+
+def test_hmac_sha256_aft_aarch64() raises:
+    check_hmac_aft[Sha256Aarch64](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-256", "AFT"))
+    )
+
+
+def test_hmac_sha256_aft_x86() raises:
+    check_hmac_aft[Sha256X86](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-256", "AFT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-384-1.0
-def test_hmac_sha384_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA2-384", "AFT")
-    run_sha384_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha384_aft_naive() raises:
+    check_hmac_aft[Sha384Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-384", "AFT"))
+    )
+
+
+def test_hmac_sha384_aft_aarch64() raises:
+    check_hmac_aft[Sha384Aarch64](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-384", "AFT"))
+    )
+
+
+def test_hmac_sha384_aft_x86() raises:
+    check_hmac_aft[Sha384X86](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-384", "AFT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-512-1.0
-def test_hmac_sha512_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA2-512", "AFT")
-    run_sha512_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha512_aft_naive() raises:
+    check_hmac_aft[Sha512Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-512", "AFT"))
+    )
+
+
+def test_hmac_sha512_aft_aarch64() raises:
+    check_hmac_aft[Sha512Aarch64](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-512", "AFT"))
+    )
+
+
+def test_hmac_sha512_aft_x86() raises:
+    check_hmac_aft[Sha512X86](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA2-512", "AFT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-512-224-1.0
-def test_hmac_sha512_224_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA2-512-224", "AFT")
-    run_sha512_224_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha512_224_aft_naive() raises:
+    check_hmac_aft[Sha512_224Naive](
+        parse_acvp_hmac_aft(
+            load_python_acvp_vectors("HMAC-SHA2-512-224", "AFT")
+        )
+    )
+
+
+def test_hmac_sha512_224_aft_aarch64() raises:
+    check_hmac_aft[Sha512_224Aarch64](
+        parse_acvp_hmac_aft(
+            load_python_acvp_vectors("HMAC-SHA2-512-224", "AFT")
+        )
+    )
+
+
+def test_hmac_sha512_224_aft_x86() raises:
+    check_hmac_aft[Sha512_224X86](
+        parse_acvp_hmac_aft(
+            load_python_acvp_vectors("HMAC-SHA2-512-224", "AFT")
+        )
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA2-512-256-1.0
-def test_hmac_sha512_256_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA2-512-256", "AFT")
-    run_sha512_256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha512_256_aft_naive() raises:
+    check_hmac_aft[Sha512_256Naive](
+        parse_acvp_hmac_aft(
+            load_python_acvp_vectors("HMAC-SHA2-512-256", "AFT")
+        )
+    )
+
+
+def test_hmac_sha512_256_aft_aarch64() raises:
+    check_hmac_aft[Sha512_256Aarch64](
+        parse_acvp_hmac_aft(
+            load_python_acvp_vectors("HMAC-SHA2-512-256", "AFT")
+        )
+    )
+
+
+def test_hmac_sha512_256_aft_x86() raises:
+    check_hmac_aft[Sha512_256X86](
+        parse_acvp_hmac_aft(
+            load_python_acvp_vectors("HMAC-SHA2-512-256", "AFT")
+        )
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-224-2.0
 # Same AFT-only shape as the HMAC-SHA2 sets (parse_acvp_hmac_aft doesn't
 # reference algorithm-specific fields), just against `-2.0` (see README for
 # why `-2.0` over `-1.0`).
-def test_hmac_sha3_224_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA3-224", "AFT")
-    run_sha3_224_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha3_224_aft_naive() raises:
+    check_hmac_aft[Sha3_224Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA3-224", "AFT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-256-2.0
-def test_hmac_sha3_256_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA3-256", "AFT")
-    run_sha3_256_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha3_256_aft_naive() raises:
+    check_hmac_aft[Sha3_256Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA3-256", "AFT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-384-2.0
-def test_hmac_sha3_384_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA3-384", "AFT")
-    run_sha3_384_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha3_384_aft_naive() raises:
+    check_hmac_aft[Sha3_384Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA3-384", "AFT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/HMAC-SHA3-512-2.0
-def test_hmac_sha3_512_aft() raises:
-    var raw = load_python_acvp_vectors("HMAC-SHA3-512", "AFT")
-    run_sha3_512_checks[check_hmac_aft](parse_acvp_hmac_aft(raw))
+def test_hmac_sha3_512_aft_naive() raises:
+    check_hmac_aft[Sha3_512Naive](
+        parse_acvp_hmac_aft(load_python_acvp_vectors("HMAC-SHA3-512", "AFT"))
+    )
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()

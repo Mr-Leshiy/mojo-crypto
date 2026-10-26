@@ -2,14 +2,23 @@ from std.testing import TestSuite, assert_equal
 
 from mojo_crypto.macs import Hmac
 from mojo_crypto.utils.hex import hex_decode, hex_encode
-
-from tests.hashes.utils import (
-    DigestEngine,
-    run_sha224_checks,
-    run_sha256_checks,
-    run_sha384_checks,
-    run_sha512_checks,
+from mojo_crypto.hashes.sha2 import (
+    Sha224Aarch64,
+    Sha224Naive,
+    Sha224X86,
+    Sha256Aarch64,
+    Sha256Naive,
+    Sha256X86,
+    Sha384Aarch64,
+    Sha384Naive,
+    Sha384X86,
+    Sha512Aarch64,
+    Sha512Naive,
+    Sha512X86,
 )
+
+from tests.hashes.utils import DigestEngine
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -44,7 +53,6 @@ def _assert_tag[
     assert_equal(hex_encode(Span(tag)[:expected_len]), expected_hex)
 
 
-@__parameter
 def check_hmac[T: DigestEngine](input: CheckInput) raises:
     """
     Reach the same tag by three routes, all of which must agree with the vector.
@@ -72,22 +80,6 @@ def check_hmac[T: DigestEngine](input: CheckInput) raises:
     after_reset.reset()
     after_reset.update(Span(data))
     _assert_tag(after_reset^.finalize(), input.expected_hex)
-
-
-def _run_rfc4231_case(vector: Rfc4231Case) raises:
-    """Check the case's four digests, on every backend available."""
-    run_sha224_checks[check_hmac](
-        CheckInput(vector.key_hex, vector.data_hex, vector.sha224_hex)
-    )
-    run_sha256_checks[check_hmac](
-        CheckInput(vector.key_hex, vector.data_hex, vector.sha256_hex)
-    )
-    run_sha384_checks[check_hmac](
-        CheckInput(vector.key_hex, vector.data_hex, vector.sha384_hex)
-    )
-    run_sha512_checks[check_hmac](
-        CheckInput(vector.key_hex, vector.data_hex, vector.sha512_hex)
-    )
 
 
 # Test vectors from RFC 4231 Section 4 (HMAC-SHA-224/256/384/512):
@@ -249,15 +241,80 @@ def _case_7() -> Rfc4231Case:
     )
 
 
-def test_rfc4231_vectors() raises:
-    _run_rfc4231_case(_case_1())
-    _run_rfc4231_case(_case_2())
-    _run_rfc4231_case(_case_3())
-    _run_rfc4231_case(_case_4())
-    _run_rfc4231_case(_case_5())
-    _run_rfc4231_case(_case_6())
-    _run_rfc4231_case(_case_7())
+def check_rfc4231[T: DigestEngine]() raises:
+    """Check every RFC 4231 case against `T`, taking the expected tag for its
+    digest size."""
+    for vector in [
+        _case_1(),
+        _case_2(),
+        _case_3(),
+        _case_4(),
+        _case_5(),
+        _case_6(),
+        _case_7(),
+    ]:
+        var expected_hex: String
+        comptime if T.OUTPUT_SIZE == 28:
+            expected_hex = vector.sha224_hex
+        elif T.OUTPUT_SIZE == 32:
+            expected_hex = vector.sha256_hex
+        elif T.OUTPUT_SIZE == 48:
+            expected_hex = vector.sha384_hex
+        else:
+            comptime assert T.OUTPUT_SIZE == 64, "no RFC 4231 tag for T"
+            expected_hex = vector.sha512_hex
+        check_hmac[T](CheckInput(vector.key_hex, vector.data_hex, expected_hex))
+
+
+def test_hmac_sha224_rfc4231_naive() raises:
+    check_rfc4231[Sha224Naive]()
+
+
+def test_hmac_sha224_rfc4231_aarch64() raises:
+    check_rfc4231[Sha224Aarch64]()
+
+
+def test_hmac_sha224_rfc4231_x86() raises:
+    check_rfc4231[Sha224X86]()
+
+
+def test_hmac_sha256_rfc4231_naive() raises:
+    check_rfc4231[Sha256Naive]()
+
+
+def test_hmac_sha256_rfc4231_aarch64() raises:
+    check_rfc4231[Sha256Aarch64]()
+
+
+def test_hmac_sha256_rfc4231_x86() raises:
+    check_rfc4231[Sha256X86]()
+
+
+def test_hmac_sha384_rfc4231_naive() raises:
+    check_rfc4231[Sha384Naive]()
+
+
+def test_hmac_sha384_rfc4231_aarch64() raises:
+    check_rfc4231[Sha384Aarch64]()
+
+
+def test_hmac_sha384_rfc4231_x86() raises:
+    check_rfc4231[Sha384X86]()
+
+
+def test_hmac_sha512_rfc4231_naive() raises:
+    check_rfc4231[Sha512Naive]()
+
+
+def test_hmac_sha512_rfc4231_aarch64() raises:
+    check_rfc4231[Sha512Aarch64]()
+
+
+def test_hmac_sha512_rfc4231_x86() raises:
+    check_rfc4231[Sha512X86]()
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()
