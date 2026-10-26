@@ -1,48 +1,33 @@
-from std.benchmark import run
 from max.gpu.host import DeviceContext
 from warp import Runtime
 
-from mojo_crypto.block_ciphers.aes import (
-    AesGpu,
-    Aes128Gpu,
-    Aes192Gpu,
-    Aes256Gpu,
-)
+from mojo_crypto.block_ciphers.aes import AesGpu
+from mojo_crypto.block_ciphers.modes import GpuCbcMode, GpuCtrMode
 
-from benchmarks.block_ciphers.aes.common import (
-    BLOCKS_4K,
-    BLOCKS_8K,
-    BLOCKS_16K,
-)
+from benchmarks.block_ciphers.aes.common import MODE, bench_engine
+from tests.block_ciphers.utils import BlockOn
 
 
-# Each iteration runs one call to completion with `runtime.block_on`,
-# so this measures a single call's latency, not throughput across concurrent
-# tasks.
+# `BlockOn` runs each call to completion with `runtime.block_on`, so this
+# measures a single call's latency, not throughput across concurrent tasks.
 def bench_cipher[
     KeySize: Int, prefix: StringLiteral
 ](mut runtime: Runtime) raises:
+    comptime C = AesGpu[KeySize]
+
     var key = Array[UInt8, KeySize](fill=0)
-    var cipher = runtime.block_on(
-        AesGpu[KeySize].create(runtime.context(), key)
-    )
+    var iv = Array[UInt8, C.BLOCK_SIZE](fill=0)
+    var cipher = runtime.block_on(C.create(runtime.context(), key))
+    var name = String(prefix, "_", MODE)
 
-    @__parameter
-    def bench[N: Int, suffix: StringLiteral]() raises:
-        var data = Array[UInt8, N](fill=0)
-
-        def do_encrypt() raises {mut data, mut runtime, mut cipher}:
-            runtime.block_on(cipher.encrypt(runtime.context(), Span(data)))
-
-        def do_decrypt() raises {mut data, mut runtime, mut cipher}:
-            runtime.block_on(cipher.decrypt(runtime.context(), Span(data)))
-
-        run(do_encrypt).print(prefix + "_encrypt_" + suffix)
-        run(do_decrypt).print(prefix + "_decrypt_" + suffix)
-
-    bench[BLOCKS_4K, "4kb"]()
-    bench[BLOCKS_8K, "8kb"]()
-    bench[BLOCKS_16K, "16kb"]()
+    comptime if MODE == "ecb":
+        bench_engine(BlockOn(runtime, cipher^), name)
+    elif MODE == "cbc":
+        bench_engine(BlockOn(runtime, GpuCbcMode[C](cipher^, iv^)), name)
+    elif MODE == "ctr":
+        bench_engine(BlockOn(runtime, GpuCtrMode[C](cipher^, iv^)), name)
+    else:
+        comptime assert False, "MODE must be one of: ecb, cbc, ctr"
 
 
 def main() raises:
