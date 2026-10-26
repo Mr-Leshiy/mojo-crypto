@@ -27,6 +27,76 @@ comptime AsyncBlockCipherEngine = (
     & Deinitable
 )
 
+# Which AES backends the current build can run. A test suite registers the
+# tests of a backend only when its flag is set: the hardware backends are
+# compiled in only for their target, and without an accelerator the GPU
+# kernels cannot even be compiled.
+comptime HAS_AES_AARCH64 = target_triple_contains_any(
+    ["aarch64", "arm64"]
+) and has_target_feature["aes"]()
+comptime HAS_AES_X86 = target_triple_contains_any(
+    ["x86_64"]
+) and has_target_feature["aes"]()
+comptime HAS_AES_GPU = has_accelerator()
+
+
+trait AesFactory:
+    """Creates the AES ciphers of one backend and key size, so that a check
+    can be written once and run against every backend."""
+
+    comptime KEY_SIZE: Int
+    comptime Cipher: BlockCipherEngine
+
+    def create(self, key: Array[UInt8, Self.KEY_SIZE]) raises -> Self.Cipher:
+        ...
+
+
+@fieldwise_init
+struct AesNaiveFactory[KeySize: Int](AesFactory):
+    comptime KEY_SIZE: Int = Self.KeySize
+    comptime Cipher = AesNaive[Self.KeySize]
+
+    def create(self, key: Array[UInt8, Self.KEY_SIZE]) raises -> Self.Cipher:
+        return Self.Cipher(key)
+
+
+@fieldwise_init
+struct AesAarch64Factory[KeySize: Int](AesFactory):
+    comptime KEY_SIZE: Int = Self.KeySize
+    comptime Cipher = AesAarch64[Self.KeySize]
+
+    def create(self, key: Array[UInt8, Self.KEY_SIZE]) raises -> Self.Cipher:
+        return Self.Cipher(key)
+
+
+@fieldwise_init
+struct AesX86Factory[KeySize: Int](AesFactory):
+    comptime KEY_SIZE: Int = Self.KeySize
+    comptime Cipher = AesX86[Self.KeySize]
+
+    def create(self, key: Array[UInt8, Self.KEY_SIZE]) raises -> Self.Cipher:
+        return Self.Cipher(key)
+
+
+struct AesGpuFactory[KeySize: Int](AesFactory):
+    """Creates GPU ciphers on the given device, each wrapped in `BlockOn` so
+    that the sync checks can run against it."""
+
+    comptime KEY_SIZE: Int = Self.KeySize
+    comptime Cipher = BlockOn[AesGpu[Self.KeySize]]
+
+    var _runtime: Runtime
+
+    def __init__(out self, ctx: DeviceContext):
+        self._runtime = Runtime(ctx)
+
+    def create(self, key: Array[UInt8, Self.KEY_SIZE]) raises -> Self.Cipher:
+        var runtime = self._runtime.copy()
+        var cipher = runtime.block_on(
+            AesGpu[Self.KeySize].create(runtime.context(), key)
+        )
+        return BlockOn(runtime, cipher^)
+
 
 struct BlockOn[
     Engine: AsyncBlockCipherEncryptable
@@ -70,9 +140,7 @@ def run_aes_checks[
         cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
     ](TestInput) raises capturing[_],
 ](input: TestInput) raises:
-    comptime if target_triple_contains_any(
-        ["aarch64", "arm64"]
-    ) and has_target_feature["aes"]():
+    comptime if HAS_AES_AARCH64:
 
         @__parameter
         def aes_aarch64[
@@ -84,9 +152,7 @@ def run_aes_checks[
         check[aes_aarch64[24]](input)
         check[aes_aarch64[32]](input)
 
-    comptime if target_triple_contains_any(["x86_64"]) and has_target_feature[
-        "aes"
-    ]():
+    comptime if HAS_AES_X86:
 
         @__parameter
         def aes_x86[
@@ -110,7 +176,7 @@ def run_aes_checks[
 
     # Compile-time guard: without an accelerator the GPU kernels cannot even
     # be compiled, so skipping at runtime is not enough.
-    comptime if has_accelerator():
+    comptime if HAS_AES_GPU:
         with DeviceContext() as ctx:
             var runtime = Runtime(ctx)
 
