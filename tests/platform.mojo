@@ -15,9 +15,7 @@ from mojo_crypto.utils import target_triple_contains_any, has_target_feature
 comptime IS_AARCH64 = target_triple_contains_any(["aarch64", "arm64"])
 comptime IS_X86_64 = target_triple_contains_any(["x86_64"])
 comptime HAS_GPU = has_accelerator()
-
-comptime HAS_AES_AARCH64 = IS_AARCH64 and has_target_feature["aes"]()
-comptime HAS_AES_X86 = IS_X86_64 and has_target_feature["aes"]()
+comptime HAS_AES = has_target_feature["aes"]()
 
 
 def register_platform_tests[test_funcs: Tuple, /](mut suite: TestSuite):
@@ -26,15 +24,20 @@ def register_platform_tests[test_funcs: Tuple, /](mut suite: TestSuite):
     the current build cannot run.
 
     A test is backend-specific when its name ends in `_aarch64`, `_x86` or
-    `_gpu`, and is registered only when `HAS_AES_AARCH64`, `HAS_AES_X86` or
-    `HAS_GPU` respectively is set. Every listed function is still compiled, so
-    each backend's code must compile on any build.
+    `_gpu`, and is registered only when `IS_AARCH64`, `IS_X86_64` or `HAS_GPU`
+    respectively is set. An `_aarch64` or `_x86` test whose name contains `aes`
+    runs the hardware AES instructions, so it also needs `HAS_AES`. Every listed
+    function is still compiled, so each backend's code must compile on any
+    build.
     """
     comptime for i in range(len(test_funcs)):
         comptime name = get_function_name[test_funcs[i]]()
+        comptime is_aarch64 = name.endswith("_aarch64")
+        comptime is_x86 = name.endswith("_x86")
         comptime if name.startswith("test_") and (
-            (HAS_AES_AARCH64 or not name.endswith("_aarch64"))
-            and (HAS_AES_X86 or not name.endswith("_x86"))
+            (IS_AARCH64 or not is_aarch64)
+            and (IS_X86_64 or not is_x86)
             and (HAS_GPU or not name.endswith("_gpu"))
+            and (HAS_AES or not ((is_aarch64 or is_x86) and "aes" in name))
         ):
             suite.test[rebind[def() raises thin -> None](test_funcs[i])]()
