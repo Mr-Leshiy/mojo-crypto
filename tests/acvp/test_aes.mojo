@@ -1,5 +1,6 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
+from max.gpu.host import DeviceContext
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_array
@@ -7,9 +8,13 @@ from mojo_crypto.utils.hex import hex_decode
 
 from tests.acvp.utils import load_python_acvp_vectors
 from tests.block_ciphers.utils import (
-    run_aes_checks,
-    BlockCipherEngine,
+    AesFactory,
+    AesAarch64Factory,
+    AesGpuFactory,
+    AesNaiveFactory,
+    AesX86Factory,
 )
+from tests.platform import register_platform_tests
 
 
 # Dedicated to the ECB AFT/MCT vectors only: no iv/aad/tag/test_passed
@@ -23,6 +28,7 @@ struct EcbTestVector(Copyable, Movable):
     var ct: List[UInt8]
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def parse_acvp_aes_ecb_aft(
     python_vectors: PythonObject,
 ) raises -> List[EcbTestVector]:
@@ -54,6 +60,7 @@ def parse_acvp_aes_ecb_aft(
     return vectors^
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
 def parse_acvp_aes_ecb_mct(
     python_vectors: PythonObject,
 ) raises -> List[EcbTestVector]:
@@ -79,18 +86,15 @@ def parse_acvp_aes_ecb_mct(
 
 
 def check_aes_ecb_aft[
-    C: BlockCipherEngine,
-    KeySize: Int,
-    //,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: List[EcbTestVector]) raises:
+    F: AesFactory
+](factory: F, vectors: List[EcbTestVector]) raises:
     for v in vectors:
-        if len(v.key) != KeySize:
+        if len(v.key) != F.KEY_SIZE:
             continue
 
-        var msg = "[{}], count={}".format(reflect[C].name(), v.count)
+        var msg = "[{}], count={}".format(reflect[F.Cipher].name(), v.count)
 
-        var cipher = cipher_init(to_array[KeySize](v.key))
+        var cipher = factory.create(to_array[F.KEY_SIZE](v.key))
 
         var pt = v.pt.copy()
         cipher.encrypt(pt[:])
@@ -102,49 +106,218 @@ def check_aes_ecb_aft[
 
 
 def check_aes_ecb_mct[
-    C: BlockCipherEngine,
-    KeySize: Int,
-    //,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: List[EcbTestVector]) raises:
+    F: AesFactory
+](factory: F, vectors: List[EcbTestVector]) raises:
     # Number of inner iterations per MCT outer loop, as specified in AESAVS section 6.4.1:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/AESAVS.pdf
     comptime MCT_INNER_ITERATIONS: Int = 1000
 
     for v in vectors:
-        if len(v.key) != KeySize:
+        if len(v.key) != F.KEY_SIZE:
             continue
 
         var block = v.pt.copy() if v.is_encrypt else v.ct.copy()
         var expected = v.ct.copy() if v.is_encrypt else v.pt.copy()
-        var key = to_array[KeySize](v.key)
+        var key = to_array[F.KEY_SIZE](v.key)
 
-        var cipher = cipher_init(key)
+        var cipher = factory.create(key)
         for _ in range(MCT_INNER_ITERATIONS):
             if v.is_encrypt:
                 cipher.encrypt(block[:])
             else:
                 cipher.decrypt(block[:])
 
-        var msg = "[{}], count={}".format(reflect[C].name(), v.count)
+        var msg = "[{}], count={}".format(reflect[F.Cipher].name(), v.count)
         assert_equal(block, expected, msg=msg)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_aft() raises:
-    var vectors = parse_acvp_aes_ecb_aft(
-        load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
+def test_aes128_ecb_aft_naive() raises:
+    check_aes_ecb_aft(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
     )
-    run_aes_checks[List[EcbTestVector], check_aes_ecb_aft](vectors)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-ECB-1.0
-def test_aes_mct() raises:
-    var vectors = parse_acvp_aes_ecb_mct(
-        load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
+def test_aes128_ecb_mct_naive() raises:
+    check_aes_ecb_mct(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
     )
-    run_aes_checks[List[EcbTestVector], check_aes_ecb_mct](vectors)
+
+
+def test_aes192_ecb_aft_naive() raises:
+    check_aes_ecb_aft(
+        AesNaiveFactory[24](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes192_ecb_mct_naive() raises:
+    check_aes_ecb_mct(
+        AesNaiveFactory[24](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes256_ecb_aft_naive() raises:
+    check_aes_ecb_aft(
+        AesNaiveFactory[32](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes256_ecb_mct_naive() raises:
+    check_aes_ecb_mct(
+        AesNaiveFactory[32](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes128_ecb_aft_aarch64() raises:
+    check_aes_ecb_aft(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes128_ecb_mct_aarch64() raises:
+    check_aes_ecb_mct(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes192_ecb_aft_aarch64() raises:
+    check_aes_ecb_aft(
+        AesAarch64Factory[24](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes192_ecb_mct_aarch64() raises:
+    check_aes_ecb_mct(
+        AesAarch64Factory[24](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes256_ecb_aft_aarch64() raises:
+    check_aes_ecb_aft(
+        AesAarch64Factory[32](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes256_ecb_mct_aarch64() raises:
+    check_aes_ecb_mct(
+        AesAarch64Factory[32](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes128_ecb_aft_x86() raises:
+    check_aes_ecb_aft(
+        AesX86Factory[16](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes128_ecb_mct_x86() raises:
+    check_aes_ecb_mct(
+        AesX86Factory[16](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes192_ecb_aft_x86() raises:
+    check_aes_ecb_aft(
+        AesX86Factory[24](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes192_ecb_mct_x86() raises:
+    check_aes_ecb_mct(
+        AesX86Factory[24](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes256_ecb_aft_x86() raises:
+    check_aes_ecb_aft(
+        AesX86Factory[32](),
+        parse_acvp_aes_ecb_aft(load_python_acvp_vectors("ACVP-AES-ECB", "AFT")),
+    )
+
+
+def test_aes256_ecb_mct_x86() raises:
+    check_aes_ecb_mct(
+        AesX86Factory[32](),
+        parse_acvp_aes_ecb_mct(load_python_acvp_vectors("ACVP-AES-ECB", "MCT")),
+    )
+
+
+def test_aes128_ecb_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ecb_aft(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_ecb_aft(
+                load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
+            ),
+        )
+
+
+def test_aes128_ecb_mct_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ecb_mct(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_ecb_mct(
+                load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
+            ),
+        )
+
+
+def test_aes192_ecb_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ecb_aft(
+            AesGpuFactory[24](ctx),
+            parse_acvp_aes_ecb_aft(
+                load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
+            ),
+        )
+
+
+def test_aes192_ecb_mct_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ecb_mct(
+            AesGpuFactory[24](ctx),
+            parse_acvp_aes_ecb_mct(
+                load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
+            ),
+        )
+
+
+def test_aes256_ecb_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ecb_aft(
+            AesGpuFactory[32](ctx),
+            parse_acvp_aes_ecb_aft(
+                load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
+            ),
+        )
+
+
+def test_aes256_ecb_mct_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ecb_mct(
+            AesGpuFactory[32](ctx),
+            parse_acvp_aes_ecb_mct(
+                load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
+            ),
+        )
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()

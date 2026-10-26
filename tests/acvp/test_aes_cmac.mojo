@@ -1,5 +1,6 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
+from max.gpu.host import DeviceContext
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_array
@@ -7,7 +8,14 @@ from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.macs import Cmac
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
+from tests.block_ciphers.utils import (
+    AesFactory,
+    AesAarch64Factory,
+    AesGpuFactory,
+    AesNaiveFactory,
+    AesX86Factory,
+)
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -22,6 +30,8 @@ struct CmacTestVector(Copyable, Movable):
     var test_passed: Bool
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/CMAC-AES-1.0
+# CMAC only defines AFT groups (no MCT).
 def parse_acvp_aes_cmac_aft(
     python_vectors: PythonObject,
 ) raises -> List[CmacTestVector]:
@@ -61,18 +71,17 @@ def parse_acvp_aes_cmac_aft(
 
 
 def check_aes_cmac_aft[
-    C: BlockCipherEngine,
-    KeySize: Int,
-    //,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: List[CmacTestVector]) raises:
+    F: AesFactory
+](factory: F, vectors: List[CmacTestVector]) raises:
     for v in vectors:
-        if len(v.key) != KeySize:
+        if len(v.key) != F.KEY_SIZE:
             continue
 
-        var msg = "[Cmac[{}]], count={}".format(reflect[C].name(), v.count)
+        var msg = "[Cmac[{}]], count={}".format(
+            reflect[F.Cipher].name(), v.count
+        )
 
-        var cmac = Cmac[C](cipher_init(to_array[KeySize](v.key)))
+        var cmac = Cmac[F.Cipher](factory.create(to_array[F.KEY_SIZE](v.key)))
         cmac.update(v.pt[:])
         var full_tag = cmac^.finalize()
 
@@ -89,14 +98,100 @@ def check_aes_cmac_aft[
             assert_equal(actual_mac == v.tag, v.test_passed, msg=msg)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/CMAC-AES-1.0
-# CMAC only defines AFT groups (no MCT).
-def test_aes_cmac_aft() raises:
-    var raw = load_python_acvp_vectors("CMAC-AES", "AFT")
-    run_aes_checks[List[CmacTestVector], check_aes_cmac_aft](
-        parse_acvp_aes_cmac_aft(raw)
+def test_aes128_cmac_aft_naive() raises:
+    check_aes_cmac_aft(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
     )
 
 
+def test_aes192_cmac_aft_naive() raises:
+    check_aes_cmac_aft(
+        AesNaiveFactory[24](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes256_cmac_aft_naive() raises:
+    check_aes_cmac_aft(
+        AesNaiveFactory[32](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes128_cmac_aft_aarch64() raises:
+    check_aes_cmac_aft(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes192_cmac_aft_aarch64() raises:
+    check_aes_cmac_aft(
+        AesAarch64Factory[24](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes256_cmac_aft_aarch64() raises:
+    check_aes_cmac_aft(
+        AesAarch64Factory[32](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes128_cmac_aft_x86() raises:
+    check_aes_cmac_aft(
+        AesX86Factory[16](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes192_cmac_aft_x86() raises:
+    check_aes_cmac_aft(
+        AesX86Factory[24](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes256_cmac_aft_x86() raises:
+    check_aes_cmac_aft(
+        AesX86Factory[32](),
+        parse_acvp_aes_cmac_aft(load_python_acvp_vectors("CMAC-AES", "AFT")),
+    )
+
+
+def test_aes128_cmac_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cmac_aft(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_cmac_aft(
+                load_python_acvp_vectors("CMAC-AES", "AFT")
+            ),
+        )
+
+
+def test_aes192_cmac_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cmac_aft(
+            AesGpuFactory[24](ctx),
+            parse_acvp_aes_cmac_aft(
+                load_python_acvp_vectors("CMAC-AES", "AFT")
+            ),
+        )
+
+
+def test_aes256_cmac_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cmac_aft(
+            AesGpuFactory[32](ctx),
+            parse_acvp_aes_cmac_aft(
+                load_python_acvp_vectors("CMAC-AES", "AFT")
+            ),
+        )
+
+
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()

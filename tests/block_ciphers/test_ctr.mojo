@@ -1,14 +1,19 @@
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
+from max.gpu.host import DeviceContext
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.block_ciphers.modes import CtrMode
 
 from tests.block_ciphers.utils import (
-    run_aes_checks,
-    BlockCipherEngine,
+    AesFactory,
+    AesAarch64Factory,
+    AesGpuFactory,
+    AesNaiveFactory,
+    AesX86Factory,
 )
+from tests.platform import register_platform_tests
 
 # Width in bytes of the incrementing counter field (CTR-32).
 comptime CTR_SIZE: Int = 4
@@ -17,7 +22,6 @@ comptime CTR_SIZE: Int = 4
 @fieldwise_init
 struct CtrTestVector(Copyable, Movable):
     var name: String
-    var big_endian: Bool
     var key: List[UInt8]
     var iv: List[UInt8]
     var pt: List[UInt8]
@@ -25,42 +29,29 @@ struct CtrTestVector(Copyable, Movable):
 
 
 def check_ctr[
-    C: BlockCipherEngine,
-    KeySize: Int,
-    //,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: List[CtrTestVector]) raises:
+    F: AesFactory, //, BIG_ENDIAN: Bool
+](factory: F, vectors: List[CtrTestVector]) raises:
+    comptime CTR = CtrMode[F.Cipher, CTR_SIZE, BIG_ENDIAN=BIG_ENDIAN]
     for v in vectors:
-        if len(v.key) != KeySize:
-            continue
+        var msg = "[CtrMode[{}]], {}".format(reflect[F.Cipher].name(), v.name)
 
-        var msg = "[CtrMode[{}]], {}".format(reflect[C].name(), v.name)
-
-        var key = to_array[KeySize](v.key)
-        var iv = to_array[C.BLOCK_SIZE](v.iv)
+        var key = to_array[F.KEY_SIZE](v.key)
+        var iv = to_array[F.Cipher.BLOCK_SIZE](v.iv)
 
         var pt = v.pt.copy()
-        var ct = v.ct.copy()
-        if v.big_endian:
-            comptime CTR = CtrMode[C, CTR_SIZE, BIG_ENDIAN=True]
-            var enc = CTR(cipher_init(key), iv.copy())
-            enc.encrypt(pt[:])
-            var dec = CTR(cipher_init(key), iv^)
-            dec.decrypt(ct[:])
-        else:
-            comptime CTR = CtrMode[C, CTR_SIZE, BIG_ENDIAN=False]
-            var enc = CTR(cipher_init(key), iv.copy())
-            enc.encrypt(pt[:])
-            var dec = CTR(cipher_init(key), iv^)
-            dec.decrypt(ct[:])
+        var enc = CTR(factory.create(key), iv.copy())
+        enc.encrypt(pt[:])
         assert_equal(pt, v.ct, msg=msg)
+
+        var ct = v.ct.copy()
+        var dec = CTR(factory.create(key), iv^)
+        dec.decrypt(ct[:])
         assert_equal(ct, v.pt, msg=msg)
 
 
 # Reference vectors from RustCrypto `block-modes`:
 # https://github.com/RustCrypto/block-modes/blob/master/ctr/tests/ctr32/le.rs
-# https://github.com/RustCrypto/block-modes/blob/master/ctr/tests/ctr32/be.rs
-def ctr32_vectors() raises -> List[CtrTestVector]:
+def ctr32_le_aes128_vectors() raises -> List[CtrTestVector]:
     var key = hex_decode("000102030405060708090A0B0C0D0E0F")
     var zeros = List[UInt8](length=64, fill=0)
     var ones = List[UInt8](length=64, fill=1)
@@ -68,7 +59,6 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
         # `counter_incr`: encrypting 64 zero bytes yields the raw keystream.
         CtrTestVector(
             name="le counter_incr",
-            big_endian=False,
             key=key.copy(),
             iv=hex_decode("11111111111111111111111111111191"),
             pt=zeros.copy(),
@@ -82,7 +72,6 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
         # `keystream_xor`: encrypting 64 bytes of 0x01 yields keystream XOR 0x01.
         CtrTestVector(
             name="le keystream_xor",
-            big_endian=False,
             key=key.copy(),
             iv=hex_decode("11111111111111111111111111111191"),
             pt=ones.copy(),
@@ -98,7 +87,6 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
         # without the carry escaping into the nonce.
         CtrTestVector(
             name="le counter_wrap",
-            big_endian=False,
             key=key.copy(),
             iv=hex_decode("FEFFFFFF2222222222222222222222A2"),
             pt=zeros.copy(),
@@ -109,9 +97,18 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
                 + "55DD5B0B130ED87096FE01B59A665A60"
             ),
         ),
+    ]
+
+
+# Reference vectors from RustCrypto `block-modes`:
+# https://github.com/RustCrypto/block-modes/blob/master/ctr/tests/ctr32/be.rs
+def ctr32_be_aes128_vectors() raises -> List[CtrTestVector]:
+    var key = hex_decode("000102030405060708090A0B0C0D0E0F")
+    var zeros = List[UInt8](length=64, fill=0)
+    var ones = List[UInt8](length=64, fill=1)
+    return [
         CtrTestVector(
             name="be counter_incr",
-            big_endian=True,
             key=key.copy(),
             iv=hex_decode("11111111111111111111111111111111"),
             pt=zeros.copy(),
@@ -124,7 +121,6 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
         ),
         CtrTestVector(
             name="be keystream_xor",
-            big_endian=True,
             key=key.copy(),
             iv=hex_decode("11111111111111111111111111111111"),
             pt=ones.copy(),
@@ -138,7 +134,6 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
         # `counter_wrap`: NONCE2 starts the BE counter at 0xFFFFFFFE.
         CtrTestVector(
             name="be counter_wrap",
-            big_endian=True,
             key=key.copy(),
             iv=hex_decode("222222222222222222222222FFFFFFFE"),
             pt=zeros.copy(),
@@ -152,10 +147,51 @@ def ctr32_vectors() raises -> List[CtrTestVector]:
     ]
 
 
-def test_ctr_32_aes() raises:
-    var vectors = ctr32_vectors()
-    run_aes_checks[List[CtrTestVector], check_ctr](vectors)
+def test_ctr32_le_aes128_naive() raises:
+    check_ctr[BIG_ENDIAN=False](
+        AesNaiveFactory[16](), ctr32_le_aes128_vectors()
+    )
+
+
+def test_ctr32_be_aes128_naive() raises:
+    check_ctr[BIG_ENDIAN=True](AesNaiveFactory[16](), ctr32_be_aes128_vectors())
+
+
+def test_ctr32_le_aes128_aarch64() raises:
+    check_ctr[BIG_ENDIAN=False](
+        AesAarch64Factory[16](), ctr32_le_aes128_vectors()
+    )
+
+
+def test_ctr32_be_aes128_aarch64() raises:
+    check_ctr[BIG_ENDIAN=True](
+        AesAarch64Factory[16](), ctr32_be_aes128_vectors()
+    )
+
+
+def test_ctr32_le_aes128_x86() raises:
+    check_ctr[BIG_ENDIAN=False](AesX86Factory[16](), ctr32_le_aes128_vectors())
+
+
+def test_ctr32_be_aes128_x86() raises:
+    check_ctr[BIG_ENDIAN=True](AesX86Factory[16](), ctr32_be_aes128_vectors())
+
+
+def test_ctr32_le_aes128_gpu() raises:
+    with DeviceContext() as ctx:
+        check_ctr[BIG_ENDIAN=False](
+            AesGpuFactory[16](ctx), ctr32_le_aes128_vectors()
+        )
+
+
+def test_ctr32_be_aes128_gpu() raises:
+    with DeviceContext() as ctx:
+        check_ctr[BIG_ENDIAN=True](
+            AesGpuFactory[16](ctx), ctr32_be_aes128_vectors()
+        )
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()

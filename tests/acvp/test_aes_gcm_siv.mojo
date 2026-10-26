@@ -1,5 +1,6 @@
 from std.testing import assert_equal, assert_raises, TestSuite
 from std.python import PythonObject
+from max.gpu.host import DeviceContext
 from std.reflection import reflect
 
 from mojo_crypto.utils import to_array
@@ -8,7 +9,14 @@ from mojo_crypto.universal_hashes.polyval import PolyvalNaive
 from mojo_crypto.aead.gcm_siv import GcmSiv
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import run_aes_checks, BlockCipherEngine
+from tests.block_ciphers.utils import (
+    AesFactory,
+    AesAarch64Factory,
+    AesGpuFactory,
+    AesNaiveFactory,
+    AesX86Factory,
+)
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -26,6 +34,9 @@ struct GcmSivTestVector(Copyable, Movable):
     var test_passed: Bool
 
 
+# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-SIV-1.0
+# AES-GCM-SIV only defines AFT groups (no MCT). The registration covers
+# AES-128 only.
 def parse_acvp_aes_gcm_siv_aft(
     python_vectors: PythonObject,
 ) raises -> List[GcmSivTestVector]:
@@ -61,18 +72,21 @@ def parse_acvp_aes_gcm_siv_aft(
 
 
 def check_aes_gcm_siv_aft[
-    C: BlockCipherEngine,
-    KeySize: Int,
-    //,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
-](vectors: List[GcmSivTestVector]) raises:
+    F: AesFactory
+](factory: F, vectors: List[GcmSivTestVector]) raises:
     # GCM-SIV (RFC 8452) fixes the nonce at 96 bits and the tag at 128 bits.
     comptime NONCE_SIZE = 12
     comptime TAG_SIZE = GcmSiv.TAG_SIZE
 
+    # GCM-SIV derives its subkeys through a fresh cipher, so it takes a cipher
+    # constructor rather than a cipher.
+    @__parameter
+    def cipher_init(key: Array[UInt8, F.KEY_SIZE]) raises -> F.Cipher:
+        return factory.create(key)
+
     for v in vectors:
         if (
-            len(v.key) != KeySize
+            len(v.key) != F.KEY_SIZE
             or len(v.iv) != NONCE_SIZE
             or len(v.ct) < TAG_SIZE
         ):
@@ -84,23 +98,25 @@ def check_aes_gcm_siv_aft[
         var cipher_len = len(v.ct) - TAG_SIZE
         var cipher_body = List[UInt8](v.ct[:cipher_len])
 
-        var msg = "[GcmSiv[{}]], count={}".format(reflect[C].name(), v.count)
-        var key = to_array[KeySize](v.key)
+        var msg = "[GcmSiv[{}]], count={}".format(
+            reflect[F.Cipher].name(), v.count
+        )
+        var key = to_array[F.KEY_SIZE](v.key)
         var nonce = to_array[NONCE_SIZE](v.iv)
         var tag = to_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
             var data = v.pt.copy()
-            var gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
-                key, nonce
-            )
+            var gcm_siv = GcmSiv[F.Cipher, PolyvalNaive].create[
+                F.KEY_SIZE, cipher_init
+            ](key, nonce)
             var actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, cipher_body, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
             var data = cipher_body.copy()
-            var gcm_siv = GcmSiv[C, PolyvalNaive].create[KeySize, cipher_init](
-                key, nonce
-            )
+            var gcm_siv = GcmSiv[F.Cipher, PolyvalNaive].create[
+                F.KEY_SIZE, cipher_init
+            ](key, nonce)
             if v.test_passed:
                 gcm_siv.decrypt(v.aad[:], data[:], tag)
                 assert_equal(data, v.pt, msg=msg)
@@ -109,14 +125,44 @@ def check_aes_gcm_siv_aft[
                     gcm_siv.decrypt(v.aad[:], data[:], tag)
 
 
-# https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ACVP-AES-GCM-SIV-1.0
-# AES-GCM-SIV only defines AFT groups (no MCT).
-def test_aes_gcm_siv_aft() raises:
-    var raw = load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
-    run_aes_checks[List[GcmSivTestVector], check_aes_gcm_siv_aft](
-        parse_acvp_aes_gcm_siv_aft(raw)
+def test_aes128_gcm_siv_aft_naive() raises:
+    check_aes_gcm_siv_aft(
+        AesNaiveFactory[16](),
+        parse_acvp_aes_gcm_siv_aft(
+            load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+        ),
     )
 
 
+def test_aes128_gcm_siv_aft_aarch64() raises:
+    check_aes_gcm_siv_aft(
+        AesAarch64Factory[16](),
+        parse_acvp_aes_gcm_siv_aft(
+            load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+        ),
+    )
+
+
+def test_aes128_gcm_siv_aft_x86() raises:
+    check_aes_gcm_siv_aft(
+        AesX86Factory[16](),
+        parse_acvp_aes_gcm_siv_aft(
+            load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+        ),
+    )
+
+
+def test_aes128_gcm_siv_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_gcm_siv_aft(
+            AesGpuFactory[16](ctx),
+            parse_acvp_aes_gcm_siv_aft(
+                load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
+            ),
+        )
+
+
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()
