@@ -5,18 +5,18 @@ from std.reflection import reflect
 
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.utils import to_list
+from mojo_crypto.hashes.sha3 import (
+    Sha3_224Naive,
+    Sha3_256Naive,
+    Sha3_384Naive,
+    Sha3_512Naive,
+    Shake128Naive,
+    Shake256Naive,
+)
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.hashes.utils import (
-    DigestEngine,
-    XofEngine,
-    run_sha3_224_checks,
-    run_sha3_256_checks,
-    run_sha3_384_checks,
-    run_sha3_512_checks,
-    run_shake128_checks,
-    run_shake256_checks,
-)
+from tests.hashes.utils import DigestEngine, XofEngine
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -85,7 +85,6 @@ def parse_acvp_sha3_mct(
     return vectors^
 
 
-@__parameter
 def check_sha3_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -111,7 +110,6 @@ def check_sha3_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
 # digest is always exactly one seed-width wide, so "standard" and
 # "alternate" behave identically in practice — the normalization is a
 # no-op — but both are implemented since the registration allows either.
-@__parameter
 def check_sha3_mct[T: DigestEngine](vectors: List[MctTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -215,7 +213,6 @@ def parse_acvp_shake_mct(
     return vectors^
 
 
-@__parameter
 def check_shake_test[T: XofEngine](vectors: List[XofTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -246,7 +243,6 @@ def check_shake_test[T: XofEngine](vectors: List[XofTestVector]) raises:
 #     Output MD[1000] (checkpoint j); SEED = MD[1000]
 # Unlike SHA-3's MCT, the output length itself changes every one of the
 # 1000 inner rounds, driven by the digest that round just produced.
-@__parameter
 def check_shake_mct[T: XofEngine](vectors: List[ShakeMctTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -283,93 +279,115 @@ def check_shake_mct[T: XofEngine](vectors: List[ShakeMctTestVector]) raises:
 # message across the downloaded SHA3-*-2.0 sets is 1 GiB, which the naive
 # backend (the only one SHA-3 has today) is far too slow to hash in a test
 # run.
-def test_sha3_224_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-224", "AFT")
-    run_sha3_224_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
+def test_sha3_224_aft_naive() raises:
+    check_sha3_aft[Sha3_224Naive](
+        parse_acvp_sha3_aft(load_python_acvp_vectors("SHA3-224", "AFT"))
+    )
 
 
-def test_sha3_224_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-224", "MCT")
-    run_sha3_224_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
+def test_sha3_224_mct_naive() raises:
+    check_sha3_mct[Sha3_224Naive](
+        parse_acvp_sha3_mct(load_python_acvp_vectors("SHA3-224", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-256-2.0
-def test_sha3_256_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-256", "AFT")
-    run_sha3_256_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
+def test_sha3_256_aft_naive() raises:
+    check_sha3_aft[Sha3_256Naive](
+        parse_acvp_sha3_aft(load_python_acvp_vectors("SHA3-256", "AFT"))
+    )
 
 
-def test_sha3_256_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-256", "MCT")
-    run_sha3_256_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
+def test_sha3_256_mct_naive() raises:
+    check_sha3_mct[Sha3_256Naive](
+        parse_acvp_sha3_mct(load_python_acvp_vectors("SHA3-256", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-384-2.0
-def test_sha3_384_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-384", "AFT")
-    run_sha3_384_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
+def test_sha3_384_aft_naive() raises:
+    check_sha3_aft[Sha3_384Naive](
+        parse_acvp_sha3_aft(load_python_acvp_vectors("SHA3-384", "AFT"))
+    )
 
 
-def test_sha3_384_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-384", "MCT")
-    run_sha3_384_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
+def test_sha3_384_mct_naive() raises:
+    check_sha3_mct[Sha3_384Naive](
+        parse_acvp_sha3_mct(load_python_acvp_vectors("SHA3-384", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA3-512-2.0
-def test_sha3_512_aft() raises:
-    var raw = load_python_acvp_vectors("SHA3-512", "AFT")
-    run_sha3_512_checks[check_sha3_aft](parse_acvp_sha3_aft(raw))
+def test_sha3_512_aft_naive() raises:
+    check_sha3_aft[Sha3_512Naive](
+        parse_acvp_sha3_aft(load_python_acvp_vectors("SHA3-512", "AFT"))
+    )
 
 
-def test_sha3_512_mct() raises:
-    var raw = load_python_acvp_vectors("SHA3-512", "MCT")
-    run_sha3_512_checks[check_sha3_mct](parse_acvp_sha3_mct(raw))
+def test_sha3_512_mct_naive() raises:
+    check_sha3_mct[Sha3_512Naive](
+        parse_acvp_sha3_mct(load_python_acvp_vectors("SHA3-512", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-128-1.0
-def test_shake128_aft() raises:
-    var raw = load_python_acvp_vectors("SHAKE-128-1.0", "AFT")
-    run_shake128_checks[check_shake_test](parse_acvp_shake_test(raw))
+def test_shake128_aft_naive() raises:
+    check_shake_test[Shake128Naive](
+        parse_acvp_shake_test(load_python_acvp_vectors("SHAKE-128-1.0", "AFT"))
+    )
 
 
-def test_shake128_vot() raises:
-    var raw = load_python_acvp_vectors("SHAKE-128-1.0", "VOT")
-    run_shake128_checks[check_shake_test](parse_acvp_shake_test(raw))
+def test_shake128_vot_naive() raises:
+    check_shake_test[Shake128Naive](
+        parse_acvp_shake_test(load_python_acvp_vectors("SHAKE-128-1.0", "VOT"))
+    )
 
 
-def test_shake128_mct() raises:
-    var raw = load_python_acvp_vectors("SHAKE-128-1.0", "MCT")
-    run_shake128_checks[check_shake_mct](parse_acvp_shake_mct(raw))
+def test_shake128_mct_naive() raises:
+    check_shake_mct[Shake128Naive](
+        parse_acvp_shake_mct(load_python_acvp_vectors("SHAKE-128-1.0", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-256-1.0
-def test_shake256_aft() raises:
-    var raw = load_python_acvp_vectors("SHAKE-256-1.0", "AFT")
-    run_shake256_checks[check_shake_test](parse_acvp_shake_test(raw))
+def test_shake256_aft_naive() raises:
+    check_shake_test[Shake256Naive](
+        parse_acvp_shake_test(load_python_acvp_vectors("SHAKE-256-1.0", "AFT"))
+    )
 
 
-def test_shake256_vot() raises:
-    var raw = load_python_acvp_vectors("SHAKE-256-1.0", "VOT")
-    run_shake256_checks[check_shake_test](parse_acvp_shake_test(raw))
+def test_shake256_vot_naive() raises:
+    check_shake_test[Shake256Naive](
+        parse_acvp_shake_test(load_python_acvp_vectors("SHAKE-256-1.0", "VOT"))
+    )
 
 
-def test_shake256_mct() raises:
-    var raw = load_python_acvp_vectors("SHAKE-256-1.0", "MCT")
-    run_shake256_checks[check_shake_mct](parse_acvp_shake_mct(raw))
+def test_shake256_mct_naive() raises:
+    check_shake_mct[Shake256Naive](
+        parse_acvp_shake_mct(load_python_acvp_vectors("SHAKE-256-1.0", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-128-FIPS202
 # Byte-aligned-only revision: AFT is the only group type it defines.
-def test_shake128_fips202_aft() raises:
-    var raw = load_python_acvp_vectors("SHAKE-128-FIPS202", "AFT")
-    run_shake128_checks[check_shake_test](parse_acvp_shake_test(raw))
+def test_shake128_fips202_aft_naive() raises:
+    check_shake_test[Shake128Naive](
+        parse_acvp_shake_test(
+            load_python_acvp_vectors("SHAKE-128-FIPS202", "AFT")
+        )
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHAKE-256-FIPS202
-def test_shake256_fips202_aft() raises:
-    var raw = load_python_acvp_vectors("SHAKE-256-FIPS202", "AFT")
-    run_shake256_checks[check_shake_test](parse_acvp_shake_test(raw))
+def test_shake256_fips202_aft_naive() raises:
+    check_shake_test[Shake256Naive](
+        parse_acvp_shake_test(
+            load_python_acvp_vectors("SHAKE-256-FIPS202", "AFT")
+        )
+    )
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()

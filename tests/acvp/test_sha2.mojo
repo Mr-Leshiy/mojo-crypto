@@ -5,17 +5,30 @@ from std.reflection import reflect
 
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.utils import to_array, to_list
+from mojo_crypto.hashes.sha2 import (
+    Sha224Aarch64,
+    Sha224Naive,
+    Sha224X86,
+    Sha256Aarch64,
+    Sha256Naive,
+    Sha256X86,
+    Sha384Aarch64,
+    Sha384Naive,
+    Sha384X86,
+    Sha512Aarch64,
+    Sha512Naive,
+    Sha512X86,
+    Sha512_224Aarch64,
+    Sha512_224Naive,
+    Sha512_224X86,
+    Sha512_256Aarch64,
+    Sha512_256Naive,
+    Sha512_256X86,
+)
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.hashes.utils import (
-    DigestEngine,
-    run_sha224_checks,
-    run_sha256_checks,
-    run_sha384_checks,
-    run_sha512_checks,
-    run_sha512_224_checks,
-    run_sha512_256_checks,
-)
+from tests.hashes.utils import DigestEngine
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -85,7 +98,6 @@ def parse_acvp_sha2_mct(
     return vectors^
 
 
-@__parameter
 def check_sha2_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -111,7 +123,6 @@ def check_sha2_aft[T: DigestEngine](vectors: List[HashTestVector]) raises:
 #         allows byte-granular lengths >= 1720 bits).
 #       MD = SHA(MSG); A = B; B = C; C = MD
 #     Output MD (checkpoint j); SEED = MD
-@__parameter
 def check_sha2_mct[T: DigestEngine](vectors: List[MctTestVector]) raises:
     for v in vectors:
         var msg = "[{}], count={}".format(reflect[T].name(), v.count)
@@ -159,70 +170,228 @@ def check_sha2_mct[T: DigestEngine](vectors: List[MctTestVector]) raises:
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-224-1.0
-def test_sha224_aft() raises:
-    var raw = load_python_acvp_vectors("SHA2-224", "AFT")
-    run_sha224_checks[check_sha2_aft](parse_acvp_sha2_aft(raw))
+def test_sha224_aft_naive() raises:
+    check_sha2_aft[Sha224Naive](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-224", "AFT"))
+    )
 
 
-def test_sha224_mct() raises:
-    var raw = load_python_acvp_vectors("SHA2-224", "MCT")
-    run_sha224_checks[check_sha2_mct](parse_acvp_sha2_mct(raw))
+def test_sha224_aft_aarch64() raises:
+    check_sha2_aft[Sha224Aarch64](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-224", "AFT"))
+    )
+
+
+def test_sha224_aft_x86() raises:
+    check_sha2_aft[Sha224X86](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-224", "AFT"))
+    )
+
+
+def test_sha224_mct_naive() raises:
+    check_sha2_mct[Sha224Naive](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-224", "MCT"))
+    )
+
+
+def test_sha224_mct_aarch64() raises:
+    check_sha2_mct[Sha224Aarch64](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-224", "MCT"))
+    )
+
+
+def test_sha224_mct_x86() raises:
+    check_sha2_mct[Sha224X86](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-224", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-256-1.0
-def test_sha256_aft() raises:
-    var raw = load_python_acvp_vectors("SHA2-256", "AFT")
-    run_sha256_checks[check_sha2_aft](parse_acvp_sha2_aft(raw))
+def test_sha256_aft_naive() raises:
+    check_sha2_aft[Sha256Naive](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-256", "AFT"))
+    )
 
 
-def test_sha256_mct() raises:
-    var raw = load_python_acvp_vectors("SHA2-256", "MCT")
-    run_sha256_checks[check_sha2_mct](parse_acvp_sha2_mct(raw))
+def test_sha256_aft_aarch64() raises:
+    check_sha2_aft[Sha256Aarch64](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-256", "AFT"))
+    )
+
+
+def test_sha256_aft_x86() raises:
+    check_sha2_aft[Sha256X86](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-256", "AFT"))
+    )
+
+
+def test_sha256_mct_naive() raises:
+    check_sha2_mct[Sha256Naive](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-256", "MCT"))
+    )
+
+
+def test_sha256_mct_aarch64() raises:
+    check_sha2_mct[Sha256Aarch64](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-256", "MCT"))
+    )
+
+
+def test_sha256_mct_x86() raises:
+    check_sha2_mct[Sha256X86](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-256", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-384-1.0
-def test_sha384_aft() raises:
-    var raw = load_python_acvp_vectors("SHA2-384", "AFT")
-    run_sha384_checks[check_sha2_aft](parse_acvp_sha2_aft(raw))
+def test_sha384_aft_naive() raises:
+    check_sha2_aft[Sha384Naive](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-384", "AFT"))
+    )
 
 
-def test_sha384_mct() raises:
-    var raw = load_python_acvp_vectors("SHA2-384", "MCT")
-    run_sha384_checks[check_sha2_mct](parse_acvp_sha2_mct(raw))
+def test_sha384_aft_aarch64() raises:
+    check_sha2_aft[Sha384Aarch64](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-384", "AFT"))
+    )
+
+
+def test_sha384_aft_x86() raises:
+    check_sha2_aft[Sha384X86](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-384", "AFT"))
+    )
+
+
+def test_sha384_mct_naive() raises:
+    check_sha2_mct[Sha384Naive](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-384", "MCT"))
+    )
+
+
+def test_sha384_mct_aarch64() raises:
+    check_sha2_mct[Sha384Aarch64](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-384", "MCT"))
+    )
+
+
+def test_sha384_mct_x86() raises:
+    check_sha2_mct[Sha384X86](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-384", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-512-1.0
-def test_sha512_aft() raises:
-    var raw = load_python_acvp_vectors("SHA2-512", "AFT")
-    run_sha512_checks[check_sha2_aft](parse_acvp_sha2_aft(raw))
+def test_sha512_aft_naive() raises:
+    check_sha2_aft[Sha512Naive](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512", "AFT"))
+    )
 
 
-def test_sha512_mct() raises:
-    var raw = load_python_acvp_vectors("SHA2-512", "MCT")
-    run_sha512_checks[check_sha2_mct](parse_acvp_sha2_mct(raw))
+def test_sha512_aft_aarch64() raises:
+    check_sha2_aft[Sha512Aarch64](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512", "AFT"))
+    )
+
+
+def test_sha512_aft_x86() raises:
+    check_sha2_aft[Sha512X86](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512", "AFT"))
+    )
+
+
+def test_sha512_mct_naive() raises:
+    check_sha2_mct[Sha512Naive](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512", "MCT"))
+    )
+
+
+def test_sha512_mct_aarch64() raises:
+    check_sha2_mct[Sha512Aarch64](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512", "MCT"))
+    )
+
+
+def test_sha512_mct_x86() raises:
+    check_sha2_mct[Sha512X86](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-512-224-1.0
-def test_sha512_224_aft() raises:
-    var raw = load_python_acvp_vectors("SHA2-512-224", "AFT")
-    run_sha512_224_checks[check_sha2_aft](parse_acvp_sha2_aft(raw))
+def test_sha512_224_aft_naive() raises:
+    check_sha2_aft[Sha512_224Naive](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512-224", "AFT"))
+    )
 
 
-def test_sha512_224_mct() raises:
-    var raw = load_python_acvp_vectors("SHA2-512-224", "MCT")
-    run_sha512_224_checks[check_sha2_mct](parse_acvp_sha2_mct(raw))
+def test_sha512_224_aft_aarch64() raises:
+    check_sha2_aft[Sha512_224Aarch64](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512-224", "AFT"))
+    )
+
+
+def test_sha512_224_aft_x86() raises:
+    check_sha2_aft[Sha512_224X86](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512-224", "AFT"))
+    )
+
+
+def test_sha512_224_mct_naive() raises:
+    check_sha2_mct[Sha512_224Naive](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512-224", "MCT"))
+    )
+
+
+def test_sha512_224_mct_aarch64() raises:
+    check_sha2_mct[Sha512_224Aarch64](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512-224", "MCT"))
+    )
+
+
+def test_sha512_224_mct_x86() raises:
+    check_sha2_mct[Sha512_224X86](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512-224", "MCT"))
+    )
 
 
 # https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/SHA2-512-256-1.0
-def test_sha512_256_aft() raises:
-    var raw = load_python_acvp_vectors("SHA2-512-256", "AFT")
-    run_sha512_256_checks[check_sha2_aft](parse_acvp_sha2_aft(raw))
+def test_sha512_256_aft_naive() raises:
+    check_sha2_aft[Sha512_256Naive](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512-256", "AFT"))
+    )
 
 
-def test_sha512_256_mct() raises:
-    var raw = load_python_acvp_vectors("SHA2-512-256", "MCT")
-    run_sha512_256_checks[check_sha2_mct](parse_acvp_sha2_mct(raw))
+def test_sha512_256_aft_aarch64() raises:
+    check_sha2_aft[Sha512_256Aarch64](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512-256", "AFT"))
+    )
+
+
+def test_sha512_256_aft_x86() raises:
+    check_sha2_aft[Sha512_256X86](
+        parse_acvp_sha2_aft(load_python_acvp_vectors("SHA2-512-256", "AFT"))
+    )
+
+
+def test_sha512_256_mct_naive() raises:
+    check_sha2_mct[Sha512_256Naive](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512-256", "MCT"))
+    )
+
+
+def test_sha512_256_mct_aarch64() raises:
+    check_sha2_mct[Sha512_256Aarch64](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512-256", "MCT"))
+    )
+
+
+def test_sha512_256_mct_x86() raises:
+    check_sha2_mct[Sha512_256X86](
+        parse_acvp_sha2_mct(load_python_acvp_vectors("SHA2-512-256", "MCT"))
+    )
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()
