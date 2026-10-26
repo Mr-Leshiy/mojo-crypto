@@ -1,7 +1,5 @@
 from std.testing import assert_equal, TestSuite
-from std.sys.info import CompilationTarget
 
-from mojo_crypto.utils import target_triple_contains_any
 from mojo_crypto.utils.hex import hex_decode
 from mojo_crypto.universal_hashes.traits import UniversalHashable
 from mojo_crypto.universal_hashes.ghash import (
@@ -11,7 +9,11 @@ from mojo_crypto.universal_hashes.ghash import (
 )
 from mojo_crypto.universal_hashes.ghash.generic import _mulx
 
+from tests.platform import register_platform_tests
 
+
+# Test vectors for GHASH from RFC 8452 Appendix A
+# <https://tools.ietf.org/html/rfc8452#appendix-A>
 def check_ghash_test_vector[
     T: UniversalHashable & Movable & Deinitable
 ]() raises:
@@ -29,16 +31,16 @@ def check_ghash_test_vector[
     )
 
 
-# Test vectors for GHASH from RFC 8452 Appendix A
-# <https://tools.ietf.org/html/rfc8452#appendix-A>
-def test_ghash_test_vector() raises:
+def test_ghash_rfc8452_naive() raises:
     check_ghash_test_vector[GHashNaive]()
 
-    comptime if target_triple_contains_any(["aarch64", "arm64"]):
-        check_ghash_test_vector[GHashAarch64]()
 
-    comptime if target_triple_contains_any(["x86_64"]):
-        check_ghash_test_vector[GHashX86]()
+def test_ghash_rfc8452_aarch64() raises:
+    check_ghash_test_vector[GHashAarch64]()
+
+
+def test_ghash_rfc8452_x86() raises:
+    check_ghash_test_vector[GHashX86]()
 
 
 # Test vector given in RFC 8452 Appendix A.
@@ -198,4 +200,6 @@ def test_fe_mulx() raises:
 
 
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    var suite = TestSuite()
+    register_platform_tests[__functions_in_module()](suite)
+    suite^.run()
