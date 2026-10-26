@@ -1,5 +1,6 @@
 from std.testing import assert_equal, TestSuite
 from std.reflection import reflect
+from max.gpu.host import DeviceContext
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
@@ -12,8 +13,9 @@ from tests.block_ciphers.factories.aes import (
 from tests.block_ciphers.factories.ctr import (
     CtrFactory,
     CtrModeFactory,
+    GpuCtrModeFactory,
 )
-from tests.platform import register_platform_tests
+from tests.platform import HAS_GPU, register_platform_tests
 
 # Width in bytes of the incrementing counter field (CTR-32).
 comptime CTR_SIZE: Int = 4
@@ -186,13 +188,29 @@ def test_ctr32_be_aes128_x86() raises:
     )
 
 
-# The GPU-backed CTR tests are disabled until
-# https://github.com/modular/modular/issues/7368 is fixed. Every function in
-# this module is compiled even when it is not registered, so they cannot just
-# be left unregistered. Restore them with `GpuCtrModeFactory`.
+def test_ctr32_le_aes128_gpu() raises:
+    with DeviceContext() as ctx:
+        check_ctr(
+            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=False](ctx),
+            ctr32_le_aes128_vectors(),
+        )
+
+
+def test_ctr32_be_aes128_gpu() raises:
+    with DeviceContext() as ctx:
+        check_ctr(
+            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=True](ctx),
+            ctr32_be_aes128_vectors(),
+        )
 
 
 def main() raises:
     var suite = TestSuite()
     register_platform_tests[__functions_in_module()](suite)
+    comptime if HAS_GPU:
+        suite.skip[test_ctr32_le_aes128_gpu]()
+        suite.skip[test_ctr32_be_aes128_gpu]()
+        # Skipped until https://github.com/modular/modular/issues/7368 is
+        # fixed. The GPU tests are only registered when `HAS_GPU` is set, and
+        # skipping an unregistered test is an error.
     suite^.run()

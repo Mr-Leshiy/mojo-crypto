@@ -1,6 +1,7 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
+from max.gpu.host import DeviceContext
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
@@ -14,8 +15,9 @@ from tests.block_ciphers.factories.aes import (
 from tests.block_ciphers.factories.ctr import (
     CtrFactory,
     CtrModeFactory,
+    GpuCtrModeFactory,
 )
-from tests.platform import register_platform_tests
+from tests.platform import HAS_GPU, register_platform_tests
 
 
 @fieldwise_init
@@ -150,13 +152,44 @@ def test_aes256_ctr_aft_x86() raises:
     )
 
 
-# The GPU-backed CTR tests are disabled until
-# https://github.com/modular/modular/issues/7368 is fixed. Every function in
-# this module is compiled even when it is not registered, so they cannot just
-# be left unregistered. Restore them with `GpuCtrModeFactory`.
+def test_aes128_ctr_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ctr_aft(
+            GpuCtrModeFactory[16](ctx),
+            parse_acvp_aes_ctr_aft(
+                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+            ),
+        )
+
+
+def test_aes192_ctr_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ctr_aft(
+            GpuCtrModeFactory[24](ctx),
+            parse_acvp_aes_ctr_aft(
+                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+            ),
+        )
+
+
+def test_aes256_ctr_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_ctr_aft(
+            GpuCtrModeFactory[32](ctx),
+            parse_acvp_aes_ctr_aft(
+                load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
+            ),
+        )
 
 
 def main() raises:
     var suite = TestSuite()
     register_platform_tests[__functions_in_module()](suite)
+    comptime if HAS_GPU:
+        suite.skip[test_aes128_ctr_aft_gpu]()
+        suite.skip[test_aes192_ctr_aft_gpu]()
+        suite.skip[test_aes256_ctr_aft_gpu]()
+        # Skipped until https://github.com/modular/modular/issues/7368 is
+        # fixed. The GPU tests are only registered when `HAS_GPU` is set, and
+        # skipping an unregistered test is an error.
     suite^.run()

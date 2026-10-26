@@ -1,6 +1,7 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
 from std.reflection import reflect
+from max.gpu.host import DeviceContext
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
@@ -14,8 +15,9 @@ from tests.block_ciphers.factories.aes import (
 from tests.block_ciphers.factories.cbc import (
     CbcFactory,
     CbcModeFactory,
+    GpuCbcModeFactory,
 )
-from tests.platform import register_platform_tests
+from tests.platform import HAS_GPU, register_platform_tests
 
 
 @fieldwise_init
@@ -272,13 +274,77 @@ def test_aes256_cbc_mct_x86() raises:
     )
 
 
-# The GPU-backed CBC tests are disabled until
-# https://github.com/modular/modular/issues/7368 is fixed. Every function in
-# this module is compiled even when it is not registered, so they cannot just
-# be left unregistered. Restore them with `GpuCbcModeFactory`.
+def test_aes128_cbc_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cbc_aft(
+            GpuCbcModeFactory[16](ctx),
+            parse_acvp_aes_cbc_aft(
+                load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
+            ),
+        )
+
+
+def test_aes128_cbc_mct_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cbc_mct(
+            GpuCbcModeFactory[16](ctx),
+            parse_acvp_aes_cbc_mct(
+                load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
+            ),
+        )
+
+
+def test_aes192_cbc_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cbc_aft(
+            GpuCbcModeFactory[24](ctx),
+            parse_acvp_aes_cbc_aft(
+                load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
+            ),
+        )
+
+
+def test_aes192_cbc_mct_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cbc_mct(
+            GpuCbcModeFactory[24](ctx),
+            parse_acvp_aes_cbc_mct(
+                load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
+            ),
+        )
+
+
+def test_aes256_cbc_aft_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cbc_aft(
+            GpuCbcModeFactory[32](ctx),
+            parse_acvp_aes_cbc_aft(
+                load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
+            ),
+        )
+
+
+def test_aes256_cbc_mct_gpu() raises:
+    with DeviceContext() as ctx:
+        check_aes_cbc_mct(
+            GpuCbcModeFactory[32](ctx),
+            parse_acvp_aes_cbc_mct(
+                load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
+            ),
+        )
 
 
 def main() raises:
     var suite = TestSuite()
     register_platform_tests[__functions_in_module()](suite)
+    comptime if HAS_GPU:
+        suite.skip[test_aes128_cbc_aft_gpu]()
+        suite.skip[test_aes128_cbc_mct_gpu]()
+        suite.skip[test_aes192_cbc_aft_gpu]()
+        suite.skip[test_aes192_cbc_mct_gpu]()
+        suite.skip[test_aes256_cbc_aft_gpu]()
+        suite.skip[test_aes256_cbc_mct_gpu]()
+        # Skipped until https://github.com/modular/modular/issues/7368 is
+        # fixed. The GPU tests are only registered when `HAS_GPU` is set, and
+        # skipping an unregistered test is an error.
     suite^.run()
