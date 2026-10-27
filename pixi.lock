@@ -107,7 +107,7 @@ environments:
       - conda: https://conda.modular.com/max-nightly/noarch/mblack-26.7.0.dev2026101305-release.conda
       - conda: https://conda.modular.com/max-nightly/noarch/mojo-python-1.2.0.dev2026101305-release.conda
       - conda_source: mojo-crypto[2f15c67c] @ .
-      - conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+      - conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
       - pypi: https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4b/89/90600d5b873c2f0e63f4f8494821dbc6c7c0bec18149006f203c532f676e/pymodo-0.11.13-py3-none-any.whl
@@ -195,7 +195,7 @@ environments:
       - conda: https://conda.modular.com/max-nightly/noarch/mblack-26.7.0.dev2026101305-release.conda
       - conda: https://conda.modular.com/max-nightly/noarch/mojo-python-1.2.0.dev2026101305-release.conda
       - conda_source: mojo-crypto[1c671f34] @ .
-      - conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+      - conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
       - pypi: https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4b/89/90600d5b873c2f0e63f4f8494821dbc6c7c0bec18149006f203c532f676e/pymodo-0.11.13-py3-none-any.whl
@@ -272,7 +272,7 @@ environments:
       - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-1.2.0.dev2026101305-release.conda
       - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-compiler-1.2.0.dev2026101305-release.conda
       - conda_source: mojo-crypto[34cca7fe] @ .
-      - conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+      - conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
       - pypi: https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4b/89/90600d5b873c2f0e63f4f8494821dbc6c7c0bec18149006f203c532f676e/pymodo-0.11.13-py3-none-any.whl
@@ -2945,7 +2945,7 @@ packages:
   - conda: https://conda.modular.com/max-nightly/linux-aarch64/mojo-compiler-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mblack-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mojo-python-1.2.0.dev2026101305-release.conda
-  - conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+  - conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
   host_packages:
   - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-20_gnu.conda
   - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/bzip2-1.0.8-h4777abc_10.conda
@@ -3017,7 +3017,7 @@ packages:
   - conda: https://conda.modular.com/max-nightly/linux-aarch64/mojo-compiler-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mblack-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mojo-python-1.2.0.dev2026101305-release.conda
-  - conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+  - conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
 - conda_source: mojo-crypto[2f15c67c] @ .
   variants:
     target_platform: linux-64
@@ -3098,7 +3098,7 @@ packages:
   - conda: https://conda.modular.com/max-nightly/linux-64/mojo-compiler-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mblack-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mojo-python-1.2.0.dev2026101305-release.conda
-  - conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+  - conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
   host_packages:
   - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   - conda: https://conda.anaconda.org/conda-forge/linux-64/bzip2-1.0.8-hda65f42_10.conda
@@ -3169,7 +3169,7 @@ packages:
   - conda: https://conda.modular.com/max-nightly/linux-64/mojo-compiler-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mblack-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mojo-python-1.2.0.dev2026101305-release.conda
-  - conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+  - conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
 - conda_source: mojo-crypto[34cca7fe] @ .
   variants:
     target_platform: osx-arm64
@@ -3247,7 +3247,7 @@ packages:
   - conda: https://conda.modular.com/max-nightly/osx-arm64/max-core-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-compiler-1.2.0.dev2026101305-release.conda
-  - conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+  - conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
   host_packages:
   - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
   - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
@@ -3315,8 +3315,8 @@ packages:
   - conda: https://conda.modular.com/max-nightly/osx-arm64/max-core-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-compiler-1.2.0.dev2026101305-release.conda
-  - conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
-- conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+  - conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
+- conda_source: warp[23d9161f] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
   version: 0.1.0
   build: h60d57d3_0
   subdir: osx-arm64
@@ -3458,7 +3458,7 @@ packages:
   - conda: https://conda.modular.com/max-nightly/osx-arm64/max-core-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/osx-arm64/mojo-compiler-1.2.0.dev2026101305-release.conda
-- conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+- conda_source: warp[c92dc701] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
   version: 0.1.0
   build: he8cfe8b_0
   subdir: linux-aarch64
@@ -3608,7 +3608,7 @@ packages:
   - conda: https://conda.modular.com/max-nightly/linux-aarch64/mojo-compiler-1.2.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mblack-26.7.0.dev2026101305-release.conda
   - conda: https://conda.modular.com/max-nightly/noarch/mojo-python-1.2.0.dev2026101305-release.conda
-- conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#d6d65f982dc980613abed35de4daba1ca573e462
+- conda_source: warp[d0b8bc30] @ git+https://github.com/mr-leshiy/warp?branch=main#2cd09f167778fe0bd9b5b0856d4600eec2d2bbef
   version: 0.1.0
   build: hb0f4dca_0
   subdir: linux-64
