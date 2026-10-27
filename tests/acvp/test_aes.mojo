@@ -7,7 +7,7 @@ from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import (
+from tests.block_ciphers.factories.aes import (
     AesFactory,
     AesAarch64Factory,
     AesGpuFactory,

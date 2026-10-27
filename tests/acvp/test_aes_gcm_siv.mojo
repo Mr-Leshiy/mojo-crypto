@@ -9,7 +9,7 @@ from mojo_crypto.universal_hashes.polyval import PolyvalNaive
 from mojo_crypto.aead.gcm_siv import GcmSiv
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import (
+from tests.block_ciphers.factories.aes import (
     AesFactory,
     AesAarch64Factory,
     AesGpuFactory,

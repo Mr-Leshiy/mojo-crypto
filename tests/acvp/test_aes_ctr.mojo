@@ -1,21 +1,23 @@
 from std.testing import assert_equal, TestSuite
 from std.python import PythonObject
-from max.gpu.host import DeviceContext
 from std.reflection import reflect
+from max.gpu.host import DeviceContext
 
 from mojo_crypto.utils import to_array
 from mojo_crypto.utils.hex import hex_decode
-from mojo_crypto.block_ciphers.modes import CtrMode
 
 from tests.acvp.utils import load_python_acvp_vectors
-from tests.block_ciphers.utils import (
-    AesFactory,
+from tests.block_ciphers.factories.aes import (
     AesAarch64Factory,
-    AesGpuFactory,
     AesNaiveFactory,
     AesX86Factory,
 )
-from tests.platform import register_platform_tests
+from tests.block_ciphers.factories.ctr import (
+    CtrFactory,
+    CtrModeFactory,
+    GpuCtrModeFactory,
+)
+from tests.platform import HAS_GPU, register_platform_tests
 
 
 @fieldwise_init
@@ -64,90 +66,88 @@ def parse_acvp_aes_ctr_aft(
 
 
 def check_aes_ctr_aft[
-    F: AesFactory
+    F: CtrFactory
 ](factory: F, vectors: List[CtrTestVector]) raises:
     for v in vectors:
         if len(v.key) != F.KEY_SIZE:
             continue
 
-        var msg = "[CtrMode[{}]], count={}".format(
-            reflect[F.Cipher].name(), v.count
-        )
+        var msg = "[{}], count={}".format(reflect[F.Mode].name(), v.count)
 
         var key = to_array[F.KEY_SIZE](v.key)
-        var iv = to_array[F.Cipher.BLOCK_SIZE](v.iv)
+        var iv = to_array[F.BLOCK_SIZE](v.iv)
 
         if v.is_encrypt:
             var pt = v.pt.copy()
-            var ctr = CtrMode[F.Cipher](factory.create(key), iv^)
+            var ctr = factory.create(key, iv^)
             ctr.encrypt(pt[:])
             assert_equal(pt, v.ct, msg=msg)
         else:
             var ct = v.ct.copy()
-            var ctr = CtrMode[F.Cipher](factory.create(key), iv^)
+            var ctr = factory.create(key, iv^)
             ctr.decrypt(ct[:])
             assert_equal(ct, v.pt, msg=msg)
 
 
 def test_aes128_ctr_aft_naive() raises:
     check_aes_ctr_aft(
-        AesNaiveFactory[16](),
+        CtrModeFactory(AesNaiveFactory[16]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes192_ctr_aft_naive() raises:
     check_aes_ctr_aft(
-        AesNaiveFactory[24](),
+        CtrModeFactory(AesNaiveFactory[24]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes256_ctr_aft_naive() raises:
     check_aes_ctr_aft(
-        AesNaiveFactory[32](),
+        CtrModeFactory(AesNaiveFactory[32]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes128_ctr_aft_aarch64() raises:
     check_aes_ctr_aft(
-        AesAarch64Factory[16](),
+        CtrModeFactory(AesAarch64Factory[16]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes192_ctr_aft_aarch64() raises:
     check_aes_ctr_aft(
-        AesAarch64Factory[24](),
+        CtrModeFactory(AesAarch64Factory[24]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes256_ctr_aft_aarch64() raises:
     check_aes_ctr_aft(
-        AesAarch64Factory[32](),
+        CtrModeFactory(AesAarch64Factory[32]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes128_ctr_aft_x86() raises:
     check_aes_ctr_aft(
-        AesX86Factory[16](),
+        CtrModeFactory(AesX86Factory[16]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes192_ctr_aft_x86() raises:
     check_aes_ctr_aft(
-        AesX86Factory[24](),
+        CtrModeFactory(AesX86Factory[24]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
 
 def test_aes256_ctr_aft_x86() raises:
     check_aes_ctr_aft(
-        AesX86Factory[32](),
+        CtrModeFactory(AesX86Factory[32]()),
         parse_acvp_aes_ctr_aft(load_python_acvp_vectors("ACVP-AES-CTR", "AFT")),
     )
 
@@ -155,7 +155,7 @@ def test_aes256_ctr_aft_x86() raises:
 def test_aes128_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ctr_aft(
-            AesGpuFactory[16](ctx),
+            GpuCtrModeFactory[16](ctx),
             parse_acvp_aes_ctr_aft(
                 load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
             ),
@@ -165,7 +165,7 @@ def test_aes128_ctr_aft_gpu() raises:
 def test_aes192_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ctr_aft(
-            AesGpuFactory[24](ctx),
+            GpuCtrModeFactory[24](ctx),
             parse_acvp_aes_ctr_aft(
                 load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
             ),
@@ -175,7 +175,7 @@ def test_aes192_ctr_aft_gpu() raises:
 def test_aes256_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ctr_aft(
-            AesGpuFactory[32](ctx),
+            GpuCtrModeFactory[32](ctx),
             parse_acvp_aes_ctr_aft(
                 load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
             ),
@@ -185,4 +185,11 @@ def test_aes256_ctr_aft_gpu() raises:
 def main() raises:
     var suite = TestSuite()
     register_platform_tests[__functions_in_module()](suite)
+    comptime if HAS_GPU:
+        suite.skip[test_aes128_ctr_aft_gpu]()
+        suite.skip[test_aes192_ctr_aft_gpu]()
+        suite.skip[test_aes256_ctr_aft_gpu]()
+        # Skipped until https://github.com/modular/modular/issues/7368 is
+        # fixed. The GPU tests are only registered when `HAS_GPU` is set, and
+        # skipping an unregistered test is an error.
     suite^.run()
