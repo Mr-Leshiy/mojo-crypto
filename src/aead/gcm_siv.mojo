@@ -89,9 +89,9 @@ struct GcmSiv[
 
     @staticmethod
     def create[
-        KEY_SIZE: Int,
-        cipher_init: def(Array[UInt8, KEY_SIZE]) raises capturing[_] -> Self.C,
+        KEY_SIZE: Int, //
     ](
+        cipher_init: Some[def(Array[UInt8, KEY_SIZE]) raises -> Self.C],
         key_generating_key: Array[UInt8, KEY_SIZE],
         nonce: Array[UInt8, Self.NONCE_SIZE],
     ) raises -> Self:

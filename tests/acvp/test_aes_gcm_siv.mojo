@@ -80,8 +80,9 @@ def check_aes_gcm_siv_aft[
 
     # GCM-SIV derives its subkeys through a fresh cipher, so it takes a cipher
     # constructor rather than a cipher.
-    @__parameter
-    def cipher_init(key: Array[UInt8, F.KEY_SIZE]) raises -> F.Cipher:
+    def cipher_init(
+        key: Array[UInt8, F.KEY_SIZE]
+    ) raises {imm factory} -> F.Cipher:
         return factory.create(key)
 
     for v in vectors:
@@ -106,17 +107,17 @@ def check_aes_gcm_siv_aft[
         var tag = to_array[TAG_SIZE](List[UInt8](v.ct[cipher_len:]))
         if v.is_encrypt:
             var data = v.pt.copy()
-            var gcm_siv = GcmSiv[F.Cipher, PolyvalNaive].create[
-                F.KEY_SIZE, cipher_init
-            ](key, nonce)
+            var gcm_siv = GcmSiv[F.Cipher, PolyvalNaive].create(
+                cipher_init, key, nonce
+            )
             var actual_tag = gcm_siv.encrypt[TAG_SIZE](v.aad[:], data[:])
             assert_equal(data, cipher_body, msg=msg)
             assert_equal(actual_tag, tag, msg=msg)
         else:
             var data = cipher_body.copy()
-            var gcm_siv = GcmSiv[F.Cipher, PolyvalNaive].create[
-                F.KEY_SIZE, cipher_init
-            ](key, nonce)
+            var gcm_siv = GcmSiv[F.Cipher, PolyvalNaive].create(
+                cipher_init, key, nonce
+            )
             if v.test_passed:
                 gcm_siv.decrypt(v.aad[:], data[:], tag)
                 assert_equal(data, v.pt, msg=msg)
