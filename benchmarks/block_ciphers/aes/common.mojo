@@ -20,8 +20,7 @@ comptime MODE = get_defined_string["MODE", "ecb"]()
 def bench_engine[
     E: BlockCipherEncryptable & BlockCipherDecryptable & Deinitable
 ](var engine: E, name: String) raises:
-    @__parameter
-    def bench[N: Int, suffix: StringLiteral]() raises:
+    def bench[N: Int, suffix: StringLiteral]() raises {mut engine, imm name}:
         var data = Array[UInt8, N](fill=0)
 
         def do_encrypt() raises {mut data, mut engine}:
@@ -41,9 +40,9 @@ def bench_engine[
 def bench_cipher[
     C: BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable,
     KeySize: Int,
-    cipher_init: def(Array[UInt8, KeySize]) raises capturing[_] -> C,
+    //,
     prefix: StringLiteral,
-]() raises:
+](cipher_init: Some[def(Array[UInt8, KeySize]) raises -> C]) raises:
     var key = Array[UInt8, KeySize](fill=0)
     var iv = Array[UInt8, C.BLOCK_SIZE](fill=0)
     var name = String(prefix, "_", MODE)

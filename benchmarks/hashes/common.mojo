@@ -10,7 +10,6 @@ def bench_hash[
     H: Digest & Deinitable & Movable,
     prefix: StringLiteral,
 ]() raises:
-    @__parameter
     def bench[N: Int, suffix: StringLiteral]() raises:
         # Heap-allocate the input so it isn't a stack constant. `keep` then
         # forces the optimizer to treat the buffer as opaque and to observe the
