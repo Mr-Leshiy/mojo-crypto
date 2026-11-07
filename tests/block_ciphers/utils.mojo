@@ -1,3 +1,4 @@
+from std.sys.info import CompilationTarget
 from warp import Runtime
 
 from mojo_crypto.block_ciphers.traits import (
@@ -26,10 +27,11 @@ comptime BlockCipherModeEngine = (
 
 
 struct BlockOn[
+    target: CompilationTarget,
     Engine: GpuBlockCipherEncryptable
     & GpuBlockCipherDecryptable
     & Movable
-    & Deinitable
+    & Deinitable,
 ](
     BlockCipherDecryptable,
     BlockCipherEncryptable,
@@ -47,10 +49,12 @@ struct BlockOn[
 
     comptime BLOCK_SIZE: Int = Self.Engine.BLOCK_SIZE
 
-    var _runtime: Runtime
+    var _runtime: Runtime[Self.target]
     var _engine: Self.Engine
 
-    def __init__(out self, runtime: Runtime, var engine: Self.Engine):
+    def __init__(
+        out self, runtime: Runtime[Self.target], var engine: Self.Engine
+    ):
         self._runtime = runtime.copy()
         self._engine = engine^
 

@@ -1,5 +1,7 @@
 from max.gpu.host import DeviceContext
+from std.sys.info import CompilationTarget
 from warp import Runtime
+
 
 from mojo_crypto.block_ciphers.aes import AesGpu
 from mojo_crypto.block_ciphers.modes import CbcMode, GpuCbcMode
@@ -42,18 +44,18 @@ struct CbcModeFactory[F: AesFactory, //](CbcFactory):
         return Self.Mode(self._aes.create(key), iv^)
 
 
-struct GpuCbcModeFactory[KeySize: Int](CbcFactory):
+struct GpuCbcModeFactory[target: CompilationTarget, KeySize: Int](CbcFactory):
     """Creates `GpuCbcMode`s on the given device, each wrapped in `BlockOn` so
     that the sync checks can run against it."""
 
     comptime KEY_SIZE: Int = Self.KeySize
     comptime BLOCK_SIZE: Int = AesGpu[Self.KeySize].BLOCK_SIZE
     comptime Engine = GpuCbcMode[AesGpu[Self.KeySize]]
-    comptime Mode = BlockOn[Self.Engine]
+    comptime Mode = BlockOn[Self.target, Self.Engine]
 
-    var _runtime: Runtime
+    var _runtime: Runtime[Self.target]
 
-    def __init__(out self, ctx: DeviceContext):
+    def __init__(out self, ctx: DeviceContext[Self.target]):
         self._runtime = Runtime(ctx)
 
     def create(

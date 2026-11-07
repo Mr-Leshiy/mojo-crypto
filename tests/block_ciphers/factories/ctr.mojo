@@ -1,5 +1,7 @@
 from max.gpu.host import DeviceContext
+from std.sys.info import CompilationTarget
 from warp import Runtime
+
 
 from mojo_crypto.block_ciphers.aes import AesGpu
 from mojo_crypto.block_ciphers.modes import CtrMode, GpuCtrMode
@@ -48,6 +50,7 @@ struct CtrModeFactory[
 
 
 struct GpuCtrModeFactory[
+    target: CompilationTarget,
     KeySize: Int,
     SIZE: Int = AesGpu[KeySize].BLOCK_SIZE,
     BIG_ENDIAN: Bool = True,
@@ -60,11 +63,11 @@ struct GpuCtrModeFactory[
     comptime Engine = GpuCtrMode[
         AesGpu[Self.KeySize], Self.SIZE, Self.BIG_ENDIAN
     ]
-    comptime Mode = BlockOn[Self.Engine]
+    comptime Mode = BlockOn[Self.target, Self.Engine]
 
-    var _runtime: Runtime
+    var _runtime: Runtime[Self.target]
 
-    def __init__(out self, ctx: DeviceContext):
+    def __init__(out self, ctx: DeviceContext[Self.target]):
         self._runtime = Runtime(ctx)
 
     def create(

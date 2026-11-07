@@ -1,3 +1,4 @@
+from std.sys.info import CompilationTarget
 from warp import Context
 
 from ...traits import (
@@ -43,8 +44,8 @@ struct GpuCbcMode[
         self._iv = _load_block[Self.BLOCK_SIZE](Span(iv))
 
     __async def encrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await yield_now(ctx)
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
 
@@ -55,8 +56,8 @@ struct GpuCbcMode[
             self._iv = _load_block[Self.BLOCK_SIZE](block)
 
     __async def decrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await yield_now(ctx)
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
 
