@@ -1,8 +1,8 @@
 from warp import Runtime
 
 from mojo_crypto.block_ciphers.traits import (
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
     BlockCipherDecryptable,
     BlockCipherEncryptable,
 )
@@ -13,9 +13,9 @@ comptime BlockCipherEngine = (
     BlockCipherEncryptable & BlockCipherDecryptable & Copyable & Deinitable
 )
 
-comptime AsyncBlockCipherEngine = (
-    AsyncBlockCipherEncryptable
-    & AsyncBlockCipherDecryptable
+comptime GpuBlockCipherEngine = (
+    GpuBlockCipherEncryptable
+    & GpuBlockCipherDecryptable
     & Copyable
     & Deinitable
 )
@@ -26,8 +26,8 @@ comptime BlockCipherModeEngine = (
 
 
 struct BlockOn[
-    Engine: AsyncBlockCipherEncryptable
-    & AsyncBlockCipherDecryptable
+    Engine: GpuBlockCipherEncryptable
+    & GpuBlockCipherDecryptable
     & Movable
     & Deinitable
 ](

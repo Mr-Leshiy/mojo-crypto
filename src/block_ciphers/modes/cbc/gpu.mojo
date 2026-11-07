@@ -1,8 +1,8 @@
 from warp import Context
 
 from ...traits import (
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
 )
 from ...errors import BlockSizeError
 from ....utils import yield_now
@@ -10,15 +10,15 @@ from .common import _block, _load_block, _xor_block
 
 
 struct GpuCbcMode[
-    Cipher: AsyncBlockCipherEncryptable
-    & AsyncBlockCipherDecryptable
+    Cipher: GpuBlockCipherEncryptable
+    & GpuBlockCipherDecryptable
     & Copyable
     & Deinitable
 ](
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
     Copyable,
     Deinitable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
     Movable,
 ):
     """CBC block cipher mode of operation over an async (device-backed) cipher.

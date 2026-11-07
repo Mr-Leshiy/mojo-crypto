@@ -2,23 +2,23 @@ from warp import Context
 
 from ....utils import load_bytes, to_bytes, yield_now
 from ...traits import (
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
 )
 from .common import _check_params, _increment_ctr, _xor_keystream
 
 
 struct GpuCtrMode[
-    C: AsyncBlockCipherEncryptable
-    & AsyncBlockCipherDecryptable
+    C: GpuBlockCipherEncryptable
+    & GpuBlockCipherDecryptable
     & Movable
     & Deinitable,
     SIZE: Int = C.BLOCK_SIZE,
     BIG_ENDIAN: Bool = True,
 ](
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
     Deinitable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
     Movable,
 ):
     """Counter (CTR) block cipher mode over an async (device-backed) cipher.

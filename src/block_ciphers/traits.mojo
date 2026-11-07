@@ -15,7 +15,7 @@ trait BlockCipherDecryptable:
         ...
 
 
-trait AsyncBlockCipherEncryptable:
+trait GpuBlockCipherEncryptable:
     comptime BLOCK_SIZE: Int
 
     __async def encrypt[
@@ -24,7 +24,7 @@ trait AsyncBlockCipherEncryptable:
         ...
 
 
-trait AsyncBlockCipherDecryptable:
+trait GpuBlockCipherDecryptable:
     comptime BLOCK_SIZE: Int
 
     __async def decrypt[

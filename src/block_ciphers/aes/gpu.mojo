@@ -8,8 +8,8 @@ from warp import Context
 
 from ...utils import yield_now
 from ..traits import (
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
 )
 from ..errors import BlockSizeError
 from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
@@ -17,10 +17,10 @@ from .naive import _key_expansion
 
 
 struct AesGpu[KEY_SIZE: Int](
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
     Copyable,
     Deinitable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
     Movable,
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
