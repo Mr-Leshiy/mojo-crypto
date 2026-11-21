@@ -17,7 +17,7 @@ from tests.block_ciphers.factories.ctr import (
     CtrModeFactory,
     GpuCtrModeFactory,
 )
-from tests.platform import HAS_GPU, register_platform_tests
+from tests.platform import register_platform_tests
 
 
 @fieldwise_init
@@ -185,11 +185,4 @@ def test_aes256_ctr_aft_gpu() raises:
 def main() raises:
     var suite = TestSuite()
     register_platform_tests[__functions_in_module()](suite)
-    comptime if HAS_GPU:
-        suite.skip[test_aes128_ctr_aft_gpu]()
-        suite.skip[test_aes192_ctr_aft_gpu]()
-        suite.skip[test_aes256_ctr_aft_gpu]()
-        # Skipped until https://github.com/modular/modular/issues/7368 is
-        # fixed. The GPU tests are only registered when `HAS_GPU` is set, and
-        # skipping an unregistered test is an error.
     suite^.run()
