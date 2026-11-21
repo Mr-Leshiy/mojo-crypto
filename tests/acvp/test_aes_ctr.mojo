@@ -155,7 +155,7 @@ def test_aes256_ctr_aft_x86() raises:
 def test_aes128_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ctr_aft(
-            GpuCtrModeFactory[16](ctx),
+            GpuCtrModeFactory[KeySize=16](ctx),
             parse_acvp_aes_ctr_aft(
                 load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
             ),
@@ -165,7 +165,7 @@ def test_aes128_ctr_aft_gpu() raises:
 def test_aes192_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ctr_aft(
-            GpuCtrModeFactory[24](ctx),
+            GpuCtrModeFactory[KeySize=24](ctx),
             parse_acvp_aes_ctr_aft(
                 load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
             ),
@@ -175,7 +175,7 @@ def test_aes192_ctr_aft_gpu() raises:
 def test_aes256_ctr_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ctr_aft(
-            GpuCtrModeFactory[32](ctx),
+            GpuCtrModeFactory[KeySize=32](ctx),
             parse_acvp_aes_ctr_aft(
                 load_python_acvp_vectors("ACVP-AES-CTR", "AFT")
             ),

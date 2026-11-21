@@ -1,6 +1,7 @@
 """Helpers for writing coroutines that run on a warp `Runtime`."""
 
 from std.builtin._coroutine import AnyCoroutine, _suspend_async
+from std.sys.info import CompilationTarget
 from warp import Context
 
 
@@ -12,7 +13,7 @@ from warp import Context
 # coroutine is not enough: it never suspends, so it hits the same crash.
 # TODO: remove after https://github.com/modular/modular/issues/7361 would be
 # resolved.
-__async def yield_now(ctx: Context):
+__async def yield_now[target: CompilationTarget](ctx: Context[target]):
     """Suspend and re-queue the calling task, without syncing the device."""
 
     def body(hdl: AnyCoroutine) {ctx}:

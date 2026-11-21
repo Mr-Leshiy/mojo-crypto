@@ -1,3 +1,4 @@
+from std.sys.info import CompilationTarget
 from warp import Context
 
 
@@ -15,19 +16,19 @@ trait BlockCipherDecryptable:
         ...
 
 
-trait AsyncBlockCipherEncryptable:
+trait GpuBlockCipherEncryptable:
     comptime BLOCK_SIZE: Int
 
     __async def encrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         ...
 
 
-trait AsyncBlockCipherDecryptable:
+trait GpuBlockCipherDecryptable:
     comptime BLOCK_SIZE: Int
 
     __async def decrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         ...

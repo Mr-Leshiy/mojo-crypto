@@ -191,7 +191,7 @@ def test_ctr32_be_aes128_x86() raises:
 def test_ctr32_le_aes128_gpu() raises:
     with DeviceContext() as ctx:
         check_ctr(
-            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=False](ctx),
+            GpuCtrModeFactory[KeySize=16, SIZE=CTR_SIZE, BIG_ENDIAN=False](ctx),
             ctr32_le_aes128_vectors(),
         )
 
@@ -199,7 +199,7 @@ def test_ctr32_le_aes128_gpu() raises:
 def test_ctr32_be_aes128_gpu() raises:
     with DeviceContext() as ctx:
         check_ctr(
-            GpuCtrModeFactory[16, CTR_SIZE, BIG_ENDIAN=True](ctx),
+            GpuCtrModeFactory[KeySize=16, SIZE=CTR_SIZE, BIG_ENDIAN=True](ctx),
             ctr32_be_aes128_vectors(),
         )
 

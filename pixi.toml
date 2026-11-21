@@ -35,14 +35,6 @@ warp.workspace = true
 [tasks]
 fmt    = "mojo format ."
 
-# Build the API documentation site into docs/site/public:
-#   1. modo runs `mojo doc`, copies each package README.md in as an Overview
-#      page, and emits Hugo content (see modo.yaml). Invoked as `python -m
-#      pymodo` (the documented fallback) so it works without depending on the
-#      `modo` console script being exposed on PATH.
-#   2. `hugo` renders the static HTML site (theme fetched via Hugo Modules).
-docs = "python -m pymodo build && hugo --source docs/site"
-
 # $MOJO_TEST_FEATURES enables the crypto instructions used by the hardware
 # backends, so the tests exercise the native backend of the target. CI sets it
 # per-runner (see .github/workflows/ci.yml); set it yourself to test a specific
@@ -59,26 +51,60 @@ test   = "python scripts/test.py"
 acvp-up   = "docker compose -f tests/acvp/server/docker-compose.yml up --detach --wait --build"
 acvp-down = "docker compose -f tests/acvp/server/docker-compose.yml down"
 
-bench  = "python -m benchmarks.cli"
-bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
-
-# Compile-only checks for the benchmarks: verify they build without running them
-# (running requires a GPU / specific host CPU).
-bench-build = { depends-on = ["bench-build-mojo", "bench-build-rust"] }
-
-bench-build-mojo = "python scripts/bench_build_mojo.py"
-
-bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.toml"
+# Compile-only checks for the benchmarks, across both environments.
+bench-build = { depends-on = [
+    { task = "bench-build-mojo", environment = "bench" },
+    { task = "bench-build-rust", environment = "rust" },
+] }
 
 [dependencies]
 mojo.workspace = true
 max.workspace = true
 warp.workspace = true
 mojo-crypto = { path = "." }
-rust = ">=1.80.0,<2"
+
+# Tooling that isn't needed to build and test lives in separate features and
+# environments, so nothing else can clobber the Mojo toolchain
+
+# Docs-only tooling.
+[feature.docs.tasks]
+# Build the API documentation site into docs/site/public:
+#   1. modo runs `mojo doc`, copies each package README.md in as an Overview
+#      page, and emits Hugo content (see modo.yaml). Invoked as `python -m
+#      pymodo` (the documented fallback) so it works without depending on the
+#      `modo` console script being exposed on PATH.
+#   2. `hugo` renders the static HTML site (theme fetched via Hugo Modules).
+docs = "python -m pymodo build && hugo --source docs/site"
+
+[feature.docs.dependencies]
 hugo = ">=0.163.3,<0.164"
 go = ">=1.26.4,<2"
 
-[pypi-dependencies]
-typer = ">=0.12"
+[feature.docs.pypi-dependencies]
 pymodo = ">=0.11.13, <0.12"
+
+# Mojo benchmarks (running them requires a GPU / specific host CPU).
+[feature.bench.tasks]
+bench = "python -m benchmarks.cli"
+
+# Compile-only check: verify the benchmarks build without running them.
+bench-build-mojo = "python scripts/bench_build_mojo.py"
+
+[feature.bench.pypi-dependencies]
+typer = ">=0.12"
+
+# Rust reference benchmarks.
+[feature.rust.tasks]
+bench-rust = "cargo bench --manifest-path benchmarks/rust/Cargo.toml"
+bench-build-rust = "cargo bench --no-run --manifest-path benchmarks/rust/Cargo.toml"
+
+[feature.rust.dependencies]
+rust = ">=1.80.0,<2"
+
+[environments]
+docs = ["docs"]
+bench = ["bench"]
+# `no-default-feature = true` leaves out the root `[dependencies]` (mojo, max,
+# warp), which every other environment inherits, so rust never shares an
+# environment with mojo-compiler.
+rust = { features = ["rust"], no-default-feature = true }

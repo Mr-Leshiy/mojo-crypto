@@ -277,7 +277,7 @@ def test_aes256_cbc_mct_x86() raises:
 def test_aes128_cbc_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_cbc_aft(
-            GpuCbcModeFactory[16](ctx),
+            GpuCbcModeFactory[KeySize=16](ctx),
             parse_acvp_aes_cbc_aft(
                 load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
             ),
@@ -287,7 +287,7 @@ def test_aes128_cbc_aft_gpu() raises:
 def test_aes128_cbc_mct_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_cbc_mct(
-            GpuCbcModeFactory[16](ctx),
+            GpuCbcModeFactory[KeySize=16](ctx),
             parse_acvp_aes_cbc_mct(
                 load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
             ),
@@ -297,7 +297,7 @@ def test_aes128_cbc_mct_gpu() raises:
 def test_aes192_cbc_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_cbc_aft(
-            GpuCbcModeFactory[24](ctx),
+            GpuCbcModeFactory[KeySize=24](ctx),
             parse_acvp_aes_cbc_aft(
                 load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
             ),
@@ -307,7 +307,7 @@ def test_aes192_cbc_aft_gpu() raises:
 def test_aes192_cbc_mct_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_cbc_mct(
-            GpuCbcModeFactory[24](ctx),
+            GpuCbcModeFactory[KeySize=24](ctx),
             parse_acvp_aes_cbc_mct(
                 load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
             ),
@@ -317,7 +317,7 @@ def test_aes192_cbc_mct_gpu() raises:
 def test_aes256_cbc_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_cbc_aft(
-            GpuCbcModeFactory[32](ctx),
+            GpuCbcModeFactory[KeySize=32](ctx),
             parse_acvp_aes_cbc_aft(
                 load_python_acvp_vectors("ACVP-AES-CBC", "AFT")
             ),
@@ -327,7 +327,7 @@ def test_aes256_cbc_aft_gpu() raises:
 def test_aes256_cbc_mct_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_cbc_mct(
-            GpuCbcModeFactory[32](ctx),
+            GpuCbcModeFactory[KeySize=32](ctx),
             parse_acvp_aes_cbc_mct(
                 load_python_acvp_vectors("ACVP-AES-CBC", "MCT")
             ),

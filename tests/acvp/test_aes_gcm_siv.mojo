@@ -156,7 +156,7 @@ def test_aes128_gcm_siv_aft_x86() raises:
 def test_aes128_gcm_siv_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_gcm_siv_aft(
-            AesGpuFactory[16](ctx),
+            AesGpuFactory[KeySize=16](ctx),
             parse_acvp_aes_gcm_siv_aft(
                 load_python_acvp_vectors("ACVP-AES-GCM-SIV", "AFT")
             ),

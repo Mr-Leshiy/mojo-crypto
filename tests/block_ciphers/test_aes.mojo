@@ -109,17 +109,17 @@ def test_aes256_fips197_x86() raises:
 
 def test_aes128_fips197_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes(AesGpuFactory[16](ctx), fips197_aes128_vectors())
+        check_aes(AesGpuFactory[KeySize=16](ctx), fips197_aes128_vectors())
 
 
 def test_aes192_fips197_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes(AesGpuFactory[24](ctx), fips197_aes192_vectors())
+        check_aes(AesGpuFactory[KeySize=24](ctx), fips197_aes192_vectors())
 
 
 def test_aes256_fips197_gpu() raises:
     with DeviceContext() as ctx:
-        check_aes(AesGpuFactory[32](ctx), fips197_aes256_vectors())
+        check_aes(AesGpuFactory[KeySize=32](ctx), fips197_aes256_vectors())
 
 
 def main() raises:

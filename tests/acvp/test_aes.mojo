@@ -260,7 +260,7 @@ def test_aes256_ecb_mct_x86() raises:
 def test_aes128_ecb_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ecb_aft(
-            AesGpuFactory[16](ctx),
+            AesGpuFactory[KeySize=16](ctx),
             parse_acvp_aes_ecb_aft(
                 load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
             ),
@@ -270,7 +270,7 @@ def test_aes128_ecb_aft_gpu() raises:
 def test_aes128_ecb_mct_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ecb_mct(
-            AesGpuFactory[16](ctx),
+            AesGpuFactory[KeySize=16](ctx),
             parse_acvp_aes_ecb_mct(
                 load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
             ),
@@ -280,7 +280,7 @@ def test_aes128_ecb_mct_gpu() raises:
 def test_aes192_ecb_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ecb_aft(
-            AesGpuFactory[24](ctx),
+            AesGpuFactory[KeySize=24](ctx),
             parse_acvp_aes_ecb_aft(
                 load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
             ),
@@ -290,7 +290,7 @@ def test_aes192_ecb_aft_gpu() raises:
 def test_aes192_ecb_mct_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ecb_mct(
-            AesGpuFactory[24](ctx),
+            AesGpuFactory[KeySize=24](ctx),
             parse_acvp_aes_ecb_mct(
                 load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
             ),
@@ -300,7 +300,7 @@ def test_aes192_ecb_mct_gpu() raises:
 def test_aes256_ecb_aft_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ecb_aft(
-            AesGpuFactory[32](ctx),
+            AesGpuFactory[KeySize=32](ctx),
             parse_acvp_aes_ecb_aft(
                 load_python_acvp_vectors("ACVP-AES-ECB", "AFT")
             ),
@@ -310,7 +310,7 @@ def test_aes256_ecb_aft_gpu() raises:
 def test_aes256_ecb_mct_gpu() raises:
     with DeviceContext() as ctx:
         check_aes_ecb_mct(
-            AesGpuFactory[32](ctx),
+            AesGpuFactory[KeySize=32](ctx),
             parse_acvp_aes_ecb_mct(
                 load_python_acvp_vectors("ACVP-AES-ECB", "MCT")
             ),

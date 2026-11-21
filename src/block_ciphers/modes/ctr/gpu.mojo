@@ -1,24 +1,25 @@
+from std.sys.info import CompilationTarget
 from warp import Context
 
 from ....utils import load_bytes, to_bytes, yield_now
 from ...traits import (
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
 )
 from .common import _check_params, _increment_ctr, _xor_keystream
 
 
 struct GpuCtrMode[
-    C: AsyncBlockCipherEncryptable
-    & AsyncBlockCipherDecryptable
+    C: GpuBlockCipherEncryptable
+    & GpuBlockCipherDecryptable
     & Movable
     & Deinitable,
     SIZE: Int = C.BLOCK_SIZE,
     BIG_ENDIAN: Bool = True,
 ](
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
     Deinitable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
     Movable,
 ):
     """Counter (CTR) block cipher mode over an async (device-backed) cipher.
@@ -48,18 +49,18 @@ struct GpuCtrMode[
         self._ctr = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](ctr)
 
     __async def encrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await self._apply(ctx, data)
 
     __async def decrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await self._apply(ctx, data)
 
     __async def _apply[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         # `_apply` is awaited by `encrypt`/`decrypt` and would finish without
         # suspending on an empty `data`, so it suspends first (see `yield_now`).
         __await yield_now(ctx)

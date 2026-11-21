@@ -1,5 +1,7 @@
 from max.gpu.host import DeviceContext
+from std.sys.info import CompilationTarget
 from warp import Runtime
+
 
 from mojo_crypto.block_ciphers.aes import (
     AesNaive,
@@ -49,16 +51,16 @@ struct AesX86Factory[KeySize: Int](AesFactory):
         return Self.Cipher(key)
 
 
-struct AesGpuFactory[KeySize: Int](AesFactory):
+struct AesGpuFactory[target: CompilationTarget, KeySize: Int](AesFactory):
     """Creates GPU ciphers on the given device, each wrapped in `BlockOn` so
     that the sync checks can run against it."""
 
     comptime KEY_SIZE: Int = Self.KeySize
-    comptime Cipher = BlockOn[AesGpu[Self.KeySize]]
+    comptime Cipher = BlockOn[Self.target, AesGpu[Self.KeySize]]
 
-    var _runtime: Runtime
+    var _runtime: Runtime[Self.target]
 
-    def __init__(out self, ctx: DeviceContext):
+    def __init__(out self, ctx: DeviceContext[Self.target]):
         self._runtime = Runtime(ctx)
 
     def create(self, key: Array[UInt8, Self.KEY_SIZE]) raises -> Self.Cipher:

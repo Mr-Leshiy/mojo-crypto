@@ -4,12 +4,13 @@ from max.gpu.sync import barrier
 from max.gpu import thread_idx, block_idx
 from std.builtin.globals import global_constant
 from std.memory import stack_allocation, unsafe_memcpy
+from std.sys.info import CompilationTarget
 from warp import Context
 
 from ...utils import yield_now
 from ..traits import (
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
 )
 from ..errors import BlockSizeError
 from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
@@ -17,10 +18,10 @@ from .naive import _key_expansion
 
 
 struct AesGpu[KEY_SIZE: Int](
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
     Copyable,
     Deinitable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
     Movable,
 ):
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
@@ -45,9 +46,9 @@ struct AesGpu[KEY_SIZE: Int](
         self.sbox_inv = sbox_inv^
 
     @staticmethod
-    __async def create(
-        ctx: Context, key: Array[UInt8, Self.KEY_SIZE]
-    ) raises -> Self:
+    __async def create[
+        target: CompilationTarget
+    ](ctx: Context[target], key: Array[UInt8, Self.KEY_SIZE]) raises -> Self:
         """Upload the key schedule and S-boxes, and return the cipher once they
         have landed on the device."""
         _check_key_size[Self.KEY_SIZE]()
@@ -66,13 +67,13 @@ struct AesGpu[KEY_SIZE: Int](
         return cipher^
 
     __async def encrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await yield_now(ctx)
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)
-        _launch_cipher[Self.NR](ctx, device, self.w, self.sbox)
+        _launch_cipher[NR=Self.NR](ctx, device, self.w, self.sbox)
         var host = ctx.enqueue_host_buffer(device)
         __await ctx.synchronize()
         unsafe_memcpy(
@@ -80,13 +81,13 @@ struct AesGpu[KEY_SIZE: Int](
         )
 
     __async def decrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await yield_now(ctx)
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)
-        _launch_decipher[Self.NR](ctx, device, self.w, self.sbox_inv)
+        _launch_decipher[NR=Self.NR](ctx, device, self.w, self.sbox_inv)
         var host = ctx.enqueue_host_buffer(device)
         __await ctx.synchronize()
         unsafe_memcpy(
@@ -98,9 +99,9 @@ struct AesGpu[KEY_SIZE: Int](
 # compiler (https://github.com/modular/modular/issues/7249), so the kernel
 # launches live in plain `def`s.
 def _launch_cipher[
-    NR: Int
+    target: CompilationTarget, NR: Int
 ](
-    ctx: Context,
+    ctx: Context[target],
     buf: DeviceBuffer[DType.uint8],
     w: DeviceBuffer[DType.uint32],
     sbox: DeviceBuffer[DType.uint32],
@@ -115,9 +116,9 @@ def _launch_cipher[
 
 
 def _launch_decipher[
-    NR: Int
+    target: CompilationTarget, NR: Int
 ](
-    ctx: Context,
+    ctx: Context[target],
     buf: DeviceBuffer[DType.uint8],
     w: DeviceBuffer[DType.uint32],
     sbox_inv: DeviceBuffer[DType.uint8],

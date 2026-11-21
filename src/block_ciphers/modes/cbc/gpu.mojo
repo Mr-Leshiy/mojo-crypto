@@ -1,8 +1,9 @@
+from std.sys.info import CompilationTarget
 from warp import Context
 
 from ...traits import (
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
 )
 from ...errors import BlockSizeError
 from ....utils import yield_now
@@ -10,15 +11,15 @@ from .common import _block, _load_block, _xor_block
 
 
 struct GpuCbcMode[
-    Cipher: AsyncBlockCipherEncryptable
-    & AsyncBlockCipherDecryptable
+    Cipher: GpuBlockCipherEncryptable
+    & GpuBlockCipherDecryptable
     & Copyable
     & Deinitable
 ](
-    AsyncBlockCipherDecryptable,
-    AsyncBlockCipherEncryptable,
     Copyable,
     Deinitable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
     Movable,
 ):
     """CBC block cipher mode of operation over an async (device-backed) cipher.
@@ -43,8 +44,8 @@ struct GpuCbcMode[
         self._iv = _load_block[Self.BLOCK_SIZE](Span(iv))
 
     __async def encrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await yield_now(ctx)
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
 
@@ -55,8 +56,8 @@ struct GpuCbcMode[
             self._iv = _load_block[Self.BLOCK_SIZE](block)
 
     __async def decrypt[
-        o: MutOrigin
-    ](mut self, ctx: Context, data: Span[UInt8, o]) raises:
+        target: CompilationTarget, o: MutOrigin
+    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         __await yield_now(ctx)
         BlockSizeError[Self.BLOCK_SIZE].check(len(data))
 
