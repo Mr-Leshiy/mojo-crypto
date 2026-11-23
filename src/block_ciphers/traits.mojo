@@ -1,3 +1,4 @@
+from max.gpu.host import DeviceBuffer
 from std.sys.info import CompilationTarget
 from warp import Context
 
@@ -24,6 +25,11 @@ trait GpuBlockCipherEncryptable:
     ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
         ...
 
+    def encrypt[
+        target: CompilationTarget
+    ](mut self, ctx: Context[target], data: DeviceBuffer[DType.uint8]) raises:
+        ...
+
 
 trait GpuBlockCipherDecryptable:
     comptime BLOCK_SIZE: Int
@@ -31,4 +37,9 @@ trait GpuBlockCipherDecryptable:
     __async def decrypt[
         target: CompilationTarget, o: MutOrigin
     ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
+        ...
+
+    def decrypt[
+        target: CompilationTarget
+    ](mut self, ctx: Context[target], data: DeviceBuffer[DType.uint8]) raises:
         ...
