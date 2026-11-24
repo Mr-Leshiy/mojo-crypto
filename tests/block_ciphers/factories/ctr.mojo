@@ -79,4 +79,7 @@ struct GpuCtrModeFactory[
         var cipher = runtime.block_on(
             AesGpu[Self.KeySize].create(runtime.context(), key)
         )
-        return BlockOn(runtime, Self.Engine(cipher^, ctr^))
+        var ctx = runtime.context().gpu_ctx()
+        var ctr_device = ctx.enqueue_create_buffer[DType.uint8](Self.BLOCK_SIZE)
+        ctx.enqueue_copy(ctr_device, Span(ctr).unsafe_ptr())
+        return BlockOn(runtime, Self.Engine(cipher^, ctr_device^))

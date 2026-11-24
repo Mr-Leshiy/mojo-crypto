@@ -1,12 +1,16 @@
+from max.gpu import thread_idx, block_idx, block_dim
+from max.gpu.host import DeviceBuffer
+from std.math import ceildiv
+from std.memory import unsafe_memcpy
 from std.sys.info import CompilationTarget
 from warp import Context
 
-from ....utils import load_bytes, to_bytes, yield_now
+from ....utils import yield_now
 from ...traits import (
     GpuBlockCipherDecryptable,
     GpuBlockCipherEncryptable,
 )
-from .common import _check_params, _increment_ctr, _xor_keystream
+from .common import _check_params
 
 
 struct GpuCtrMode[
@@ -34,47 +38,122 @@ struct GpuCtrMode[
     comptime BLOCK_SIZE: Int = Self.C.BLOCK_SIZE
 
     var _cipher: Self.C
-    var _ctr: SIMD[DType.uint8, Self.BLOCK_SIZE]
+    var _ctr: DeviceBuffer[DType.uint8]
 
     def __init__(
         out self,
         var cipher: Self.C,
-        var ctr: Array[UInt8, Self.BLOCK_SIZE],
+        var ctr: DeviceBuffer[DType.uint8],
     ):
-        """Initialize from a fully-assembled initial counter block."""
-
         _check_params[Self.BLOCK_SIZE, Self.SIZE]()
+        debug_assert(len(ctr) == Self.BLOCK_SIZE, "counter must be one block")
 
         self._cipher = cipher^
-        self._ctr = load_bytes[dtype=DType.uint8, width=Self.BLOCK_SIZE](ctr)
+        self._ctr = ctr^
+
+    def encrypt[
+        target: CompilationTarget
+    ](mut self, ctx: Context[target], data: DeviceBuffer[DType.uint8]) raises:
+        self._apply(ctx, data)
+
+    def decrypt[
+        target: CompilationTarget
+    ](mut self, ctx: Context[target], data: DeviceBuffer[DType.uint8]) raises:
+        self._apply(ctx, data)
+
+    def _apply[
+        target: CompilationTarget
+    ](mut self, ctx: Context[target], data: DeviceBuffer[DType.uint8]) raises:
+        """XOR the keystream over `data` in place; encryption and decryption
+        are the same operation.
+        """
+        var blocks = ceildiv(len(data), Self.BLOCK_SIZE)
+        var counters = ctx.gpu_ctx().enqueue_create_buffer[DType.uint8](
+            (blocks + 1) * Self.BLOCK_SIZE
+        )
+
+        ctx.gpu_ctx().enqueue_function[
+            _fill_counters_kernel[Self.BLOCK_SIZE, Self.SIZE, Self.BIG_ENDIAN]
+        ](counters, self._ctr, grid_dim=blocks + 1, block_dim=Self.BLOCK_SIZE)
+        ctx.gpu_ctx().enqueue_copy(
+            self._ctr,
+            counters.create_sub_buffer[DType.uint8](
+                blocks * Self.BLOCK_SIZE, Self.BLOCK_SIZE
+            ),
+        )
+
+        var keystream = counters.create_sub_buffer[DType.uint8](
+            0, blocks * Self.BLOCK_SIZE
+        )
+        self._cipher.encrypt(ctx, keystream)
+        ctx.gpu_ctx().enqueue_function[_xor_keystream_kernel](
+            data,
+            keystream,
+            Int64(len(data)),
+            grid_dim=blocks,
+            block_dim=Self.BLOCK_SIZE,
+        )
 
     __async def encrypt[
         target: CompilationTarget, o: MutOrigin
     ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
-        __await self._apply(ctx, data)
+        __await yield_now(ctx)
+
+        var device = ctx.enqueue_device_buffer(data)
+        self._apply(ctx, device)
+        var host = ctx.enqueue_host_buffer(device)
+        __await ctx.synchronize()
+        unsafe_memcpy(
+            dest=data.unsafe_ptr(), src=host.unsafe_ptr(), count=len(data)
+        )
 
     __async def decrypt[
         target: CompilationTarget, o: MutOrigin
     ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
-        __await self._apply(ctx, data)
-
-    __async def _apply[
-        target: CompilationTarget, o: MutOrigin
-    ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
-        # `_apply` is awaited by `encrypt`/`decrypt` and would finish without
-        # suspending on an empty `data`, so it suspends first (see `yield_now`).
         __await yield_now(ctx)
-        var offset = 0
-        while offset < len(data):
-            # The keystream block is E(counter). The cipher works on bytes, so
-            # the counter goes out as an array.
-            var keystream = to_bytes[
-                input_size=Self.BLOCK_SIZE, output_size=Self.BLOCK_SIZE
-            ](self._ctr)
-            __await self._cipher.encrypt(ctx, Span(keystream))
 
-            var end = min(offset + Self.BLOCK_SIZE, len(data))
-            _xor_keystream[Self.BLOCK_SIZE](data[offset:end], Span(keystream))
+        var device = ctx.enqueue_device_buffer(data)
+        self._apply(ctx, device)
+        var host = ctx.enqueue_host_buffer(device)
+        __await ctx.synchronize()
+        unsafe_memcpy(
+            dest=data.unsafe_ptr(), src=host.unsafe_ptr(), count=len(data)
+        )
 
-            _increment_ctr[Self.SIZE, Self.BIG_ENDIAN](self._ctr)
-            offset += Self.BLOCK_SIZE
+
+# Thread j of block b writes byte j of counter block b: the initial counter
+# plus b, carried through the `SIZE`-byte counter field only, as in
+# `_increment_ctr`.
+def _fill_counters_kernel[
+    BLOCK_SIZE: Int, SIZE: Int, BIG_ENDIAN: Bool
+](
+    counters: Pointer[Scalar[DType.uint8], MutAnyOrigin],
+    ctr: Pointer[Scalar[DType.uint8], ImmutAnyOrigin],
+):
+    var j = thread_idx.x
+    var b = block_idx.x
+    var byte = ctr[unsafe_offset=j]
+    var carry = b
+    comptime if BIG_ENDIAN:
+        for k in range(BLOCK_SIZE - 1, BLOCK_SIZE - SIZE - 1, -1):
+            var sum = Int(ctr[unsafe_offset=k]) + carry
+            if k == j:
+                byte = UInt8(sum & 0xFF)
+            carry = sum >> 8
+    else:
+        for k in range(SIZE):
+            var sum = Int(ctr[unsafe_offset=k]) + carry
+            if k == j:
+                byte = UInt8(sum & 0xFF)
+            carry = sum >> 8
+    counters[unsafe_offset=b * BLOCK_SIZE + j] = byte
+
+
+def _xor_keystream_kernel(
+    data: Pointer[Scalar[DType.uint8], MutAnyOrigin],
+    keystream: Pointer[Scalar[DType.uint8], ImmutAnyOrigin],
+    length: Int64,
+):
+    var i = block_idx.x * block_dim.x + thread_idx.x
+    if Int64(i) < length:
+        data[unsafe_offset=i] ^= keystream[unsafe_offset=i]
