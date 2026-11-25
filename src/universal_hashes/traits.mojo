@@ -2,9 +2,16 @@ from .errors import UhashSizeError
 
 
 trait UniversalHashable:
+    """A keyed universal hash function."""
+
     comptime BLOCK_SIZE: Int
+    """Size of the input block, in bytes."""
+
     comptime KEY_SIZE: Int
+    """Size of the key, in bytes."""
+
     comptime TAG_SIZE: Int
+    """Size of the tag `finalize` returns, in bytes."""
 
     def __init__(out self, var h: Array[UInt8, Self.KEY_SIZE]):
         """Initialize the hash from a KEY_SIZE-byte key."""

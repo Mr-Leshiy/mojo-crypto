@@ -39,6 +39,7 @@ struct Gcm[
     """
 
     comptime BLOCK_SIZE: Int = Self.Cipher.BLOCK_SIZE
+    """Size of the cipher's block, in bytes."""
 
     var _cipher: Self.Cipher
     var _ghash: Self.G

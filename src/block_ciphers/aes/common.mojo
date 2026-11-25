@@ -3,6 +3,7 @@
 comptime NB: Int = 4
 
 comptime BLOCK_SIZE: Int = 16
+"""Size of the AES block, in bytes."""
 
 # FIPS 197 Figure 7 — AES S-box
 # Values are logically UInt8 (0x00–0xFF), but stored as UInt32 so that sub_word()

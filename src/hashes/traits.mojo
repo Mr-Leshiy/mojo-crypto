@@ -1,4 +1,6 @@
 trait Digest:
+    """A hash function with fixed-length output."""
+
     comptime BLOCK_SIZE: Int
     """Size of the compression function's input block, in bytes."""
 
@@ -39,6 +41,7 @@ trait Xof:
         ...
 
     def squeeze[size: Int](mut self) -> Array[UInt8, size]:
+        """Return the next `size` bytes of output."""
         var out = Array[UInt8, size](fill=0)
         self.squeeze(out)
         return out^

@@ -34,6 +34,7 @@ struct CbcMode[
         var cipher: Self.Cipher,
         var iv: Array[UInt8, Self.BLOCK_SIZE],
     ):
+        """Initialize from an already-keyed cipher and an IV."""
         self._cipher = cipher^
         self._iv = _load_block[Self.BLOCK_SIZE](Span(iv))
 

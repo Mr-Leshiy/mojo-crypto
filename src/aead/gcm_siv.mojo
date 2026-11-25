@@ -11,12 +11,14 @@ from ..block_ciphers.modes import CtrMode
 from ..universal_hashes.traits import UniversalHashable
 
 
-# Maximum length of associated data (RFC 8452 § 6).
 comptime A_MAX: UInt64 = 1 << 36
-# Maximum length of plaintext (RFC 8452 § 6).
+"""Maximum length of associated data, in bytes (RFC 8452 § 6)."""
+
 comptime P_MAX: UInt64 = 1 << 36
-# Maximum length of ciphertext (RFC 8452 § 6).
+"""Maximum length of plaintext, in bytes (RFC 8452 § 6)."""
+
 comptime C_MAX: UInt64 = (1 << 36) + 16
+"""Maximum length of ciphertext, in bytes (RFC 8452 § 6)."""
 
 
 @fieldwise_init
@@ -78,8 +80,13 @@ struct GcmSiv[
     """
 
     comptime BLOCK_SIZE: Int = Self.C.BLOCK_SIZE
+    """Size of the cipher's block, in bytes."""
+
     comptime NONCE_SIZE: Int = 12
+    """Size of the nonce, in bytes."""
+
     comptime TAG_SIZE: Int = 16
+    """Size of the tag, in bytes."""
 
     # The message-encryption cipher, keyed with the per-record message-encryption
     # key derived in `create`. Used for both CTR encryption and tag encryption.

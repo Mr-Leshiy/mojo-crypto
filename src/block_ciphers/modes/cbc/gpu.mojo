@@ -43,6 +43,10 @@ struct GpuCbcMode[
         var cipher: Self.Cipher,
         var iv: DeviceBuffer[DType.uint8],
     ):
+        """Initialize from an already-keyed cipher and a one-block device IV.
+
+        `iv` is overwritten as the mode advances.
+        """
         debug_assert(len(iv) == Self.BLOCK_SIZE, "IV must be one block")
         self._cipher = cipher^
         self._iv = iv^
