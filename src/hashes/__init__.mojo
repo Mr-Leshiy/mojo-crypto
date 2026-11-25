@@ -1,1 +1,2 @@
-from .traits import Digest, Xof
+from .errors import BatchSizeError
+from .traits import Digest, GpuDigest, GpuXof, Xof
