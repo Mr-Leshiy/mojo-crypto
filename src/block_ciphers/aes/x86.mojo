@@ -27,6 +27,8 @@ struct AesX86[KEY_SIZE: Int](
     Deinitable,
     Movable,
 ):
+    """AES block cipher (FIPS 197) via the x86 AES-NI extension."""
+
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
     comptime NK: Int = Self.KEY_SIZE // 4
     comptime NR: Int = Self.NK + 6
@@ -35,6 +37,7 @@ struct AesX86[KEY_SIZE: Int](
     var dec_rks: Array[SIMD[DType.uint64, 2], Self.NR + 1]
 
     def __init__(out self, key: Array[UInt8, Self.KEY_SIZE]):
+        """Expand `key` into the round keys."""
         _check_key_size[Self.KEY_SIZE]()
 
         self.enc_rks = _expand_enc_rks[Self.NR, Self.NK](key)

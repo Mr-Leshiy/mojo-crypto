@@ -1,1 +1,6 @@
-from .traits import BlockCipherEncryptable, BlockCipherDecryptable
+from .traits import (
+    BlockCipherDecryptable,
+    BlockCipherEncryptable,
+    GpuBlockCipherDecryptable,
+    GpuBlockCipherEncryptable,
+)

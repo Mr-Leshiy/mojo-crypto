@@ -1,5 +1,8 @@
 trait Mac:
+    """A message authentication code."""
+
     comptime TAG_SIZE: Int
+    """Size of the tag `finalize` returns, in bytes."""
 
     def update[o: Origin](mut self, data: Span[UInt8, o]) raises:
         """Absorb more input."""

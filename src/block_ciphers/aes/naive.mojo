@@ -16,6 +16,8 @@ struct AesNaive[KEY_SIZE: Int](
     Deinitable,
     Movable,
 ):
+    """AES block cipher (FIPS 197), portable CPU implementation."""
+
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
 
     comptime NK: Int = Self.KEY_SIZE // 4
@@ -25,6 +27,7 @@ struct AesNaive[KEY_SIZE: Int](
     var w: Array[UInt32, Self.WORDS_SIZE]
 
     def __init__(out self, key: Array[UInt8, Self.KEY_SIZE]):
+        """Expand `key` into the round keys."""
         _check_key_size[Self.KEY_SIZE]()
         comptime assert (
             Self.KEY_SIZE == 16 or Self.KEY_SIZE == 24 or Self.KEY_SIZE == 32

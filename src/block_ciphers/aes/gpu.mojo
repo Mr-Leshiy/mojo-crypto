@@ -17,6 +17,7 @@ from .common import NB, BLOCK_SIZE, SBOX, SBOX_INV, _check_key_size
 from .naive import _key_expansion
 
 
+@fieldwise_init
 struct AesGpu[KEY_SIZE: Int](
     Copyable,
     Deinitable,
@@ -24,6 +25,8 @@ struct AesGpu[KEY_SIZE: Int](
     GpuBlockCipherEncryptable,
     Movable,
 ):
+    """AES block cipher (FIPS 197) on a GPU."""
+
     comptime BLOCK_SIZE: Int = BLOCK_SIZE
 
     comptime NK: Int = Self.KEY_SIZE // 4
@@ -33,17 +36,6 @@ struct AesGpu[KEY_SIZE: Int](
     var w: DeviceBuffer[DType.uint32]
     var sbox: DeviceBuffer[DType.uint32]
     var sbox_inv: DeviceBuffer[DType.uint8]
-
-    def __init__(
-        out self,
-        *,
-        var w: DeviceBuffer[DType.uint32],
-        var sbox: DeviceBuffer[DType.uint32],
-        var sbox_inv: DeviceBuffer[DType.uint8],
-    ):
-        self.w = w^
-        self.sbox = sbox^
-        self.sbox_inv = sbox_inv^
 
     @staticmethod
     __async def create[

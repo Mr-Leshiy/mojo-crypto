@@ -31,8 +31,8 @@ struct GpuCtrMode[
     NIST SP 800-38A, Section 6.5:
     https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
 
-    Each keystream block is produced by its own awaited cipher call. `SIZE`
-    and `BIG_ENDIAN` are as in `CtrMode`.
+    The keystream for a call is produced by a single cipher call over all of
+    its counter blocks. `SIZE` and `BIG_ENDIAN` are as in `CtrMode`.
     """
 
     comptime BLOCK_SIZE: Int = Self.C.BLOCK_SIZE
@@ -45,6 +45,10 @@ struct GpuCtrMode[
         var cipher: Self.C,
         var ctr: DeviceBuffer[DType.uint8],
     ):
+        """Initialize from an already-keyed cipher and a one-block device counter.
+
+        `ctr` is overwritten as the mode advances.
+        """
         _check_params[Self.BLOCK_SIZE, Self.SIZE]()
         debug_assert(len(ctr) == Self.BLOCK_SIZE, "counter must be one block")
 
