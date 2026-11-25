@@ -67,4 +67,7 @@ struct GpuCbcModeFactory[target: CompilationTarget, KeySize: Int](CbcFactory):
         var cipher = runtime.block_on(
             AesGpu[Self.KeySize].create(runtime.context(), key)
         )
-        return BlockOn(runtime, Self.Engine(cipher^, iv^))
+        var ctx = runtime.context().gpu_ctx()
+        var iv_device = ctx.enqueue_create_buffer[DType.uint8](Self.BLOCK_SIZE)
+        ctx.enqueue_copy(iv_device, Span(iv).unsafe_ptr())
+        return BlockOn(runtime, Self.Engine(cipher^, iv_device^))

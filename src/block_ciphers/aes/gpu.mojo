@@ -66,6 +66,18 @@ struct AesGpu[KEY_SIZE: Int](
         __await ctx.synchronize()
         return cipher^
 
+    def encrypt[
+        target: CompilationTarget
+    ](mut self, ctx: Context[target], data: DeviceBuffer[DType.uint8]) raises:
+        BlockSizeError[BLOCK_SIZE].check(len(data))
+        _launch_cipher[NR=Self.NR](ctx, data, self.w, self.sbox)
+
+    def decrypt[
+        target: CompilationTarget
+    ](mut self, ctx: Context[target], data: DeviceBuffer[DType.uint8]) raises:
+        BlockSizeError[BLOCK_SIZE].check(len(data))
+        _launch_decipher[NR=Self.NR](ctx, data, self.w, self.sbox_inv)
+
     __async def encrypt[
         target: CompilationTarget, o: MutOrigin
     ](mut self, ctx: Context[target], data: Span[UInt8, o]) raises:
@@ -73,7 +85,7 @@ struct AesGpu[KEY_SIZE: Int](
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)
-        _launch_cipher[NR=Self.NR](ctx, device, self.w, self.sbox)
+        self.encrypt(ctx, device)
         var host = ctx.enqueue_host_buffer(device)
         __await ctx.synchronize()
         unsafe_memcpy(
@@ -87,7 +99,7 @@ struct AesGpu[KEY_SIZE: Int](
         BlockSizeError[BLOCK_SIZE].check(len(data))
 
         var device = ctx.enqueue_device_buffer(data)
-        _launch_decipher[NR=Self.NR](ctx, device, self.w, self.sbox_inv)
+        self.decrypt(ctx, device)
         var host = ctx.enqueue_host_buffer(device)
         __await ctx.synchronize()
         unsafe_memcpy(

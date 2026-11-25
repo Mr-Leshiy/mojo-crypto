@@ -20,12 +20,16 @@ def bench_cipher[
     var cipher = runtime.block_on(C.create(runtime.context(), key))
     var name = String(prefix, "_", MODE)
 
+    var gpu_ctx = runtime.context().gpu_ctx()
+    var iv_device = gpu_ctx.enqueue_create_buffer[DType.uint8](C.BLOCK_SIZE)
+    gpu_ctx.enqueue_copy(iv_device, Span(iv).unsafe_ptr())
+
     comptime if MODE == "ecb":
         bench_engine(BlockOn(runtime, cipher^), name)
     elif MODE == "cbc":
-        bench_engine(BlockOn(runtime, GpuCbcMode[C](cipher^, iv^)), name)
+        bench_engine(BlockOn(runtime, GpuCbcMode[C](cipher^, iv_device^)), name)
     elif MODE == "ctr":
-        bench_engine(BlockOn(runtime, GpuCtrMode[C](cipher^, iv^)), name)
+        bench_engine(BlockOn(runtime, GpuCtrMode[C](cipher^, iv_device^)), name)
     else:
         comptime assert False, "MODE must be one of: ecb, cbc, ctr"
 
